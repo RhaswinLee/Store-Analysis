@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Store Analysis Dashboard</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1d23;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 220px;
+      height: 100vh;
+      background: #0f172a;
+      display: flex;
+      flex-direction: column;
+      padding: 0 0 24px;
+      z-index: 100;
+    }
+    .sidebar-brand {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .sidebar-brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+    .sidebar-brand p {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 0;
+    }
+    .nav-section {
+      padding: 8px 20px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #475569;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { color: #e2e8f0; background: #1e293b; }
+    .nav-item.active {
+      color: #fff;
+      background: #1e293b;
+      border-left-color: #6366f1;
+    }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+    .sidebar-footer {
+      padding: 16px 20px 0;
+      border-top: 1px solid #1e293b;
+    }
+    .avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .avatar-info p { font-size: 12px; font-weight: 600; color: #e2e8f0; }
+    .avatar-info span { font-size: 11px; color: #64748b; }
+
+    /* ── Main ── */
+    .main {
+      margin-left: 220px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 28px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topbar-left h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .topbar-left p { font-size: 12px; color: #64748b; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .date-range {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #475569;
+      cursor: pointer;
+    }
+    .btn-export {
+      padding: 7px 16px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-export:hover { background: #4f46e5; }
+
+    /* ── Page content ── */
+    .content {
+      padding: 24px 28px;
+      flex: 1;
+    }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 22px;
+      border: 1px solid #e2e8f0;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 60px; height: 60px;
+      border-radius: 0 12px 0 60px;
+      opacity: 0.08;
+    }
+    .kpi-card.purple::after { background: #6366f1; }
+    .kpi-card.green::after  { background: #10b981; }
+    .kpi-card.blue::after   { background: #3b82f6; }
+    .kpi-card.amber::after  { background: #f59e0b; }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #94a3b8;
+    }
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 6px 0 4px;
+      letter-spacing: -0.5px;
+    }
+    .kpi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-up   { background: #dcfce7; color: #16a34a; }
+    .badge-down { background: #fee2e2; color: #dc2626; }
+    .kpi-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .kpi-icon {
+      position: absolute;
+      top: 18px; right: 18px;
+      font-size: 20px;
+      opacity: 0.5;
+    }
+
+    /* ── Chart rows ── */
+    .chart-row {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .chart-row.two-col   { grid-template-columns: 2fr 1fr; }
+    .chart-row.three-col { grid-template-columns: 1fr 1fr 1fr; }
+    .chart-row.half      { grid-template-columns: 1fr 1fr; }
+
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      padding: 20px 22px;
+    }
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .chart-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .chart-sub   { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .chart-tag {
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #ede9fe;
+      color: #7c3aed;
+    }
+
+    /* ── Table ── */
+    .table-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .table-head {
+      padding: 18px 22px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .table-search {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left;
+      padding: 10px 22px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    td {
+      padding: 13px 22px;
+      font-size: 13px;
+      color: #334155;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    .product-cell { display: flex; align-items: center; gap: 10px; }
+    .product-img {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .product-name { font-weight: 600; color: #0f172a; font-size: 13px; }
+    .product-sku  { font-size: 11px; color: #94a3b8; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-high   { background: #dcfce7; color: #16a34a; }
+    .status-medium { background: #fef9c3; color: #ca8a04; }
+    .status-low    { background: #fee2e2; color: #dc2626; }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #f1f5f9;
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    /* ── Tooltip customization ── */
+    .custom-tooltip {
+      background: #0f172a;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    .custom-tooltip .label { font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .custom-tooltip .value { color: #a5b4fc; }
+
+    /* ── Loading ── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #f0f2f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { font-size: 13px; color: #64748b; }
+
+    @media (max-width: 1100px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-row.two-col { grid-template-columns: 1fr; }
+      .chart-row.three-col { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>Loading dashboard…</p>
+  </div>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+    const {
+      LineChart, Line, BarChart, Bar, AreaChart, Area,
+      PieChart, Pie, Cell, RadarChart, Radar, PolarGrid,
+      PolarAngleAxis, PolarRadiusAxis,
+      XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+      ResponsiveContainer, ReferenceLine
+    } = Recharts;
+
+    /* ─────────────────── Mock Data ─────────────────── */
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const revenueData = [
+      { month:'Jan', revenue:42800, orders:312, prev:38200 },
+      { month:'Feb', revenue:38500, orders:278, prev:35100 },
+      { month:'Mar', revenue:51200, orders:389, prev:44600 },
+      { month:'Apr', revenue:48900, orders:361, prev:46200 },
+      { month:'May', revenue:63400, orders:471, prev:52800 },
+      { month:'Jun', revenue:71800, orders:534, prev:58300 },
+      { month:'Jul', revenue:68200, orders:502, prev:61100 },
+      { month:'Aug', revenue:79500, orders:589, prev:65400 },
+      { month:'Sep', revenue:85100, orders:632, prev:71200 },
+      { month:'Oct', revenue:91400, orders:678, prev:76800 },
+      { month:'Nov', revenue:112600, orders:834, prev:89300 },
+      { month:'Dec', revenue:134200, orders:991, prev:104700 },
+    ];
+
+    const categoryData = [
+      { name:'Electronics',  revenue:198400, units:1240, color:'#6366f1' },
+      { name:'Clothing',     revenue:145600, units:2890, color:'#10b981' },
+      { name:'Home & Garden',revenue:112300, units:876,  color:'#3b82f6' },
+      { name:'Sports',       revenue:87500,  units:1102, color:'#f59e0b' },
+      { name:'Beauty',       revenue:64200,  units:2340, color:'#ec4899' },
+      { name:'Books',        revenue:31800,  units:1890, color:'#8b5cf6' },
+    ];
+
+    const hourlyData = [
+      { hour:'6am', visitors:120, conversions:8 },
+      { hour:'8am', visitors:340, conversions:28 },
+      { hour:'10am',visitors:680, conversions:62 },
+      { hour:'12pm',visitors:920, conversions:88 },
+      { hour:'2pm', visitors:840, conversions:79 },
+      { hour:'4pm', visitors:1020,conversions:97 },
+      { hour:'6pm', visitors:1240,conversions:124 },
+      { hour:'8pm', visitors:980, conversions:91 },
+      { hour:'10pm',visitors:420, conversions:34 },
+    ];
+
+    const customerData = [
+      { name:'New',      value:38, color:'#6366f1' },
+      { name:'Returning',value:47, color:'#10b981' },
+      { name:'Churned',  value:15, color:'#f1f5f9' },
+    ];
+
+    const topProducts = [
+      { name:'AirPods Pro 2nd Gen',  sku:'EL-1204', emoji:'🎧', cat:'Electronics', sales:2840, revenue:71000,  margin:32, stock:'high'   },
+      { name:'Nike Air Max 270',     sku:'SP-8801', emoji:'👟', cat:'Sports',       sales:2210, revenue:44200,  margin:41, stock:'medium' },
+      { name:'Dyson V15 Vacuum',     sku:'HG-3302', emoji:'🌀', cat:'Home & Garden',sales:1890, revenue:94500,  margin:28, stock:'high'   },
+      { name:'Samsung 55" QLED TV',  sku:'EL-5507', emoji:'📺', cat:'Electronics', sales:1640, revenue:131200, margin:22, stock:'medium' },
+      { name:'Levi 501 Original',    sku:'CL-2201', emoji:'👖', cat:'Clothing',     sales:3120, revenue:93600,  margin:55, stock:'high'   },
+      { name:'Instant Pot Duo 7-qt', sku:'HG-4401', emoji:'🫕', cat:'Home & Garden',sales:1450, revenue:101500, margin:38, stock:'low'    },
+      { name:'The North Face Jacket',sku:'CL-3308', emoji:'🧥', cat:'Clothing',     sales:980,  revenue:107800, margin:44, stock:'low'    },
+      { name:'Kindle Paperwhite',    sku:'BK-0012', emoji:'📖', cat:'Books',        sales:2640, revenue:52800,  margin:30, stock:'high'   },
+    ];
+
+    const trafficSources = [
+      { source:'Organic Search', sessions:48200, cr:3.2, revenue:142600 },
+      { source:'Paid Search',    sessions:31400, cr:4.8, revenue:118200 },
+      { source:'Social Media',   sessions:22800, cr:2.1, revenue:64300  },
+      { source:'Email',          sessions:18600, cr:5.9, revenue:87400  },
+      { source:'Direct',         sessions:14200, cr:3.7, revenue:51800  },
+      { source:'Referral',       sessions:8900,  cr:2.9, revenue:31200  },
+    ];
+
+    const performanceRadar = [
+      { metric:'Revenue',   score:88 },
+      { metric:'Traffic',   score:73 },
+      { metric:'Conversion',score:65 },
+      { metric:'Retention', score:79 },
+      { metric:'Avg Order', score:82 },
+      { metric:'NPS',       score:91 },
+    ];
+
+    /* ─────────────────── Formatters ─────────────────── */
+    const fmtK  = v => v >= 1000 ? `$${(v/1000).toFixed(1)}k` : `$${v}`;
+    const fmtN  = v => v >= 1000 ? `${(v/1000).toFixed(1)}k`  : v;
+    const fmtPct= v => `${v}%`;
+
+    /* ─────────────────── Custom Tooltip ─────────────────── */
+    const DarkTooltip = ({ active, payload, label }) => {
+      if (!active || !payload?.length) return null;
+      return (
+        <div className="custom-tooltip">
+          <div className="label">{label}</div>
+          {payload.map((p, i) => (
+            <div key={i} className="value" style={{ color: p.color || '#a5b4fc' }}>
+              {p.name}: {typeof p.value === 'number' && p.value > 999
+                ? (p.name?.toLowerCase().includes('revenue') || p.name?.toLowerCase().includes('prev')
+                    ? fmtK(p.value) : fmtN(p.value))
+                : p.value}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    /* ─────────────────── KPI Card ─────────────────── */
+    const KPICard = ({ label, value, badge, badgeDir, sub, color, icon }) => (
+      <div className={`kpi-card ${color}`}>
+        <div className="kpi-icon">{icon}</div>
+        <div className="kpi-label">{label}</div>
+        <div className="kpi-value">{value}</div>
+        <span className={`kpi-badge ${badgeDir === 'up' ? 'badge-up' : 'badge-down'}`}>
+          {badgeDir === 'up' ? '↑' : '↓'} {badge}
+        </span>
+        <div className="kpi-sub">{sub}</div>
+      </div>
+    );
+
+    /* ─────────────────── Nav Item ─────────────────── */
+    const NavItem = ({ icon, label, active, onClick }) => (
+      <div className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
+        <span className="nav-icon">{icon}</span> {label}
+      </div>
+    );
+
+    /* ─────────────────── Main App ─────────────────── */
+    function App() {
+      const [activeNav, setActiveNav] = useState('Overview');
+      const [range, setRange] = useState('Last 12 months');
+
+      const totalRevenue = revenueData.reduce((s,d) => s + d.revenue, 0);
+      const totalOrders  = revenueData.reduce((s,d) => s + d.orders, 0);
+      const avgOrder     = Math.round(totalRevenue / totalOrders);
+      const convRate     = 3.8;
+
+      return (
+        <>
+          {/* Sidebar */}
+          <aside className="sidebar">
+            <div className="sidebar-brand">
+              <h1>🛍 StoreIQ</h1>
+              <p>Analytics Dashboard</p>
+            </div>
+            <nav className="sidebar-nav">
+              <div className="nav-section">Analytics</div>
+              {[
+                { icon:'📊', label:'Overview'   },
+                { icon:'💰', label:'Revenue'    },
+                { icon:'📦', label:'Products'   },
+                { icon:'👥', label:'Customers'  },
+              ].map(n => (
+                <NavItem key={n.label} {...n}
+                  active={activeNav === n.label}
+                  onClick={() => setActiveNav(n.label)} />
+              ))}
+              <div className="nav-section" style={{marginTop:16}}>Store</div>
+              {[
+                { icon:'🏪', label:'Inventory'  },
+                { icon:'🚚', label:'Orders'     },
+                { icon:'⭐', label:'Reviews'    },
+                { icon:'⚙️', label:'Settings'   },
+              ].map(n => (
+                <NavItem key={n.label} {...n}
+                  active={activeNav === n.label}
+                  onClick={() => setActiveNav(n.label)} />
+              ))}
+            </nav>
+            <div className="sidebar-footer">
+              <div className="avatar-row">
+                <div className="avatar">R</div>
+                <div className="avatar-info">
+                  <p>Rhaswin Lee</p>
+                  <span>Store Admin</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main className="main">
+            {/* Topbar */}
+            <header className="topbar">
+              <div className="topbar-left">
+                <h2>{activeNav}</h2>
+                <p>Welcome back — here's what's happening today.</p>
+              </div>
+              <div className="topbar-right">
+                <div className="date-range">
+                  📅 {range}
+                </div>
+                <button className="btn-export">↓ Export</button>
+              </div>
+            </header>
+
+            {/* Content */}
+            <div className="content">
+
+              {/* KPI Row */}
+              <div className="kpi-grid">
+                <KPICard
+                  label="Total Revenue" value="$887.6k"
+                  badge="18.4%" badgeDir="up"
+                  sub="vs $748.4k last year"
+                  color="purple" icon="💵" />
+                <KPICard
+                  label="Total Orders" value="5,571"
+                  badge="22.1%" badgeDir="up"
+                  sub="Avg 464 / month"
+                  color="green" icon="📦" />
+                <KPICard
+                  label="Avg Order Value" value="$159"
+                  badge="3.2%" badgeDir="down"
+                  sub="Target $175"
+                  color="blue" icon="🎯" />
+                <KPICard
+                  label="Conversion Rate" value="3.8%"
+                  badge="0.4pp" badgeDir="up"
+                  sub="Industry avg: 2.9%"
+                  color="amber" icon="⚡" />
+              </div>
+
+              {/* Revenue Area + Customer Donut */}
+              <div className="chart-row two-col">
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Revenue vs Prior Year</div>
+                      <div className="chart-sub">Monthly comparison across all channels</div>
+                    </div>
+                    <span className="chart-tag">+18.4% YoY</span>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={revenueData} margin={{ top:4, right:4, left:-10, bottom:0 }}>
+                      <defs>
+                        <linearGradient id="gRev" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.25}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="gPrev" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#94a3b8" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                      <XAxis dataKey="month" tick={{ fontSize:11, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <YAxis tickFormatter={fmtK} tick={{ fontSize:11, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <Tooltip content={<DarkTooltip />}/>
+                      <Area type="monotone" dataKey="prev"    name="Prior Year" stroke="#94a3b8" strokeWidth={1.5} fill="url(#gPrev)" dot={false} strokeDasharray="4 3"/>
+                      <Area type="monotone" dataKey="revenue" name="Revenue"    stroke="#6366f1" strokeWidth={2.5} fill="url(#gRev)"  dot={false}/>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Customer Mix</div>
+                      <div className="chart-sub">New vs returning vs churned</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={customerData} cx="50%" cy="50%" innerRadius={48} outerRadius={72}
+                        paddingAngle={3} dataKey="value" startAngle={90} endAngle={-270}>
+                        {customerData.map((d,i) => <Cell key={i} fill={d.color}/>)}
+                      </Pie>
+                      <Tooltip formatter={v => `${v}%`}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8, marginTop:8 }}>
+                    {customerData.map(d => (
+                      <div key={d.name} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                          <div style={{ width:10, height:10, borderRadius:3, background:d.color }}/>
+                          <span style={{ fontSize:12, color:'#64748b' }}>{d.name}</span>
+                        </div>
+                        <span style={{ fontSize:13, fontWeight:700, color:'#0f172a' }}>{d.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Bars + Orders + Radar */}
+              <div className="chart-row three-col">
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Revenue by Category</div>
+                      <div className="chart-sub">YTD performance</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={categoryData} layout="vertical" margin={{ top:0, right:8, left:0, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9"/>
+                      <XAxis type="number" tickFormatter={fmtK} tick={{ fontSize:11, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:'#64748b' }} axisLine={false} tickLine={false} width={88}/>
+                      <Tooltip formatter={v => fmtK(v)} content={<DarkTooltip />}/>
+                      <Bar dataKey="revenue" name="Revenue" radius={[0,4,4,0]}>
+                        {categoryData.map((d,i) => <Cell key={i} fill={d.color}/>)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Daily Traffic</div>
+                      <div className="chart-sub">Sessions & conversions by hour</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={hourlyData} margin={{ top:4, right:4, left:-16, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                      <XAxis dataKey="hour" tick={{ fontSize:10, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <YAxis tick={{ fontSize:10, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <Tooltip content={<DarkTooltip />}/>
+                      <Line type="monotone" dataKey="visitors"    name="Visitors"    stroke="#3b82f6" strokeWidth={2} dot={false}/>
+                      <Line type="monotone" dataKey="conversions" name="Conversions" stroke="#10b981" strokeWidth={2} dot={false}/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Store Health</div>
+                      <div className="chart-sub">Key performance metrics</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <RadarChart data={performanceRadar} cx="50%" cy="50%" outerRadius={72}>
+                      <PolarGrid stroke="#e2e8f0"/>
+                      <PolarAngleAxis dataKey="metric" tick={{ fontSize:10, fill:'#64748b' }}/>
+                      <PolarRadiusAxis angle={30} domain={[0,100]} tick={false} axisLine={false}/>
+                      <Radar name="Score" dataKey="score" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} strokeWidth={2}/>
+                      <Tooltip content={<DarkTooltip />}/>
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+              </div>
+
+              {/* Traffic Sources */}
+              <div className="chart-row half" style={{ marginBottom:16 }}>
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Traffic Sources</div>
+                      <div className="chart-sub">Sessions, conversion rate & revenue</div>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                    {trafficSources.map((t, i) => {
+                      const maxSessions = trafficSources[0].sessions;
+                      const pct = Math.round((t.sessions / maxSessions) * 100);
+                      return (
+                        <div key={t.source}>
+                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#334155' }}>{t.source}</span>
+                            <div style={{ display:'flex', gap:16 }}>
+                              <span style={{ fontSize:11, color:'#94a3b8' }}>{fmtN(t.sessions)} sessions</span>
+                              <span style={{ fontSize:11, color:'#10b981', fontWeight:600 }}>{t.cr}% CR</span>
+                              <span style={{ fontSize:12, fontWeight:700, color:'#0f172a' }}>{fmtK(t.revenue)}</span>
+                            </div>
+                          </div>
+                          <div className="progress-bar">
+                            <div className="progress-fill" style={{ width:`${pct}%`, opacity: 0.6 + i*0.05 }}/>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-header">
+                    <div>
+                      <div className="chart-title">Monthly Orders</div>
+                      <div className="chart-sub">Order volume trend</div>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={revenueData} margin={{ top:4, right:4, left:-16, bottom:0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
+                      <XAxis dataKey="month" tick={{ fontSize:11, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <YAxis tick={{ fontSize:11, fill:'#94a3b8' }} axisLine={false} tickLine={false}/>
+                      <Tooltip content={<DarkTooltip />}/>
+                      <Bar dataKey="orders" name="Orders" fill="#6366f1" radius={[4,4,0,0]} maxBarSize={32}>
+                        {revenueData.map((_, i) => (
+                          <Cell key={i} fill={i === revenueData.length-1 ? '#6366f1' : '#ede9fe'}
+                            stroke={i === revenueData.length-1 ? '#6366f1' : 'none'}/>
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Top Products Table */}
+              <div className="table-card">
+                <div className="table-head">
+                  <div>
+                    <div className="chart-title">Top Products</div>
+                    <div className="chart-sub">Best performing items by revenue</div>
+                  </div>
+                  <div className="table-search">🔍 Search products</div>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Category</th>
+                      <th>Sales</th>
+                      <th>Revenue</th>
+                      <th>Margin</th>
+                      <th>Stock</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topProducts.map(p => (
+                      <tr key={p.sku}>
+                        <td>
+                          <div className="product-cell">
+                            <div className="product-img" style={{ background:'#f8fafc' }}>{p.emoji}</div>
+                            <div>
+                              <div className="product-name">{p.name}</div>
+                              <div className="product-sku">{p.sku}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ color:'#64748b', fontSize:12 }}>{p.cat}</td>
+                        <td style={{ fontWeight:600 }}>{p.sales.toLocaleString()}</td>
+                        <td style={{ fontWeight:700, color:'#0f172a' }}>${p.revenue.toLocaleString()}</td>
+                        <td>
+                          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#334155', width:32 }}>{p.margin}%</span>
+                            <div className="progress-bar" style={{ width:60 }}>
+                              <div className="progress-fill" style={{ width:`${p.margin*1.4}%` }}/>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-pill status-${p.stock}`}>
+                            {p.stock === 'high' ? '● In stock' : p.stock === 'medium' ? '◐ Limited' : '○ Low stock'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>{/* /content */}
+          </main>
+        </>
+      );
+    }
+
+    /* ─── Mount ─── */
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+    document.getElementById('loading').style.display = 'none';
+  </script>
+</body>
+</html>
