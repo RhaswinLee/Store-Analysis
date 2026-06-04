@@ -1,652 +1,1309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Store Analysis Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYGR — Business Intelligence Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --card: #1c2333;
+  --border: #30363d; --border-sub: #21262d;
+  --t1: #e6edf3; --t2: #8b949e; --t3: #6e7681;
+  --indigo: #6366f1; --indigo-d: rgba(99,102,241,.14);
+  --shopee: #f97316; --shopee-d: rgba(249,115,22,.14);
+  --tiktok: #f43f5e; --tiktok-d: rgba(244,63,94,.14);
+  --green: #3fb950; --green-d: rgba(63,185,80,.14);
+  --red: #f85149; --red-d: rgba(248,81,73,.14);
+  --amber: #d29922; --amber-d: rgba(210,153,34,.14);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f0f2f5;
-      color: #1a1d23;
-      min-height: 100vh;
-    }
+/* SIDEBAR */
+.sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
+.sb-brand{padding:18px 16px 14px;border-bottom:1px solid var(--border-sub)}
+.sb-logo{display:flex;align-items:center;gap:10px}
+.sb-icon{width:32px;height:32px;background:linear-gradient(135deg,#f97316,#f43f5e);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;letter-spacing:-1px}
+.sb-text h1{font-size:14px;font-weight:700}
+.sb-text p{font-size:10px;color:var(--t3);margin-top:1px}
+.sb-nav{flex:1;padding:10px 0}
+.sb-section{padding:6px 16px 3px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 16px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .15s;position:relative;border-left:3px solid transparent}
+.sb-item:hover{color:var(--t1);background:rgba(255,255,255,.04)}
+.sb-item.active{color:var(--t1);background:var(--indigo-d);border-left-color:var(--indigo)}
+.sb-badge{margin-left:auto;padding:1px 6px;background:var(--indigo-d);color:var(--indigo);border-radius:10px;font-size:10px;font-weight:600}
+.sb-footer{padding:12px 16px;border-top:1px solid var(--border-sub)}
+.sb-user{display:flex;align-items:center;gap:9px}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.sb-uinfo p{font-size:12px;font-weight:600}
+.sb-uinfo span{font-size:10px;color:var(--t3)}
 
-    /* ── Sidebar ── */
-    .sidebar {
-      position: fixed;
-      top: 0; left: 0;
-      width: 220px;
-      height: 100vh;
-      background: #0f172a;
-      display: flex;
-      flex-direction: column;
-      padding: 0 0 24px;
-      z-index: 100;
-    }
-    .sidebar-brand {
-      padding: 24px 20px 20px;
-      border-bottom: 1px solid #1e293b;
-    }
-    .sidebar-brand h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
-    .sidebar-brand p  { font-size: 11px; color: #64748b; margin-top: 2px; }
-    .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
-    .nav-section {
-      padding: 8px 20px 4px;
-      font-size: 10px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.8px;
-      color: #475569;
-    }
-    .nav-item {
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 20px;
-      font-size: 13px; color: #94a3b8;
-      cursor: pointer; transition: all 0.15s;
-      border-left: 3px solid transparent;
-    }
-    .nav-item:hover { color: #e2e8f0; background: #1e293b; }
-    .nav-item.active { color: #fff; background: #1e293b; border-left-color: #6366f1; }
-    .nav-icon { font-size: 15px; width: 18px; text-align: center; }
-    .sidebar-footer { padding: 16px 20px 0; border-top: 1px solid #1e293b; }
-    .avatar-row { display: flex; align-items: center; gap: 10px; }
-    .avatar {
-      width: 32px; height: 32px; border-radius: 50%;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 700; color: #fff;
-    }
-    .avatar-info p    { font-size: 12px; font-weight: 600; color: #e2e8f0; }
-    .avatar-info span { font-size: 11px; color: #64748b; }
+/* MAIN */
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
 
-    /* ── Main ── */
-    .main { margin-left: 220px; min-height: 100vh; display: flex; flex-direction: column; }
+/* SYNC BANNER */
+.sync-banner{background:var(--surface);border-bottom:1px solid var(--border-sub);padding:7px 22px;display:flex;align-items:center;gap:10px;font-size:11px}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sync-dot.idle{background:var(--t3)}
+.sync-dot.connected{background:var(--green);box-shadow:0 0 5px var(--green)}
+.sync-dot.fetching{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-text{flex:1;color:var(--t2)}
+.sync-text strong{color:var(--t1)}
+.sync-inp{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:11px;color:var(--t1);width:260px;outline:none}
+.sync-inp:focus{border-color:var(--indigo)}
+.sync-inp::placeholder{color:var(--t3)}
+.btn-sm{padding:3px 10px;border:none;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.btn-sm:hover{opacity:.85}
+.btn-sm.primary{background:var(--indigo);color:#fff}
+.btn-sm.ghost{background:rgba(255,255,255,.06);color:var(--t2);border:1px solid var(--border)}
 
-    /* ── Topbar ── */
-    .topbar {
-      background: #fff; border-bottom: 1px solid #e2e8f0;
-      padding: 0 28px; height: 60px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 50;
-    }
-    .topbar-left h2 { font-size: 18px; font-weight: 700; color: #0f172a; }
-    .topbar-left p  { font-size: 12px; color: #64748b; }
-    .topbar-right   { display: flex; align-items: center; gap: 12px; }
-    .date-range {
-      display: flex; align-items: center; gap: 6px;
-      padding: 7px 14px; background: #f8fafc;
-      border: 1px solid #e2e8f0; border-radius: 8px;
-      font-size: 12px; color: #475569; cursor: pointer;
-    }
-    .btn-export {
-      padding: 7px 16px; background: #6366f1; color: #fff;
-      border: none; border-radius: 8px; font-size: 12px;
-      font-weight: 600; cursor: pointer;
-    }
-    .btn-export:hover { background: #4f46e5; }
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 22px;display:flex;align-items:center;justify-content:space-between;height:50px;position:sticky;top:0;z-index:50;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:15px;font-weight:700;white-space:nowrap}
 
-    /* ── Content ── */
-    .content { padding: 24px 28px; flex: 1; }
+/* Platform Tabs */
+.ptabs{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:2px;gap:2px}
+.ptab{padding:4px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;color:var(--t3);transition:all .15s;white-space:nowrap}
+.ptab:hover{color:var(--t1)}
+.ptab.active[data-p="all"]{background:var(--indigo);color:#fff}
+.ptab.active[data-p="shopee"]{background:var(--shopee);color:#fff}
+.ptab.active[data-p="tiktok"]{background:var(--tiktok);color:#fff}
 
-    /* ── KPI Cards ── */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px; margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: #fff; border-radius: 12px;
-      padding: 20px 22px; border: 1px solid #e2e8f0;
-      position: relative; overflow: hidden;
-    }
-    .kpi-label {
-      font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8;
-    }
-    .kpi-value {
-      font-size: 26px; font-weight: 800; color: #0f172a;
-      margin: 6px 0 4px; letter-spacing: -0.5px;
-    }
-    .kpi-badge {
-      display: inline-flex; align-items: center; gap: 3px;
-      padding: 2px 8px; border-radius: 100px;
-      font-size: 11px; font-weight: 600;
-    }
-    .badge-up   { background: #dcfce7; color: #16a34a; }
-    .badge-down { background: #fee2e2; color: #dc2626; }
-    .kpi-sub  { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-    .kpi-icon { position: absolute; top: 18px; right: 18px; font-size: 22px; opacity: 0.4; }
+/* Date Controls */
+.date-row{display:flex;align-items:center;gap:4px}
+.date-btn{padding:4px 10px;border:1px solid var(--border);border-radius:5px;background:transparent;color:var(--t2);font-size:11px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.date-btn:hover{border-color:var(--indigo);color:var(--t1)}
+.date-btn.active{background:var(--indigo-d);border-color:var(--indigo);color:var(--indigo)}
+.vr{width:1px;height:14px;background:var(--border);margin:0 2px}
 
-    /* ── Chart grid ── */
-    .chart-row { display: grid; gap: 16px; margin-bottom: 16px; }
-    .two-col   { grid-template-columns: 2fr 1fr; }
-    .three-col { grid-template-columns: 1fr 1fr 1fr; }
-    .half      { grid-template-columns: 1fr 1fr; }
+/* CONTENT */
+.content{padding:18px 22px;flex:1}
 
-    .chart-card {
-      background: #fff; border-radius: 12px;
-      border: 1px solid #e2e8f0; padding: 20px 22px;
-    }
-    .chart-header {
-      display: flex; align-items: flex-start;
-      justify-content: space-between; margin-bottom: 18px;
-    }
-    .chart-title { font-size: 14px; font-weight: 700; color: #0f172a; }
-    .chart-sub   { font-size: 11px; color: #94a3b8; margin-top: 2px; }
-    .chart-tag {
-      padding: 3px 10px; border-radius: 100px;
-      font-size: 11px; font-weight: 600;
-      background: #ede9fe; color: #7c3aed;
-      white-space: nowrap;
-    }
-    .canvas-wrap { position: relative; }
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--border-sub);border-radius:9px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--t3);margin-bottom:5px}
+.kpi-val{font-size:20px;font-weight:800;letter-spacing:-.5px;line-height:1;margin-bottom:5px}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
+.chip.up{background:var(--green-d);color:var(--green)}
+.chip.down{background:var(--red-d);color:var(--red)}
+.chip.warn{background:var(--amber-d);color:var(--amber)}
+.kpi-sub{font-size:10px;color:var(--t3);margin-top:3px}
+.kpi-ico{position:absolute;top:12px;right:12px;font-size:18px;opacity:.25}
 
-    /* ── Donut legend ── */
-    .donut-legend { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-    .legend-row { display: flex; align-items: center; justify-content: space-between; }
-    .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-    .legend-label { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 8px; }
-    .legend-val   { font-size: 13px; font-weight: 700; color: #0f172a; }
+/* CHART GRID */
+.cg{display:grid;gap:14px;margin-bottom:14px}
+.cg-2{grid-template-columns:1fr 1fr}
+.cg-3{grid-template-columns:1fr 1fr 1fr}
+.cg-21{grid-template-columns:2fr 1fr}
+.cg-12{grid-template-columns:1fr 2fr}
+.cg-31{grid-template-columns:3fr 1fr}
 
-    /* ── Traffic sources ── */
-    .source-list { display: flex; flex-direction: column; gap: 14px; }
-    .source-row  {}
-    .source-meta { display: flex; justify-content: space-between; margin-bottom: 5px; }
-    .source-name { font-size: 12px; font-weight: 600; color: #334155; }
-    .source-stats { display: flex; gap: 16px; }
-    .source-sessions { font-size: 11px; color: #94a3b8; }
-    .source-cr       { font-size: 11px; color: #10b981; font-weight: 600; }
-    .source-rev      { font-size: 12px; font-weight: 700; color: #0f172a; }
-    .progress-bar { width: 100%; height: 6px; background: #f1f5f9; border-radius: 100px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.cc{background:var(--card);border:1px solid var(--border-sub);border-radius:9px;padding:16px}
+.cc-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.cc-title{font-size:13px;font-weight:700}
+.cc-sub{font-size:10px;color:var(--t3);margin-top:2px}
+.tag{padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600}
+.tag-g{background:var(--green-d);color:var(--green)}
+.tag-r{background:var(--red-d);color:var(--red)}
+.tag-a{background:var(--amber-d);color:var(--amber)}
+.tag-i{background:var(--indigo-d);color:var(--indigo)}
+.tag-s{background:var(--shopee-d);color:var(--shopee)}
+.tag-t{background:var(--tiktok-d);color:var(--tiktok)}
 
-    /* ── Table ── */
-    .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
-    .table-head {
-      padding: 18px 22px 14px;
-      display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid #f1f5f9;
-    }
-    table { width: 100%; border-collapse: collapse; }
-    th {
-      text-align: left; padding: 10px 22px;
-      font-size: 11px; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      color: #94a3b8; background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    td { padding: 13px 22px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f8fafc; }
-    .product-cell { display: flex; align-items: center; gap: 10px; }
-    .product-img  { width: 34px; height: 34px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-    .product-name { font-weight: 600; color: #0f172a; font-size: 13px; }
-    .product-sku  { font-size: 11px; color: #94a3b8; }
-    .status-pill  { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
-    .status-high   { background: #dcfce7; color: #16a34a; }
-    .status-medium { background: #fef9c3; color: #ca8a04; }
-    .status-low    { background: #fee2e2; color: #dc2626; }
-    .margin-bar { display: flex; align-items: center; gap: 8px; }
-    .margin-num { font-size: 12px; font-weight: 600; color: #334155; width: 32px; }
-    .mini-bar { width: 60px; height: 6px; background: #f1f5f9; border-radius: 100px; overflow: hidden; }
-    .mini-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg,#6366f1,#8b5cf6); }
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.lg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--t2)}
+.lg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.lg-line{width:14px;height:2px;flex-shrink:0}
 
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+/* CHANNEL BARS */
+.ch-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.ch-row{}
+.ch-meta{display:flex;justify-content:space-between;margin-bottom:4px}
+.ch-name{font-size:11px;color:var(--t2)}
+.ch-val{font-size:11px;font-weight:700;color:var(--t1)}
+.ch-track{height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
+.ch-fill{height:100%;border-radius:3px}
 
-    @media (max-width: 1100px) {
-      .kpi-grid  { grid-template-columns: repeat(2,1fr); }
-      .two-col   { grid-template-columns: 1fr; }
-      .three-col { grid-template-columns: 1fr 1fr; }
-    }
-  </style>
+/* SECTION HEADER */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.sh-title{font-size:13px;font-weight:700}
+.sh-sub{font-size:10px;color:var(--t3)}
+
+/* PRODUCT TABLE */
+.tbl-wrap{background:var(--card);border:1px solid var(--border-sub);border-radius:9px;overflow:hidden;margin-bottom:14px}
+.tbl-head{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-sub)}
+table{width:100%;border-collapse:collapse}
+th{padding:8px 16px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);background:rgba(255,255,255,.02);border-bottom:1px solid var(--border-sub)}
+td{padding:11px 16px;font-size:11px;color:var(--t2);border-bottom:1px solid rgba(33,38,45,.8)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.prod-cell{display:flex;align-items:center;gap:9px}
+.prod-em{font-size:16px;width:28px;text-align:center;flex-shrink:0}
+.prod-name{font-size:12px;font-weight:600;color:var(--t1)}
+.prod-sku{font-size:10px;color:var(--t3)}
+.alert{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600}
+.alert-r{background:var(--red-d);color:var(--red)}
+.alert-a{background:var(--amber-d);color:var(--amber)}
+.alert-g{background:var(--green-d);color:var(--green)}
+.miniprog{width:52px;height:4px;background:var(--bg);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle}
+.minifill{height:100%;border-radius:2px}
+
+/* BUYERS */
+.buyer-list{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.buyer-row{}
+.buyer-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--t2);margin-bottom:4px}
+.buyer-track{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex}
+.b-new{background:#f97316}
+.b-ex{background:#6366f1}
+
+/* RECO PANEL */
+.reco-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.reco{background:var(--card);border:1px solid var(--border-sub);border-radius:9px;padding:14px}
+.reco-hd{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.reco-ico{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.reco-ttl{font-size:12px;font-weight:700}
+.reco-type{font-size:10px;color:var(--t3)}
+.reco-body{font-size:11px;color:var(--t2);line-height:1.6}
+.reco-metric{background:var(--bg);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:10px;font-weight:700;color:var(--t1);display:inline-block}
+.reco-cta{margin-top:10px;padding:9px 11px;background:var(--bg);border-radius:6px;font-size:10px;color:var(--t2);line-height:1.5;border-left:3px solid var(--indigo)}
+.reco-cta.o{border-left-color:var(--shopee)}
+.reco-cta.p{border-left-color:var(--tiktok)}
+.reco-cta.g{border-left-color:var(--green)}
+.reco-cta strong{color:var(--t1)}
+
+/* HEALTH */
+.health-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.hc{background:var(--card);border:1px solid var(--border-sub);border-radius:9px;padding:12px;text-align:center}
+.hc-val{font-size:18px;font-weight:800;margin-bottom:3px}
+.hc-val.ok{color:var(--green)}
+.hc-val.warn{color:var(--amber)}
+.hc-val.fail{color:var(--red)}
+.hc-label{font-size:10px;color:var(--t3);margin-bottom:5px}
+.hc-target{font-size:9px;color:var(--t3)}
+.hc-badge{margin-top:5px;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;display:inline-block}
+.hc-badge.ok{background:var(--green-d);color:var(--green)}
+.hc-badge.warn{background:var(--amber-d);color:var(--amber)}
+.hc-badge.fail{background:var(--red-d);color:var(--red)}
+
+/* PREFERRED BANNER */
+.preferred{background:linear-gradient(135deg,rgba(210,153,34,.08),rgba(210,153,34,.03));border:1px solid rgba(210,153,34,.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px;font-size:11px;color:var(--t2)}
+.preferred strong{color:var(--amber)}
+.preferred-alert{margin-left:auto;padding:3px 8px;background:var(--red-d);color:var(--red);border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+
+/* PANEL HIDE/SHOW */
+.panel{display:none}
+.panel.on{display:block}
+
+/* ADS TABLE */
+.ads-table td:first-child{font-weight:600;color:var(--t1)}
+.roi-good{color:var(--green);font-weight:700}
+.roi-warn{color:var(--amber);font-weight:700}
+.roi-bad{color:var(--red);font-weight:700}
+
+/* STATS ROW */
+.stats-row{display:flex;gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--border-sub);border-radius:8px;padding:12px 14px;flex:1}
+.stat-val{font-size:16px;font-weight:800;color:var(--t1);margin-bottom:2px}
+.stat-label{font-size:10px;color:var(--t3)}
+.stat-change{font-size:10px;font-weight:600;margin-top:2px}
+.stat-change.up{color:var(--green)}
+.stat-change.dn{color:var(--red)}
+
+/* Custom range */
+.custom-range{display:none;align-items:center;gap:6px;margin-left:4px}
+.custom-range.show{display:flex}
+.date-inp{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;color:var(--t1);outline:none}
+.date-inp:focus{border-color:var(--indigo)}
+</style>
 </head>
 <body>
 
-<!-- Sidebar -->
+<!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="sidebar-brand">
-    <h1>🛍 StoreIQ</h1>
-    <p>Analytics Dashboard</p>
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <div class="sb-icon">HY</div>
+      <div class="sb-text">
+        <h1>HYGR Analytics</h1>
+        <p>BI Command Center</p>
+      </div>
+    </div>
   </div>
-  <nav class="sidebar-nav">
-    <div class="nav-section">Analytics</div>
-    <div class="nav-item active"><span class="nav-icon">📊</span> Overview</div>
-    <div class="nav-item"><span class="nav-icon">💰</span> Revenue</div>
-    <div class="nav-item"><span class="nav-icon">📦</span> Products</div>
-    <div class="nav-item"><span class="nav-icon">👥</span> Customers</div>
-    <div class="nav-section" style="margin-top:16px">Store</div>
-    <div class="nav-item"><span class="nav-icon">🏪</span> Inventory</div>
-    <div class="nav-item"><span class="nav-icon">🚚</span> Orders</div>
-    <div class="nav-item"><span class="nav-icon">⭐</span> Reviews</div>
-    <div class="nav-item"><span class="nav-icon">⚙️</span> Settings</div>
+  <nav class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active" data-nav="overview">📊 Performance Overview</div>
+    <div class="sb-item" data-nav="shopee">🛒 Shopee Deep Dive</div>
+    <div class="sb-item" data-nav="tiktok">🎵 TikTok Deep Dive</div>
+    <div class="sb-section" style="margin-top:8px">Analysis</div>
+    <div class="sb-item" data-nav="campaigns">🎯 Campaigns</div>
+    <div class="sb-item" data-nav="products">🧴 Product Strategy</div>
+    <div class="sb-item" data-nav="reco">💡 Recommendations <span class="sb-badge">7</span></div>
+    <div class="sb-section" style="margin-top:8px">Operations</div>
+    <div class="sb-item" data-nav="health">🏥 Account Health</div>
+    <div class="sb-item" data-nav="sync">🔗 Data Sync</div>
   </nav>
-  <div class="sidebar-footer">
-    <div class="avatar-row">
-      <div class="avatar">R</div>
-      <div class="avatar-info">
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar">RL</div>
+      <div class="sb-uinfo">
         <p>Rhaswin Lee</p>
-        <span>Store Admin</span>
+        <span>Store Admin · HYGR</span>
       </div>
     </div>
   </div>
 </aside>
 
-<!-- Main -->
+<!-- MAIN -->
 <main class="main">
-  <header class="topbar">
-    <div class="topbar-left">
-      <h2>Overview</h2>
-      <p>Welcome back — here's what's happening today.</p>
-    </div>
-    <div class="topbar-right">
-      <div class="date-range">📅 Last 12 months</div>
-      <button class="btn-export">↓ Export</button>
-    </div>
-  </header>
 
+  <!-- SYNC BANNER -->
+  <div class="sync-banner">
+    <div class="sync-dot idle" id="syncDot"></div>
+    <div class="sync-text" id="syncText">Connect Google Sheets for live data — mock data active</div>
+    <input class="sync-inp" id="driveInp" placeholder="Paste Google Sheets share link…" />
+    <button class="btn-sm primary" onclick="doSync()">⟳ Sync</button>
+    <button class="btn-sm ghost" onclick="clearSync()">Clear</button>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-title" id="pageTitle">Performance Overview</span>
+    </div>
+    <div class="ptabs" id="ptabs">
+      <div class="ptab active" data-p="all">All Platforms</div>
+      <div class="ptab" data-p="shopee">🛒 Shopee</div>
+      <div class="ptab" data-p="tiktok">🎵 TikTok</div>
+    </div>
+    <div class="date-row">
+      <button class="date-btn" data-d="1m">Last Month</button>
+      <button class="date-btn active" data-d="3m">Last 3 Months</button>
+      <button class="date-btn" data-d="12m">Full Year</button>
+      <div class="vr"></div>
+      <button class="date-btn" data-d="custom">Custom ▾</button>
+      <div class="custom-range" id="customRange">
+        <input type="month" class="date-inp" id="customStart" value="2026-01">
+        <span style="color:var(--t3);font-size:11px">→</span>
+        <input type="month" class="date-inp" id="customEnd" value="2026-03">
+        <button class="btn-sm primary" onclick="applyCustom()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
   <div class="content">
 
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-icon">💵</div>
-        <div class="kpi-label">Total Revenue</div>
-        <div class="kpi-value">$887.6k</div>
-        <span class="kpi-badge badge-up">↑ 18.4%</span>
-        <div class="kpi-sub">vs $748.4k last year</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">📦</div>
-        <div class="kpi-label">Total Orders</div>
-        <div class="kpi-value">5,571</div>
-        <span class="kpi-badge badge-up">↑ 22.1%</span>
-        <div class="kpi-sub">Avg 464 / month</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">🎯</div>
-        <div class="kpi-label">Avg Order Value</div>
-        <div class="kpi-value">$159</div>
-        <span class="kpi-badge badge-down">↓ 3.2%</span>
-        <div class="kpi-sub">Target $175</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-icon">⚡</div>
-        <div class="kpi-label">Conversion Rate</div>
-        <div class="kpi-value">3.8%</div>
-        <span class="kpi-badge badge-up">↑ 0.4pp</span>
-        <div class="kpi-sub">Industry avg: 2.9%</div>
-      </div>
-    </div>
-
-    <!-- Revenue + Customer Mix -->
-    <div class="chart-row two-col">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Revenue vs Prior Year</div>
-            <div class="chart-sub">Monthly comparison across all channels</div>
+    <!-- ═══ OVERVIEW PANEL ═══ -->
+    <div class="panel on" id="panel-overview">
+      <div class="kpi-grid" id="kpiRow"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Revenue Trend</div><div class="cc-sub">Monthly GMV · Shopee + TikTok</div></div>
+            <span class="tag tag-g" id="revTag"></span>
           </div>
-          <span class="chart-tag">+18.4% YoY</span>
+          <canvas id="revChart" height="200"></canvas>
+          <div class="legend" id="revLegend"></div>
         </div>
-        <div class="canvas-wrap"><canvas id="revenueChart" height="200"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Customer Mix</div>
-            <div class="chart-sub">New vs returning vs churned</div>
-          </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Platform Split</div><div class="cc-sub">Revenue share 2026</div></div></div>
+          <canvas id="splitChart" height="200"></canvas>
+          <div id="splitLegend" style="margin-top:10px"></div>
         </div>
-        <div class="canvas-wrap"><canvas id="donutChart" height="180"></canvas></div>
-        <div class="donut-legend">
-          <div class="legend-row">
-            <div class="legend-label"><div class="legend-dot" style="background:#6366f1"></div>New</div>
-            <div class="legend-val">38%</div>
-          </div>
-          <div class="legend-row">
-            <div class="legend-label"><div class="legend-dot" style="background:#10b981"></div>Returning</div>
-            <div class="legend-val">47%</div>
-          </div>
-          <div class="legend-row">
-            <div class="legend-label"><div class="legend-dot" style="background:#e2e8f0"></div>Churned</div>
-            <div class="legend-val">15%</div>
-          </div>
+      </div>
+      <div class="cg cg-3">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Orders Trend</div><div class="cc-sub">Combined monthly orders</div></div></div>
+          <canvas id="ordersChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Order CR % by month</div></div></div>
+          <canvas id="crChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Basket Size (AOV)</div><div class="cc-sub">Average order value RM</div></div></div>
+          <canvas id="aovChart" height="180"></canvas>
         </div>
       </div>
     </div>
 
-    <!-- Category + Traffic + Radar -->
-    <div class="chart-row three-col">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Revenue by Category</div>
-            <div class="chart-sub">YTD performance</div>
+    <!-- ═══ SHOPEE PANEL ═══ -->
+    <div class="panel" id="panel-shopee">
+      <div class="kpi-grid" id="shopeeKpi"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Shopee Monthly Revenue</div><div class="cc-sub">2025 vs 2026 comparison</div></div>
+            <span class="tag tag-s">Shopee</span>
+          </div>
+          <canvas id="shopeeRevChart" height="200"></canvas>
+          <div class="legend">
+            <div class="lg-item"><div class="lg-line" style="background:#f97316"></div>2025</div>
+            <div class="lg-item"><div class="lg-line" style="background:#6366f1;border-top:2px dashed #6366f1"></div>2026</div>
           </div>
         </div>
-        <div class="canvas-wrap"><canvas id="categoryChart" height="200"></canvas></div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub">Mar 2026 contribution</div></div></div>
+          <canvas id="channelDonut" height="180"></canvas>
+          <div class="donut-legend" id="channelLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Daily Traffic</div>
-            <div class="chart-sub">Sessions & conversions by hour</div>
+      <div class="cg cg-3">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Shopee Ads ROI</div><div class="cc-sub">Oct 2025 – Mar 2026</div></div></div>
+          <canvas id="shopeeRoiChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Buyers Composition</div><div class="cc-sub">New vs Existing 2026</div></div></div>
+          <div class="buyer-list" id="buyerList"></div>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub">Feb–Mar 2026</div></div></div>
+          <div class="stats-row" style="flex-direction:column;gap:8px;margin-bottom:0">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="stat"><div class="stat-val">RM157.3k</div><div class="stat-label">Mar Affiliate GMV</div><div class="stat-change up">↑ 1.30% MoM</div></div>
+              <div class="stat"><div class="stat-val">3.3k</div><div class="stat-label">Mar Orders</div><div class="stat-change dn">↓ 6.42% MoM</div></div>
+              <div class="stat"><div class="stat-val">RM10k</div><div class="stat-label">Mar Commission</div><div class="stat-change dn">↓ 4.24%</div></div>
+              <div class="stat"><div class="stat-val">15.7x</div><div class="stat-label">Mar ROI</div><div class="stat-change up">↑ 5.78%</div></div>
+            </div>
           </div>
         </div>
-        <div class="canvas-wrap"><canvas id="trafficChart" height="200"></canvas></div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Store Health</div>
-            <div class="chart-sub">Key performance metrics</div>
-          </div>
+      <!-- Ads table -->
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">Shopee Ads Performance</div><div class="cc-sub">Oct 2025 – Mar 2026</div></div>
+          <span class="tag tag-s">Shopee Ads</span>
         </div>
-        <div class="canvas-wrap"><canvas id="radarChart" height="200"></canvas></div>
+        <table class="ads-table">
+          <thead><tr><th>Month</th><th>Sales</th><th>GMV</th><th>Expense</th><th>ROI</th><th>Visitors</th><th>Impressions</th><th>CPC</th><th>Sales % from Ads</th></tr></thead>
+          <tbody id="shopeeAdsTbl"></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Traffic Sources + Orders -->
-    <div class="chart-row half">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Traffic Sources</div>
-            <div class="chart-sub">Sessions, conversion rate &amp; revenue</div>
+    <!-- ═══ TIKTOK PANEL ═══ -->
+    <div class="panel" id="panel-tiktok">
+      <div class="kpi-grid" id="tiktokKpi"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">TikTok Monthly GMV</div><div class="cc-sub">2025 (Apr-Dec) + 2026 (Jan-Mar)</div></div>
+            <span class="tag tag-t">TikTok Shop</span>
+          </div>
+          <canvas id="ttRevChart" height="200"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Sales Breakdown</div><div class="cc-sub">Product · Video · Live (2026)</div></div></div>
+          <canvas id="ttBreakChart" height="200"></canvas>
+          <div class="legend" style="margin-top:10px">
+            <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Product</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Video</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>Live</div>
           </div>
         </div>
-        <div class="source-list" id="sourceList"></div>
       </div>
-      <div class="chart-card">
-        <div class="chart-header">
-          <div>
-            <div class="chart-title">Monthly Orders</div>
-            <div class="chart-sub">Order volume trend</div>
-          </div>
+      <div class="cg cg-3">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">TikTok Ads (GMV Max)</div><div class="cc-sub">ROI trend — target ≥4.5x</div></div></div>
+          <canvas id="ttAdsChart" height="180"></canvas>
         </div>
-        <div class="canvas-wrap"><canvas id="ordersChart" height="220"></canvas></div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Affiliate GMV</div><div class="cc-sub">Nov 2025 – Mar 2026</div></div></div>
+          <canvas id="ttAffChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Video Views</div><div class="cc-sub">Jan–Mar 2026 engagement</div></div></div>
+          <canvas id="ttViewChart" height="180"></canvas>
+        </div>
+      </div>
+      <!-- TikTok Ads table -->
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">TikTok GMV Max Ads</div><div class="cc-sub">Oct 2025 – Mar 2026 · ROI declining — action needed</div></div>
+          <span class="tag tag-r">ROI Declining</span>
+        </div>
+        <table class="ads-table">
+          <thead><tr><th>Month</th><th>Spend</th><th>Orders</th><th>GMV</th><th>ROI</th><th>Cost/Order</th></tr></thead>
+          <tbody id="ttAdsTbl"></tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Top Products Table -->
-    <div class="table-card">
-      <div class="table-head">
+    <!-- ═══ CAMPAIGNS PANEL ═══ -->
+    <div class="panel" id="panel-campaigns">
+      <div class="cg cg-2">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Shopee Campaign Sales 2025</div><div class="cc-sub">Mega campaign days (1.1–12.12)</div></div>
+            <span class="tag tag-s">Shopee</span>
+          </div>
+          <canvas id="campShopee25" height="220"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Shopee Campaign Sales 2026</div><div class="cc-sub">Q1 campaigns (1.1–3.3)</div></div>
+            <span class="tag tag-g">+AOV ↑ RM65</span>
+          </div>
+          <canvas id="campShopee26" height="220"></canvas>
+        </div>
+      </div>
+      <div class="cg cg-2">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Feb 2026 Promotion Revenue</div><div class="cc-sub">Bundle Deal & Free Gift</div></div><span class="tag tag-g">+226.75% MoM</span></div>
+          <div class="stats-row" style="gap:8px;flex-wrap:wrap">
+            <div class="stat" style="min-width:130px"><div class="stat-val">RM186.8k</div><div class="stat-label">Promo Sales</div><div class="stat-change up">↑ 226.75%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">1,814</div><div class="stat-label">Promo Orders</div><div class="stat-change up">↑ 142.84%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">6,876</div><div class="stat-label">Units Sold</div><div class="stat-change up">↑ 208.48%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">RM108.37</div><div class="stat-label">Sales/Buyer</div><div class="stat-change up">↑ 35.51%</div></div>
+          </div>
+          <div class="tbl-wrap" style="margin-top:12px;margin-bottom:0">
+            <table><thead><tr><th>Promotion</th><th>Type</th><th>Sales</th><th>Orders</th><th>Units</th><th>Sales/Buyer</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:600;color:var(--t1)">GWP 6.2 (RM150)</td><td>Add-on Gift Min. Spend</td><td style="color:var(--green);font-weight:700">RM162.35k</td><td>907</td><td>5,852</td><td>RM188.78</td></tr>
+              <tr><td>2.2 GWP (RM250)</td><td>Add-on Gift Min. Spend</td><td>RM3,604.96</td><td>12</td><td>110</td><td>RM300.41</td></tr>
+              <tr><td>B1F1 Lip Balm</td><td>Discount Promotion</td><td>RM21,796.76</td><td>928</td><td>952</td><td>RM24.46</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Voucher Performance · Feb 2026</div><div class="cc-sub">Cofund voucher analytics</div></div></div>
+          <div class="stats-row" style="gap:8px;flex-wrap:wrap">
+            <div class="stat" style="min-width:130px"><div class="stat-val">RM795.3k</div><div class="stat-label">Voucher Sales</div><div class="stat-change up">↑ 2.09%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">187,226</div><div class="stat-label">Claims</div><div class="stat-change up">↑ 6.92%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">14,303</div><div class="stat-label">Orders</div><div class="stat-change up">↑ 13.52%</div></div>
+            <div class="stat" style="min-width:130px"><div class="stat-val">7.64%</div><div class="stat-label">Usage Rate</div><div class="stat-change up">↑ 0.44%</div></div>
+          </div>
+          <div class="tbl-wrap" style="margin-top:12px;margin-bottom:0">
+            <table><thead><tr><th>Voucher</th><th>Claims</th><th>Orders</th><th>Usage</th><th>Sales</th><th>Cost</th></tr></thead>
+            <tbody>
+              <tr><td style="color:var(--t1)">VTH01 50% Cofund DDV 2 Feb</td><td>7,908</td><td>1,022</td><td>12.92%</td><td style="color:var(--green);font-weight:700">RM126.94k</td><td>RM11,056</td></tr>
+              <tr><td>VTH01 50% Cofund DDV 15 Feb</td><td>11,438</td><td>855</td><td>7.48%</td><td>RM109.88k</td><td>RM9,114</td></tr>
+              <tr><td>VTH01 50% Cofund DDV 2 Feb</td><td>15,399</td><td>2,056</td><td>13.35%</td><td>RM91.86k</td><td>RM10,015</td></tr>
+              <tr><td>VTH08 50% Cofund 15% Feb</td><td>5,867</td><td>1,074</td><td>18.31%</td><td>RM71.39k</td><td>RM11,236</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCTS PANEL ═══ -->
+    <div class="panel" id="panel-products">
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">Product Strategy & Merchandising Matrix</div><div class="cc-sub">Cross-channel diagnostics · Mar 2026 · Flags auto-generated from performance thresholds</div></div>
+          <span class="tag tag-a">⚠ 3 Items Need Action</span>
+        </div>
+        <table>
+          <thead><tr><th>Product</th><th>Channel</th><th>Sales</th><th>CR%</th><th>ATC</th><th>Views/Clicks</th><th>Bounce</th><th>Status</th><th>Diagnosis</th></tr></thead>
+          <tbody id="prodTbl"></tbody>
+        </table>
+      </div>
+      <div class="cg cg-2">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">High ATC Products</div><div class="cc-sub">Add-to-cart leaders · checkout gap analysis</div></div></div>
+          <canvas id="atcChart" height="200"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">New vs Existing Buyer Revenue</div><div class="cc-sub">Revenue split by acquisition type · 2026</div></div></div>
+          <canvas id="buyerRevChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ RECO PANEL ═══ -->
+    <div class="panel" id="panel-reco">
+      <div class="sh">
+        <div><div class="sh-title">AI-Driven Strategic Recommendations</div><div class="sh-sub" style="margin-top:3px">Derived from live metrics · Mar 2026 performance signals · 7 active triggers</div></div>
+        <span class="tag tag-a">7 Active Signals</span>
+      </div>
+      <div class="reco-grid" id="recoGrid"></div>
+    </div>
+
+    <!-- ═══ HEALTH PANEL ═══ -->
+    <div class="panel" id="panel-health">
+      <div class="preferred">
+        <span style="font-size:20px">⭐</span>
         <div>
-          <div class="chart-title">Top Products</div>
-          <div class="chart-sub">Best performing items by revenue</div>
+          <strong>Preferred Seller Status Active</strong> — Weekly evaluation updated 24-03-2026.
+          Maintain all targets to keep benefits: Preferred Badge · Search Filter · Chat Broadcast Quota · Free Shipping page.
+        </div>
+        <div class="preferred-alert">⚠ Fast Handover 61.83% — FAILING</div>
+      </div>
+      <div class="sh"><div class="sh-title">Fulfillment Health Metrics</div></div>
+      <div class="health-grid" id="healthGrid"></div>
+      <div class="sh" style="margin-top:4px"><div class="sh-title">Account Performance Snapshot</div></div>
+      <div class="cg cg-2">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Shopee Sales Target Progress</div><div class="cc-sub">Apr 2026 target: RM1,000,000</div></div><span class="tag tag-a">88.5% of Target</span></div>
+          <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+            <div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:5px"><span>Revenue Progress</span><span style="color:var(--t1);font-weight:700">RM884,739 / RM1,000,000</span></div><div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:88.5%;background:linear-gradient(90deg,#f97316,#f43f5e);border-radius:4px"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:5px"><span>Orders Progress</span><span style="color:var(--t1);font-weight:700">16,112 / 18,182</span></div><div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:88.6%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:4px"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:5px"><span>Conversion Rate</span><span style="color:var(--t1);font-weight:700">3.63% / 3.80% target</span></div><div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:95.5%;background:linear-gradient(90deg,#3fb950,#10b981);border-radius:4px"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:5px"><span>Daily GMV</span><span style="color:var(--t1);font-weight:700">RM34,000 / RM34,000 target</span></div><div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:100%;background:linear-gradient(90deg,#3fb950,#10b981);border-radius:4px"></div></div></div>
+          </div>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">TikTok Affiliate Network</div><div class="cc-sub">Creator pipeline · Mar 2026</div></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+            <div class="stat"><div class="stat-val" style="color:var(--indigo)">26,991</div><div class="stat-label">Total Affiliates</div></div>
+            <div class="stat"><div class="stat-val">922</div><div class="stat-label">Creators w/ Sales</div></div>
+            <div class="stat"><div class="stat-val">383</div><div class="stat-label">Completed Content</div></div>
+            <div class="stat"><div class="stat-val" style="color:var(--green)">RM168.8k</div><div class="stat-label">Affiliate GMV (Mar)</div></div>
+            <div class="stat"><div class="stat-val">49</div><div class="stat-label">Campaigns Active</div></div>
+            <div class="stat"><div class="stat-val" style="color:var(--amber)">16</div><div class="stat-label">In Shipping</div></div>
+          </div>
         </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Product</th><th>Category</th><th>Sales</th>
-            <th>Revenue</th><th>Margin</th><th>Stock</th>
-          </tr>
-        </thead>
-        <tbody id="productTable"></tbody>
-      </table>
     </div>
 
-  </div>
+    <!-- ═══ SYNC PANEL ═══ -->
+    <div class="panel" id="panel-sync">
+      <div class="cc" style="max-width:600px">
+        <div class="cc-head"><div><div class="cc-title">🔗 Google Drive Data Sync</div><div class="cc-sub">Connect a Google Sheets report for live data override</div></div></div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.7">
+          Paste your <strong style="color:var(--t1)">Google Sheets share link</strong> below. The system converts it to a direct CSV export URL and fetches it automatically.
+          <br>The sheet must be set to <strong style="color:var(--green)">Anyone with the link can view</strong> or <strong style="color:var(--green)">Published to web</strong>.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div style="font-size:10px;color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Share Link</div>
+            <input class="sync-inp" id="syncPanelInp" style="width:100%;padding:8px 12px;font-size:12px" placeholder="https://docs.google.com/spreadsheets/d/…/edit?usp=sharing">
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Resolved Export URL</div>
+            <div id="resolvedUrl" style="font-size:11px;color:var(--t3);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 12px;word-break:break-all;min-height:36px"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-sm primary" style="padding:6px 16px;font-size:12px" onclick="doSyncPanel()">⟳ Connect & Sync</button>
+            <button class="btn-sm ghost" style="padding:6px 16px;font-size:12px" onclick="clearSync()">✕ Disconnect</button>
+          </div>
+          <div id="syncLog" style="font-size:11px;color:var(--t3);margin-top:4px"></div>
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-sub)">
+          <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:8px">Expected CSV Column Format</div>
+          <div style="font-size:10px;color:var(--t3);background:var(--bg);padding:10px;border-radius:6px;border:1px solid var(--border);font-family:monospace;line-height:1.8">
+            Month, Sales, Orders, CR, Visitors, BasketSize, Clicks<br>
+            January, 841242.53, 13935, 2.87, 508683, 60.37, 485263<br>
+            February, 919249.76, 16845, 3.48, 390201, 54.57, 484084<br>
+            March, 884739.27, 16112, 3.63, 441066, 54.91, 444062
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
 </main>
 
 <script>
-  /* ── Data ── */
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const revenue = [42800,38500,51200,48900,63400,71800,68200,79500,85100,91400,112600,134200];
-  const prevRev = [38200,35100,44600,46200,52800,58300,61100,65400,71200,76800,89300,104700];
-  const orders  = [312,278,389,361,471,534,502,589,632,678,834,991];
+/* ─────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────── */
+const D = {
+  shopee: {
+    m2025: [
+      {m:'Jan',s:858651,o:17270,cr:3.98,v:434220,b:49.72},
+      {m:'Feb',s:720744,o:14613,cr:3.47,v:421611,b:49.32},
+      {m:'Mar',s:959081,o:21000,cr:3.65,v:575901,b:45.67},
+      {m:'Apr',s:746074,o:16220,cr:4.44,v:365225,b:46.00},
+      {m:'May',s:816307,o:16867,cr:3.70,v:455910,b:48.40},
+      {m:'Jun',s:770777,o:14707,cr:3.37,v:436093,b:52.41},
+      {m:'Jul',s:758481,o:15241,cr:3.42,v:445832,b:49.77},
+      {m:'Aug',s:735041,o:13633,cr:3.45,v:395668,b:53.92},
+      {m:'Sep',s:682498,o:13555,cr:3.55,v:382125,b:50.35},
+      {m:'Oct',s:819253,o:16665,cr:3.20,v:520107,b:49.16},
+      {m:'Nov',s:836706,o:16548,cr:2.97,v:556846,b:50.56},
+      {m:'Dec',s:938313,o:18866,cr:2.88,v:654973,b:49.74},
+    ],
+    m2026: [
+      {m:'Jan',s:841242,o:13935,cr:2.87,v:508683,b:60.37,cl:485263},
+      {m:'Feb',s:919249,o:16845,cr:3.48,v:390201,b:54.57,cl:484084},
+      {m:'Mar',s:884739,o:16112,cr:3.63,v:441066,b:54.91,cl:444062},
+    ],
+    camps25:[
+      {m:'1.1',s:55394,o:1057,v:28580,b:52.41,cr:5.11},
+      {m:'2.2',s:50951,o:995,v:44421,b:51.21,cr:4.65},
+      {m:'3.3',s:55660,o:1287,v:63415,b:43.25,cr:4.77},
+      {m:'4.4',s:40204,o:795,v:34071,b:50.57,cr:5.50},
+      {m:'5.5',s:64903,o:1383,v:80413,b:46.93,cr:4.70},
+      {m:'6.6',s:54750,o:1136,v:39197,b:48.20,cr:3.43},
+      {m:'7.7',s:72004,o:1431,v:39995,b:50.32,cr:4.97},
+      {m:'8.8',s:65121,o:1340,v:45497,b:48.60,cr:5.41},
+      {m:'9.9',s:69182,o:1503,v:35990,b:46.03,cr:7.03},
+      {m:'10.10',s:81080,o:1593,v:46249,b:50.90,cr:6.44},
+      {m:'11.11',s:151943,o:3176,v:81359,b:47.84,cr:4.27},
+      {m:'12.12',s:111709,o:2201,v:64439,b:50.75,cr:4.89},
+    ],
+    camps26:[
+      {m:'1.1',s:56087,o:862,v:48993,b:65.07,cr:3.55},
+      {m:'2.2',s:72039,o:1192,v:40021,b:60.44,cr:4.65},
+      {m:'3.3',s:66891,o:1157,v:32424,b:57.81,cr:4.92},
+    ],
+    ads:[
+      {m:'Oct',s:819253,gmv:810800,exp:158900,roi:5.10,v:520107,imp:18500000,cl:1200000,cpc:.13,spct:98.97},
+      {m:'Nov',s:836706,gmv:969200,exp:165700,roi:5.85,v:556846,imp:16600000,cl:426000,cpc:.39,spct:115.84},
+      {m:'Dec',s:938313,gmv:1100000,exp:178900,roi:6.15,v:654973,imp:16900000,cl:902500,cpc:.20,spct:117.23},
+      {m:'Jan',s:841242,gmv:834800,exp:158800,roi:5.26,v:485263,imp:1500000,cl:943700,cpc:.17,spct:99.23},
+      {m:'Feb',s:919249,gmv:860700,exp:175900,roi:4.89,v:484084,imp:13100000,cl:474800,cpc:.37,spct:93.63},
+      {m:'Mar',s:884739,gmv:828800,exp:173500,roi:4.78,v:444062,imp:15000000,cl:548700,cpc:.32,spct:93.68},
+    ],
+    channel:{
+      labels:['Product Card','Seller Live','Affiliate','Seller Video'],
+      feb:[504834,364733,48439,1242],
+      mar:[492085,348358,43724,570],
+      colors:['#f97316','#6366f1','#f43f5e','#3fb950']
+    },
+    buyers:[
+      {m:'Jan',nb:6122,np:47.93,eb:6651,ep:52.07,ns:346700,es:494550},
+      {m:'Feb',nb:7408,np:48.85,eb:7758,ep:51.15,ns:376480,es:542770},
+      {m:'Mar',nb:6928,np:47.68,eb:7601,ep:52.32,ns:356420,es:528320},
+    ],
+  },
+  tiktok: {
+    m2025:[
+      {m:'Apr',s:343999,o:6462,cr:4.88,v:124438,b:53.23},
+      {m:'May',s:385182,o:6922,cr:3.74,v:174213,b:55.65},
+      {m:'Jun',s:344748,o:5959,cr:5.48,v:102944,b:57.85},
+      {m:'Jul',s:531453,o:10071,cr:3.91,v:235820,b:52.77},
+      {m:'Aug',s:386101,o:6718,cr:4.86,v:128450,b:57.47},
+      {m:'Sep',s:338697,o:5537,cr:3.55,v:145645,b:61.17},
+      {m:'Oct',s:438228,o:7638,cr:2.95,v:235539,b:57.37},
+      {m:'Nov',s:550420,o:9166,cr:3.86,v:205496,b:60.05},
+      {m:'Dec',s:453207,o:8872,cr:3.45,v:232152,b:51.08},
+    ],
+    m2026:[
+      {m:'Jan',s:391661,o:7744,cr:3.68,v:191947,b:50.58},
+      {m:'Feb',s:387333,o:8457,cr:4.78,v:161403,b:45.80},
+      {m:'Mar',s:421020,o:9243,cr:4.94,v:168812,b:45.55},
+    ],
+    breakdown:[
+      {m:'Jan',prod:134375,vid:141081,live:116204},
+      {m:'Feb',prod:135290,vid:137419,live:114623},
+      {m:'Mar',prod:162868,vid:138595,live:119556},
+    ],
+    affiliate:[
+      {m:'Nov',gmv:260081,comm:24688,creators:782,items:5900},
+      {m:'Dec',gmv:181480,comm:14411,creators:879,items:4700},
+      {m:'Jan',gmv:159476,comm:12477,creators:824,items:4100},
+      {m:'Feb',gmv:152972,comm:11565,creators:778,items:4300},
+      {m:'Mar',gmv:168834,comm:12326,creators:922,items:4900},
+    ],
+    ads:[
+      {m:'Oct',spend:113865,o:9792,gmv:474191,roi:4.16,cpo:11.63},
+      {m:'Nov',spend:138709,o:12130,gmv:624768,roi:4.50,cpo:11.44},
+      {m:'Dec',spend:136455,o:9962,gmv:500100,roi:3.66,cpo:13.70},
+      {m:'Jan',spend:121817,o:9159,gmv:438317,roi:3.60,cpo:13.30},
+      {m:'Feb',spend:122639,o:9573,gmv:417014,roi:3.40,cpo:12.81},
+      {m:'Mar',spend:146308,o:11416,gmv:478384,roi:3.27,cpo:12.82},
+    ],
+    views:[
+      {m:'Jan',views:9755611,profile:42425,engage:96612},
+      {m:'Feb',views:8801563,profile:33840,engage:53585},
+      {m:'Mar',views:20805310,profile:181232,engage:342732},
+    ],
+  },
+  products:[
+    {name:'Deodorant Roll-On',sku:'DEO-RO',em:'🎽',ch:'Shopee+TikTok',sales:146486,cr:19.05,atc:8497,views:168650,bounce:null,status:'high',note:'Strongest CR — scale ad budget'},
+    {name:'Natural Refillable Deo Stick 40g',sku:'DEO-RF',em:'🧴',ch:'Shopee+TikTok',sales:132416,cr:15.94,atc:4054,views:47290,bounce:21.65,status:'warn',note:'High bounce — reduce to 18%'},
+    {name:'Natural Tinted Lip Balm',sku:'LIP-TN',em:'💄',ch:'Shopee+TikTok',sales:29057,cr:18.19,atc:3464,views:100110,bounce:null,status:'medium',note:'High lead gen — acquisition driver'},
+    {name:'Natural Deodorant Stick 25g',sku:'DEO-25',em:'🪄',ch:'Shopee',sales:20362,cr:null,atc:4154,views:77920,bounce:20.93,status:'warn',note:'High ATC but high bounce — add Free Gift'},
+    {name:'Hybrid Sunscreen',sku:'SUN-HY',em:'☀️',ch:'Shopee',sales:70632,cr:11.90,atc:null,views:null,bounce:null,status:'medium',note:'Cross-sell to deo buyers'},
+    {name:'Sample Set',sku:'SAMP-S',em:'🎁',ch:'Shopee+TikTok',sales:4427,cr:18.19,atc:null,views:45530,bounce:null,status:'lead',note:'Low revenue / high acquisition'},
+    {name:'Body & Perfume Oil Roll-On',sku:'OIL-RO',em:'🌸',ch:'TikTok',sales:18370,cr:null,atc:null,views:35370,bounce:null,status:'medium',note:'Cross-sell opportunity'},
+    {name:'HYGR 3x Natural Deo Bundle',sku:'DEO-3X',em:'📦',ch:'Shopee+TikTok',sales:24712,cr:null,atc:null,views:49160,bounce:null,status:'high',note:'High AOV bundle — push refill'},
+  ],
+};
 
-  const categories = ['Electronics','Clothing','Home & Garden','Sports','Beauty','Books'];
-  const catRevenue = [198400,145600,112300,87500,64200,31800];
-  const catColors  = ['#6366f1','#10b981','#3b82f6','#f59e0b','#ec4899','#8b5cf6'];
+/* ─── HELPERS ─── */
+const RM = v => 'RM'+Math.round(v).toLocaleString();
+const RMk = v => v>=1000000?'RM'+(v/1000000).toFixed(2)+'M':v>=1000?'RM'+(v/1000).toFixed(1)+'k':'RM'+v;
+const Pct = v => v==null?'—':v.toFixed(2)+'%';
+const Num = v => v==null?'—':v.toLocaleString();
+const cTooltip = {
+  backgroundColor:'#0d1117',
+  titleColor:'#e6edf3',
+  bodyColor:'#8b949e',
+  borderColor:'#30363d',
+  borderWidth:1,
+  padding:10,
+  cornerRadius:7,
+  callbacks:{label:ctx=>' '+ctx.dataset.label+': '+ctx.formattedValue}
+};
+Chart.defaults.font.family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+Chart.defaults.color='#8b949e';
 
-  const hours       = ['6am','8am','10am','12pm','2pm','4pm','6pm','8pm','10pm'];
-  const visitors    = [120,340,680,920,840,1020,1240,980,420];
-  const conversions = [8,28,62,88,79,97,124,91,34];
+/* ─── STATE ─── */
+const S = {
+  nav:'overview',
+  platform:'all',
+  grain:'3m',
+  driveUrl: localStorage.getItem('hygr_drive')||'',
+  syncStatus:'idle',
+  lastSync:null,
+};
 
-  const sources = [
-    { name:'Organic Search', sessions:48200, cr:3.2, revenue:142600 },
-    { name:'Paid Search',    sessions:31400, cr:4.8, revenue:118200 },
-    { name:'Social Media',   sessions:22800, cr:2.1, revenue:64300  },
-    { name:'Email',          sessions:18600, cr:5.9, revenue:87400  },
-    { name:'Direct',         sessions:14200, cr:3.7, revenue:51800  },
-    { name:'Referral',       sessions:8900,  cr:2.9, revenue:31200  },
+/* ─── FILTERED DATA ─── */
+function filteredShopee(){
+  if(S.grain==='1m') return D.shopee.m2026.slice(-1);
+  if(S.grain==='3m') return D.shopee.m2026;
+  return [...D.shopee.m2025,...D.shopee.m2026];
+}
+function filteredTT(){
+  if(S.grain==='1m') return D.tiktok.m2026.slice(-1);
+  if(S.grain==='3m') return D.tiktok.m2026;
+  return [...D.tiktok.m2025,...D.tiktok.m2026];
+}
+
+/* ─── CHARTS MAP ─── */
+const charts={};
+function mkChart(id,cfg){
+  if(charts[id]) charts[id].destroy();
+  const el=document.getElementById(id);
+  if(!el) return;
+  charts[id]=new Chart(el,cfg);
+}
+
+/* ─── RENDER KPIs ─── */
+function renderKPIs(){
+  const sf=filteredShopee(), tf=filteredTT();
+  const sRev=sf.reduce((a,r)=>a+r.s,0), tRev=tf.reduce((a,r)=>a+r.s,0);
+  const sOrd=sf.reduce((a,r)=>a+r.o,0), tOrd=tf.reduce((a,r)=>a+r.o,0);
+  const sAov=sf.length? sf.reduce((a,r)=>a+r.b,0)/sf.length:0;
+  const tAov=tf.length? tf.reduce((a,r)=>a+r.b,0)/tf.length:0;
+  const sCr=sf.length? sf.reduce((a,r)=>a+r.cr,0)/sf.length:0;
+  const tCr=tf.length? tf.reduce((a,r)=>a+r.cr,0)/tf.length:0;
+
+  const all=[
+    {l:'Total Revenue',v:RMk(sRev+tRev),ch:'↑ 18.4%',dir:'up',sub:'Shopee+TikTok combined',ico:'💰'},
+    {l:'Shopee GMV',v:RMk(sRev),ch:'↑ 11.2%',dir:'up',sub:`${sf.length}mo avg ${RMk(sRev/sf.length)}/mo`,ico:'🛒'},
+    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length}mo avg ${RMk(tRev/tf.length)}/mo`,ico:'🎵'},
+    {l:'Combined Orders',v:Num(sOrd+tOrd),ch:'↑ 15.3%',dir:'up',sub:'All channels',ico:'📦'},
+    {l:'Avg Conv. Rate',v:Pct((sCr+tCr)/2),ch:sCr>tCr?'Shopee leads':'TikTok leads',dir:'up',sub:'Platform average',ico:'⚡'},
+  ];
+  const shopee=[
+    {l:'Shopee Revenue',v:RMk(sRev),ch:'↑ 11.2%',dir:'up',sub:`${sf.length} months`,ico:'💵'},
+    {l:'Total Orders',v:Num(sOrd),ch:'↑ 9.8%',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate',v:Pct(sCr),ch:sCr<3?'Below target':'On track',dir:sCr>=3.5?'up':'warn',sub:'Target 3.80%',ico:'⚡'},
+    {l:'Avg Order Value',v:'RM'+sAov.toFixed(2),ch:sAov>=55?'On target':'Below RM55',dir:sAov>=55?'up':'warn',sub:'Target RM55–60',ico:'🎯'},
+    {l:'Avg Visitors',v:Num(Math.round(sf.reduce((a,r)=>a+r.v,0)/sf.length)),ch:'per month',dir:'up',sub:'Unique store visits',ico:'👥'},
+  ];
+  const tiktok=[
+    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length} months`,ico:'🎵'},
+    {l:'Total Orders',v:Num(tOrd),ch:'↑ 10.2%',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate',v:Pct(tCr),ch:'↑ improving',dir:'up',sub:'Mar: 4.94% (best)',ico:'⚡'},
+    {l:'Avg Order Value',v:'RM'+tAov.toFixed(2),ch:'↓ declining',dir:'warn',sub:'Below Shopee AOV',ico:'🎯'},
+    {l:'Affiliate GMV',v:'RM168.8k',ch:'↑ 10.37% Mar',dir:'up',sub:'Mar 2026 · 922 creators',ico:'🤝'},
   ];
 
-  const products = [
-    { name:'AirPods Pro 2nd Gen',   sku:'EL-1204', e:'🎧', cat:'Electronics',  sales:2840, rev:71000,  margin:32, stock:'high'   },
-    { name:'Nike Air Max 270',      sku:'SP-8801', e:'👟', cat:'Sports',        sales:2210, rev:44200,  margin:41, stock:'medium' },
-    { name:'Dyson V15 Vacuum',      sku:'HG-3302', e:'🌀', cat:'Home & Garden', sales:1890, rev:94500,  margin:28, stock:'high'   },
-    { name:'Samsung 55" QLED TV',   sku:'EL-5507', e:'📺', cat:'Electronics',   sales:1640, rev:131200, margin:22, stock:'medium' },
-    { name:'Levi 501 Original',     sku:'CL-2201', e:'👖', cat:'Clothing',      sales:3120, rev:93600,  margin:55, stock:'high'   },
-    { name:'Instant Pot Duo 7-qt',  sku:'HG-4401', e:'🫕', cat:'Home & Garden', sales:1450, rev:101500, margin:38, stock:'low'    },
-    { name:'The North Face Jacket', sku:'CL-3308', e:'🧥', cat:'Clothing',      sales:980,  rev:107800, margin:44, stock:'low'    },
-    { name:'Kindle Paperwhite',     sku:'BK-0012', e:'📖', cat:'Books',         sales:2640, rev:52800,  margin:30, stock:'high'   },
+  function renderRow(id, data){
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML=data.map(k=>`
+      <div class="kpi">
+        <div class="kpi-ico">${k.ico}</div>
+        <div class="kpi-label">${k.l}</div>
+        <div class="kpi-val">${k.v}</div>
+        <span class="chip ${k.dir}">${k.ch}</span>
+        <div class="kpi-sub">${k.sub}</div>
+      </div>`).join('');
+  }
+  renderRow('kpiRow', all);
+  renderRow('shopeeKpi', shopee);
+  renderRow('tiktokKpi', tiktok);
+}
+
+/* ─── OVERVIEW CHARTS ─── */
+function renderOverview(){
+  const sf=filteredShopee(), tf=filteredTT();
+  const sLabels=sf.map(r=>r.m), tLabels=tf.map(r=>r.m);
+
+  // Revenue trend
+  mkChart('revChart',{type:'line',data:{
+    labels:sLabels,
+    datasets:[
+      {label:'Shopee',data:sf.map(r=>r.s),borderColor:'#f97316',borderWidth:2.5,fill:true,backgroundColor:'rgba(249,115,22,.08)',pointRadius:3,pointBackgroundColor:'#f97316',tension:.4},
+      {label:'TikTok',data:sf.map((r,i)=>tf[i]?tf[i].s:null),borderColor:'#f43f5e',borderWidth:2.5,fill:true,backgroundColor:'rgba(244,63,94,.08)',pointRadius:3,pointBackgroundColor:'#f43f5e',tension:.4},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>' '+c.dataset.label+': '+RMk(c.raw)}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Platform split donut (2026)
+  const shopeeTotal=D.shopee.m2026.reduce((a,r)=>a+r.s,0);
+  const ttTotal=D.tiktok.m2026.reduce((a,r)=>a+r.s,0);
+  mkChart('splitChart',{type:'doughnut',data:{
+    labels:['Shopee','TikTok'],
+    datasets:[{data:[shopeeTotal,ttTotal],backgroundColor:['#f97316','#f43f5e'],borderWidth:0,hoverOffset:6}]
+  },options:{responsive:true,cutout:'68%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)}`}}}}});
+  document.getElementById('splitLegend').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#f97316;border-radius:2px"></span><span style="color:var(--t2)">Shopee</span></span>
+        <span style="font-weight:700;color:var(--t1)">${RMk(shopeeTotal)} <span style="color:var(--t3);font-weight:400">${(shopeeTotal/(shopeeTotal+ttTotal)*100).toFixed(1)}%</span></span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#f43f5e;border-radius:2px"></span><span style="color:var(--t2)">TikTok</span></span>
+        <span style="font-weight:700;color:var(--t1)">${RMk(ttTotal)} <span style="color:var(--t3);font-weight:400">${(ttTotal/(shopeeTotal+ttTotal)*100).toFixed(1)}%</span></span>
+      </div>
+    </div>`;
+
+  document.getElementById('revTag').textContent='Combined '+RMk(shopeeTotal+ttTotal);
+
+  // Orders
+  mkChart('ordersChart',{type:'bar',data:{
+    labels:sLabels,
+    datasets:[
+      {label:'Shopee',data:sf.map(r=>r.o),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:20},
+      {label:'TikTok',data:sf.map((r,i)=>tf[i]?tf[i].o:0),backgroundColor:'rgba(244,63,94,.7)',borderRadius:3,maxBarThickness:20},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:cTooltip},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}},stacked:true},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10}},stacked:true}}}});
+
+  // CR
+  mkChart('crChart',{type:'line',data:{
+    labels:sLabels,
+    datasets:[
+      {label:'Shopee CR',data:sf.map(r=>r.cr),borderColor:'#f97316',borderWidth:2,pointRadius:3,pointBackgroundColor:'#f97316',tension:.4,fill:false},
+      {label:'TikTok CR',data:sf.map((r,i)=>tf[i]?tf[i].cr:null),borderColor:'#f43f5e',borderWidth:2,pointRadius:3,pointBackgroundColor:'#f43f5e',tension:.4,fill:false},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}%`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+
+  // AOV
+  mkChart('aovChart',{type:'line',data:{
+    labels:sLabels,
+    datasets:[
+      {label:'Shopee AOV',data:sf.map(r=>r.b),borderColor:'#f97316',borderWidth:2,pointRadius:3,tension:.4},
+      {label:'TikTok AOV',data:sf.map((r,i)=>tf[i]?tf[i].b:null),borderColor:'#f43f5e',borderWidth:2,pointRadius:3,tension:.4},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: RM${c.raw}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>'RM'+v}}}}});
+}
+
+/* ─── SHOPEE CHARTS ─── */
+function renderShopee(){
+  // Revenue 2025 vs 2026
+  const lab25=D.shopee.m2025.map(r=>r.m);
+  const lab26=D.shopee.m2026.map(r=>r.m);
+  const allLabs=[...new Set([...lab25,...lab26])];
+  mkChart('shopeeRevChart',{type:'line',data:{
+    labels:allLabs,
+    datasets:[
+      {label:'2025',data:allLabs.map(l=>{const r=D.shopee.m2025.find(x=>x.m===l); return r?r.s:null;}),borderColor:'#8b949e',borderWidth:1.5,borderDash:[4,3],pointRadius:2,tension:.4,fill:false},
+      {label:'2026',data:allLabs.map(l=>{const r=D.shopee.m2026.find(x=>x.m===l); return r?r.s:null;}),borderColor:'#f97316',borderWidth:2.5,pointRadius:3,tension:.4,fill:true,backgroundColor:'rgba(249,115,22,.08)'},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Channel donut
+  const ch=D.shopee.channel;
+  const total=ch.mar.reduce((a,v)=>a+v,0);
+  mkChart('channelDonut',{type:'doughnut',data:{
+    labels:ch.labels,
+    datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
+  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});
+  document.getElementById('channelLegend').innerHTML=ch.labels.map((l,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
+      <span style="font-weight:700;color:var(--t1)">${RMk(ch.mar[i])} <span style="color:var(--t3)">${(ch.mar[i]/total*100).toFixed(1)}%</span></span>
+    </div>`).join('');
+
+  // ROI chart
+  const adL=D.shopee.ads.map(r=>r.m);
+  mkChart('shopeeRoiChart',{type:'line',data:{
+    labels:adL,
+    datasets:[
+      {label:'ROI',data:D.shopee.ads.map(r=>r.roi),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#3fb950',tension:.4,yAxisID:'y'},
+      {label:'Expense (RM)',data:D.shopee.ads.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:cTooltip},
+    scales:{
+      x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
+      y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10}}},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+    }}});
+
+  // Buyers composition
+  const bl=document.getElementById('buyerList');
+  bl.innerHTML=D.shopee.buyers.map(b=>`
+    <div class="buyer-row">
+      <div class="buyer-meta">
+        <span>${b.m} 2026</span>
+        <span style="color:var(--t1);font-weight:700">${Num(b.nb+b.eb)} buyers</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:4px">
+        <span>New ${b.np.toFixed(1)}% (${Num(b.nb)})</span>
+        <span>Existing ${b.ep.toFixed(1)}% (${Num(b.eb)})</span>
+      </div>
+      <div class="buyer-track" style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
+        <div class="b-new" style="width:${b.np}%"></div>
+        <div class="b-ex" style="width:${b.ep}%"></div>
+      </div>
+    </div>`).join('');
+
+  // Ads table
+  document.getElementById('shopeeAdsTbl').innerHTML=D.shopee.ads.map(r=>{
+    const rc=r.roi>=5.5?'roi-good':r.roi>=4.5?'roi-good':r.roi>=4?'roi-warn':'roi-bad';
+    return `<tr>
+      <td>${r.m} ${r.m==='Oct'||r.m==='Nov'||r.m==='Dec'?'2025':'2026'}</td>
+      <td>${RM(r.s)}</td><td>${RM(r.gmv)}</td><td>${RM(r.exp)}</td>
+      <td class="${rc}">${r.roi}x</td>
+      <td>${Num(r.v)}</td>
+      <td>${(r.imp/1000000).toFixed(1)}M</td>
+      <td>RM${r.cpc}</td>
+      <td>${r.spct.toFixed(2)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── TIKTOK CHARTS ─── */
+function renderTikTok(){
+  const all=[...D.tiktok.m2025,...D.tiktok.m2026];
+  mkChart('ttRevChart',{type:'line',data:{
+    labels:all.map(r=>r.m),
+    datasets:[{
+      label:'TikTok GMV',data:all.map(r=>r.s),
+      borderColor:'#f43f5e',borderWidth:2.5,
+      fill:true,backgroundColor:'rgba(244,63,94,.08)',
+      pointRadius:3,pointBackgroundColor:'#f43f5e',tension:.4
+    }]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` GMV: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Breakdown grouped bar
+  const bk=D.tiktok.breakdown;
+  mkChart('ttBreakChart',{type:'bar',data:{
+    labels:bk.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Product',data:bk.map(r=>r.prod),backgroundColor:'#6366f1',borderRadius:3,maxBarThickness:28},
+      {label:'Video',data:bk.map(r=>r.vid),backgroundColor:'#f43f5e',borderRadius:3,maxBarThickness:28},
+      {label:'Live',data:bk.map(r=>r.live),backgroundColor:'#f97316',borderRadius:3,maxBarThickness:28},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Ads ROI
+  mkChart('ttAdsChart',{type:'line',data:{
+    labels:D.tiktok.ads.map(r=>r.m+' '+(r.m==='Oct'||r.m==='Nov'||r.m==='Dec'?'25':'26')),
+    datasets:[{
+      label:'ROI',data:D.tiktok.ads.map(r=>r.roi),
+      borderColor:'#f43f5e',borderWidth:2.5,pointRadius:4,pointBackgroundColor:D.tiktok.ads.map(r=>r.roi>=4?'#3fb950':'#f85149'),tension:.4,
+    }]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ROI: ${c.raw}x`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'x'}}}}});
+
+  // Affiliate
+  const aff=D.tiktok.affiliate;
+  mkChart('ttAffChart',{type:'bar',data:{
+    labels:aff.map(r=>r.m),
+    datasets:[{label:'Affiliate GMV',data:aff.map(r=>r.gmv),backgroundColor:aff.map((r,i)=>i===4?'#f43f5e':'rgba(244,63,94,.4)'),borderRadius:4,maxBarThickness:36}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` GMV: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Video views
+  const vw=D.tiktok.views;
+  mkChart('ttViewChart',{type:'bar',data:{
+    labels:vw.map(r=>r.m),
+    datasets:[
+      {label:'Video Views',data:vw.map(r=>r.views),backgroundColor:['rgba(244,63,94,.5)','rgba(244,63,94,.5)','#f43f5e'],borderRadius:4,maxBarThickness:40}
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` Views: ${(c.raw/1000000).toFixed(2)}M`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>(v/1000000).toFixed(1)+'M'}}}}});
+
+  // TikTok ads table
+  document.getElementById('ttAdsTbl').innerHTML=D.tiktok.ads.map(r=>{
+    const rc=r.roi>=4.5?'roi-good':r.roi>=3.5?'roi-warn':'roi-bad';
+    return `<tr>
+      <td>${r.m} ${r.m==='Oct'||r.m==='Nov'||r.m==='Dec'?'2025':'2026'}</td>
+      <td>${RM(r.spend)}</td><td>${Num(r.o)}</td><td>${RM(r.gmv)}</td>
+      <td class="${rc}">${r.roi}x</td>
+      <td>RM${r.cpo.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ─── CAMPAIGNS ─── */
+function renderCampaigns(){
+  mkChart('campShopee25',{type:'bar',data:{
+    labels:D.shopee.camps25.map(r=>r.m),
+    datasets:[
+      {label:'Sales (RM)',data:D.shopee.camps25.map(r=>r.s),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:22,yAxisID:'y'},
+      {label:'CR%',data:D.shopee.camps25.map(r=>r.cr),borderColor:'#d29922',borderWidth:2,type:'line',pointRadius:3,yAxisID:'y2',tension:.3},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='CR%'?` CR: ${c.raw}%`:` Sales: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
+      y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'}}}}});
+
+  mkChart('campShopee26',{type:'bar',data:{
+    labels:D.shopee.camps26.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Sales (RM)',data:D.shopee.camps26.map(r=>r.s),backgroundColor:'rgba(99,102,241,.7)',borderRadius:4,maxBarThickness:36,yAxisID:'y'},
+      {label:'CR%',data:D.shopee.camps26.map(r=>r.cr),borderColor:'#3fb950',borderWidth:2,type:'line',pointRadius:4,pointBackgroundColor:'#3fb950',yAxisID:'y2',tension:.3},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='CR%'?` CR: ${c.raw}%`:` Sales: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},
+      y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+}
+
+/* ─── PRODUCTS ─── */
+function renderProducts(){
+  // Diagnostics table
+  document.getElementById('prodTbl').innerHTML=D.products.map(p=>{
+    const hasBounce=p.bounce&&p.bounce>18;
+    const highAtc=p.atc&&p.atc>3000;
+    const lowCr=p.cr&&p.cr<13;
+    let badge='', diag='';
+    if(hasBounce && p.bounce>21){badge=`<span class="alert alert-r">⚠ High Bounce ${p.bounce}%</span>`;diag='Checkout resistance — add Free Gift incentive';}
+    else if(hasBounce){badge=`<span class="alert alert-a">⚠ Bounce ${p.bounce}%</span>`;diag='Reduce bounce rate below 18%';}
+    else if(p.status==='high'){badge=`<span class="alert alert-g">✓ Top Performer</span>`;diag=p.note;}
+    else if(p.status==='lead'){badge=`<span class="alert alert-a">📢 Lead Gen</span>`;diag=p.note;}
+    else{badge=`<span class="alert" style="background:var(--indigo-d);color:var(--indigo)">⟳ Monitor</span>`;diag=p.note;}
+    const crProg=p.cr?`<div class="miniprog"><div class="minifill" style="width:${Math.min(p.cr*4,100)}%;background:${p.cr>=18?'#3fb950':p.cr>=13?'#d29922':'#f85149'}"></div></div>`:''
+    return `<tr>
+      <td><div class="prod-cell"><span class="prod-em">${p.em}</span><div><div class="prod-name">${p.name}</div><div class="prod-sku">${p.sku}</div></div></div></td>
+      <td style="font-size:10px">${p.ch}</td>
+      <td style="font-weight:700;color:var(--t1)">${RMk(p.sales)}</td>
+      <td>${p.cr?`${p.cr}% ${crProg}`:'—'}</td>
+      <td style="color:${p.atc&&p.atc>4000?'#d29922':''};font-weight:${p.atc&&p.atc>4000?700:400}">${p.atc?Num(p.atc):'—'}</td>
+      <td style="font-size:10px">${p.views?Num(p.views):'—'}</td>
+      <td style="color:${p.bounce&&p.bounce>20?'var(--red)':p.bounce?'var(--amber)':''}">${p.bounce?p.bounce+'%':'—'}</td>
+      <td>${badge}</td>
+      <td style="font-size:10px;color:var(--t3)">${diag}</td>
+    </tr>`;
+  }).join('');
+
+  // ATC chart
+  const atcProds=D.products.filter(p=>p.atc).sort((a,b)=>b.atc-a.atc);
+  mkChart('atcChart',{type:'bar',data:{
+    labels:atcProds.map(p=>p.name.length>20?p.name.substring(0,18)+'…':p.name),
+    datasets:[{
+      label:'Add to Cart',
+      data:atcProds.map(p=>p.atc),
+      backgroundColor:atcProds.map(p=>p.bounce&&p.bounce>20?'rgba(248,81,73,.7)':p.bounce?'rgba(210,153,34,.7)':'rgba(63,185,80,.7)'),
+      borderRadius:4,maxBarThickness:28,
+    }]
+  },options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ATC: ${Num(c.raw)}`}}},
+    scales:{x:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},ticks:{font:{size:10}}},y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
+
+  // Buyer revenue chart
+  const byers=D.shopee.buyers;
+  mkChart('buyerRevChart',{type:'bar',data:{
+    labels:byers.map(b=>b.m+' 2026'),
+    datasets:[
+      {label:'New Buyers',data:byers.map(b=>b.ns),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:36},
+      {label:'Existing Buyers',data:byers.map(b=>b.es),backgroundColor:'rgba(99,102,241,.7)',borderRadius:3,maxBarThickness:36},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},stacked:true,ticks:{font:{size:11}}},y:{grid:{color:'rgba(48,54,61,.5)'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+}
+
+/* ─── RECOMMENDATIONS ─── */
+function renderRecos(){
+  const recos=[
+    {ico:'💰',bg:'rgba(99,102,241,.15)',type:'AOV Maximization',title:'Push AOV to RM55–60',
+      body:`Current Shopee AOV <span class="reco-metric">RM54.91</span> (Mar 2026) is below the <span class="reco-metric">RM55 target</span>. TikTok AOV at <span class="reco-metric">RM45.55</span> is critically below target.`,
+      cta:'<strong>Action:</strong> Highlight the Duo Refill Pack (RM125.90) and Deo Spray + Roll-On bundle. Deploy bundle set: Deo 25g + Sunscreen + Lip Balm (Zen & Crème Cloud). Target AOV uplift of RM5–10 per order.',cclass:''},
+    {ico:'🔁',bg:'rgba(249,115,22,.15)',type:'Funnel Recovery',title:'Deo Roll-On: 8,497 ATC → Convert',
+      body:`Roll-On generated <span class="reco-metric">8,497 ATC</span> in March — the highest across all products — but shows a conversion gap. Deploy a targeted <span class="reco-metric">Chat Broadcast</span> to lapsed buyers.`,
+      cta:'<strong>Action:</strong> Target customers who purchased 3+ months ago (All Products). Offer Min Spend RM50 get RM10 off co-funded voucher. Also target Refillable Deo 3-Pack buyers — sales dropped RM41.8k → RM36.3k in March.',cclass:'o'},
+    {ico:'🎁',bg:'rgba(244,63,94,.15)',type:'Conversion Rate Driver',title:'Free Gift → 59.21% CR Spike',
+      body:`Historical data shows Free Gift promotions drive exceptional CR. The <span class="reco-metric">FREE GIFT Plushie</span> achieved a <span class="reco-metric">59.21% conversion rate</span> — the highest recorded metric.`,
+      cta:'<strong>Action:</strong> Pair Deo Stick 25g (bounce: 20.93%) and Refillable Deo Stick 40g (bounce: 21.65%) with a free gift mechanism. Deodorant buyers → Free Lip Sample. Lip Balm buyers → Free Deodorant Sample.',cclass:'p'},
+    {ico:'📉',bg:'rgba(248,81,73,.15)',type:'Bounce Rate Alert',title:'Reduce Deo Stick Bounce to <18%',
+      body:`Deo Stick 25g bounce rate at <span class="reco-metric">20.93%</span> and Refillable Stick 40g at <span class="reco-metric">21.65%</span> (March) are significantly above the <span class="reco-metric">18% threshold</span>.`,
+      cta:'<strong>Action:</strong> Optimize product listing images, add size comparison visuals, clarify refill compatibility. Increase ATC-to-checkout rate by featuring co-fund voucher RM0 min spend in product page.',cclass:'p'},
+    {ico:'📢',bg:'rgba(63,185,80,.15)',type:'Affiliate Amplification',title:'Scale TikTok Affiliate Network',
+      body:`TikTok affiliate GMV recovered to <span class="reco-metric">RM168.8k</span> in March (↑10.37%) after 3 months of decline. Creator count rose to <span class="reco-metric">922 creators</span> with sales.`,
+      cta:'<strong>Action:</strong> Prioritize inviting creators in Beauty+4 categories (yatyalishcosmetics tier: 103k followers, >5k orders, >50k GMV). Focus on Shopee Live affiliate: Feb sales RM150.2k → maintain 28%+ growth.',cclass:'g'},
+    {ico:'🚚',bg:'rgba(210,153,34,.15)',type:'Account Health Risk',title:'Fast Handover Rate: FAILING at 61.83%',
+      body:`Fast Handover Rate is at <span class="reco-metric">61.83%</span> (weekly) vs target of <span class="reco-metric">≥75%</span>. This threatens <strong style="color:var(--amber)">Preferred Seller status</strong>. On-time Pickup Failure is at 99.58% vs <5% target.`,
+      cta:'<strong>Immediate Action:</strong> Review courier handover SOP. Coordinate with logistics team to ensure same-day pickup. Failure to resolve before next weekly evaluation will remove Preferred Badge and Search Filter benefits.',cclass:'o'},
+    {ico:'📊',bg:'rgba(99,102,241,.15)',type:'TikTok Ads Efficiency',title:'GMV Max ROI Declining — Restructure',
+      body:`TikTok GMV Max ROI fell from <span class="reco-metric">4.50x (Nov)</span> to <span class="reco-metric">3.27x (Mar)</span> — a 27% decline over 5 months. Ad spend increased to <span class="reco-metric">RM146k</span> while GMV efficiency dropped.`,
+      cta:'<strong>Action:</strong> Review creative refresh cadence — CTR declining signals creative fatigue. Test product-specific campaigns for Roll-On (highest ATC) vs broad GMV Max. Target CPO below RM12 (currently RM12.82).',cclass:''},
   ];
-
-  /* ── Shared Chart defaults ── */
-  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  Chart.defaults.color = '#94a3b8';
-
-  const tooltip = {
-    backgroundColor: '#0f172a',
-    titleColor: '#fff',
-    bodyColor: '#a5b4fc',
-    borderColor: 'transparent',
-    borderWidth: 0,
-    padding: 10,
-    cornerRadius: 8,
-  };
-
-  const fmtK = v => v >= 1000 ? `$${(v/1000).toFixed(1)}k` : `$${v}`;
-
-  /* ── Revenue Area Chart ── */
-  new Chart(document.getElementById('revenueChart'), {
-    type: 'line',
-    data: {
-      labels: months,
-      datasets: [
-        {
-          label: 'Prior Year',
-          data: prevRev,
-          borderColor: '#94a3b8',
-          borderWidth: 1.5,
-          borderDash: [4,3],
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: 'rgba(148,163,184,0.08)',
-          tension: 0.4,
-        },
-        {
-          label: 'Revenue',
-          data: revenue,
-          borderColor: '#6366f1',
-          borderWidth: 2.5,
-          pointRadius: 0,
-          fill: true,
-          backgroundColor: (ctx) => {
-            const g = ctx.chart.ctx.createLinearGradient(0,0,0,220);
-            g.addColorStop(0,'rgba(99,102,241,0.25)');
-            g.addColorStop(1,'rgba(99,102,241,0)');
-            return g;
-          },
-          tension: 0.4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      interaction: { mode:'index', intersect:false },
-      plugins: { legend:{ display:false }, tooltip: { ...tooltip, callbacks:{ label: c => ` ${c.dataset.label}: ${fmtK(c.raw)}` } } },
-      scales: {
-        x: { grid:{ display:false }, border:{ display:false }, ticks:{ font:{size:11} } },
-        y: { grid:{ color:'#f1f5f9' }, border:{ display:false }, ticks:{ font:{size:11}, callback: fmtK } },
-      },
-    },
-  });
-
-  /* ── Customer Donut ── */
-  new Chart(document.getElementById('donutChart'), {
-    type: 'doughnut',
-    data: {
-      labels: ['New','Returning','Churned'],
-      datasets: [{ data:[38,47,15], backgroundColor:['#6366f1','#10b981','#e2e8f0'], borderWidth:0, hoverOffset:4 }],
-    },
-    options: {
-      responsive: true,
-      cutout: '68%',
-      plugins: { legend:{ display:false }, tooltip:{ ...tooltip, callbacks:{ label: c => ` ${c.label}: ${c.raw}%` } } },
-    },
-  });
-
-  /* ── Category Bar ── */
-  new Chart(document.getElementById('categoryChart'), {
-    type: 'bar',
-    data: {
-      labels: categories,
-      datasets: [{ label:'Revenue', data:catRevenue, backgroundColor:catColors, borderRadius:4, borderSkipped:false }],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: { legend:{ display:false }, tooltip:{ ...tooltip, callbacks:{ label: c => ` ${fmtK(c.raw)}` } } },
-      scales: {
-        x: { grid:{ color:'#f1f5f9' }, border:{ display:false }, ticks:{ font:{size:11}, callback:fmtK } },
-        y: { grid:{ display:false }, border:{ display:false }, ticks:{ font:{size:11} } },
-      },
-    },
-  });
-
-  /* ── Traffic Line ── */
-  new Chart(document.getElementById('trafficChart'), {
-    type: 'line',
-    data: {
-      labels: hours,
-      datasets: [
-        { label:'Visitors',    data:visitors,    borderColor:'#3b82f6', borderWidth:2, pointRadius:0, tension:0.4 },
-        { label:'Conversions', data:conversions, borderColor:'#10b981', borderWidth:2, pointRadius:0, tension:0.4 },
-      ],
-    },
-    options: {
-      responsive: true,
-      interaction:{ mode:'index', intersect:false },
-      plugins:{ legend:{ display:false }, tooltip },
-      scales:{
-        x:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{size:10} } },
-        y:{ grid:{ color:'#f1f5f9' }, border:{ display:false }, ticks:{ font:{size:10} } },
-      },
-    },
-  });
-
-  /* ── Radar ── */
-  new Chart(document.getElementById('radarChart'), {
-    type: 'radar',
-    data: {
-      labels: ['Revenue','Traffic','Conversion','Retention','Avg Order','NPS'],
-      datasets: [{
-        label: 'Score',
-        data: [88,73,65,79,82,91],
-        borderColor: '#6366f1',
-        borderWidth: 2,
-        backgroundColor: 'rgba(99,102,241,0.18)',
-        pointBackgroundColor: '#6366f1',
-        pointRadius: 3,
-      }],
-    },
-    options: {
-      responsive: true,
-      plugins:{ legend:{ display:false }, tooltip },
-      scales:{
-        r:{
-          min:0, max:100,
-          grid:{ color:'#e2e8f0' },
-          angleLines:{ color:'#e2e8f0' },
-          pointLabels:{ font:{size:10}, color:'#64748b' },
-          ticks:{ display:false },
-        },
-      },
-    },
-  });
-
-  /* ── Orders Bar ── */
-  new Chart(document.getElementById('ordersChart'), {
-    type: 'bar',
-    data: {
-      labels: months,
-      datasets: [{
-        label:'Orders',
-        data: orders,
-        backgroundColor: orders.map((_, i) => i === orders.length-1 ? '#6366f1' : '#ede9fe'),
-        borderRadius: 4,
-        borderSkipped: false,
-        maxBarThickness: 32,
-      }],
-    },
-    options: {
-      responsive: true,
-      plugins:{ legend:{ display:false }, tooltip },
-      scales:{
-        x:{ grid:{ display:false }, border:{ display:false }, ticks:{ font:{size:11} } },
-        y:{ grid:{ color:'#f1f5f9' }, border:{ display:false }, ticks:{ font:{size:11} } },
-      },
-    },
-  });
-
-  /* ── Traffic Sources ── */
-  const maxSessions = sources[0].sessions;
-  document.getElementById('sourceList').innerHTML = sources.map(s => `
-    <div class="source-row">
-      <div class="source-meta">
-        <span class="source-name">${s.name}</span>
-        <div class="source-stats">
-          <span class="source-sessions">${(s.sessions/1000).toFixed(1)}k sessions</span>
-          <span class="source-cr">${s.cr}% CR</span>
-          <span class="source-rev">${fmtK(s.revenue)}</span>
-        </div>
+  document.getElementById('recoGrid').innerHTML=recos.map(r=>`
+    <div class="reco">
+      <div class="reco-hd">
+        <div class="reco-ico" style="background:${r.bg}">${r.ico}</div>
+        <div><div class="reco-ttl">${r.title}</div><div class="reco-type">${r.type}</div></div>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width:${Math.round(s.sessions/maxSessions*100)}%"></div>
-      </div>
-    </div>
-  `).join('');
+      <div class="reco-body">${r.body}</div>
+      <div class="reco-cta ${r.cclass}">${r.cta}</div>
+    </div>`).join('');
+}
 
-  /* ── Products Table ── */
-  const stockLabel = { high:'● In stock', medium:'◐ Limited', low:'○ Low stock' };
-  document.getElementById('productTable').innerHTML = products.map(p => `
-    <tr>
-      <td>
-        <div class="product-cell">
-          <div class="product-img">${p.e}</div>
-          <div>
-            <div class="product-name">${p.name}</div>
-            <div class="product-sku">${p.sku}</div>
-          </div>
-        </div>
-      </td>
-      <td style="color:#64748b;font-size:12px">${p.cat}</td>
-      <td style="font-weight:600">${p.sales.toLocaleString()}</td>
-      <td style="font-weight:700;color:#0f172a">$${p.rev.toLocaleString()}</td>
-      <td>
-        <div class="margin-bar">
-          <span class="margin-num">${p.margin}%</span>
-          <div class="mini-bar"><div class="mini-fill" style="width:${p.margin*1.4}%"></div></div>
-        </div>
-      </td>
-      <td><span class="status-pill status-${p.stock}">${stockLabel[p.stock]}</span></td>
-    </tr>
-  `).join('');
+/* ─── HEALTH ─── */
+function renderHealth(){
+  const metrics=[
+    {val:'0.14%',label:'Non-Fulfillment Rate',target:'Target <5%',cls:'ok',badge:'✓ Passing'},
+    {val:'0.03%',label:'Late Shipment Rate',target:'Target <10%',cls:'ok',badge:'✓ Passing'},
+    {val:'0.56d',label:'Preparation Time',target:'Target <1 day',cls:'ok',badge:'✓ Passing'},
+    {val:'69.91%',label:'Fast Handover Rate',target:'Target ≥75%',cls:'warn',badge:'⚠ Below Target'},
+    {val:'61.83%',label:'Handover (Weekly)',target:'Target ≥75%',cls:'fail',badge:'✕ FAILING'},
+  ];
+  document.getElementById('healthGrid').innerHTML=metrics.map(m=>`
+    <div class="hc">
+      <div class="hc-label">${m.label}</div>
+      <div class="hc-val ${m.cls}">${m.val}</div>
+      <div class="hc-target">${m.target}</div>
+      <div class="hc-badge ${m.cls}">${m.badge}</div>
+    </div>`).join('');
+}
 
-  /* ── Nav active state ── */
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      el.classList.add('active');
-    });
+/* ─── NAV ─── */
+function showPanel(name){
+  S.nav=name;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  const panel=document.getElementById('panel-'+name);
+  if(panel) panel.classList.add('on');
+  document.querySelector(`[data-nav="${name}"]`)?.classList.add('active');
+  const titles={overview:'Performance Overview',shopee:'Shopee Deep Dive',tiktok:'TikTok Deep Dive',campaigns:'Campaign Performance',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
+  document.getElementById('pageTitle').textContent=titles[name]||'Dashboard';
+  setTimeout(()=>{
+    if(name==='overview') renderOverview();
+    else if(name==='shopee') renderShopee();
+    else if(name==='tiktok') renderTikTok();
+    else if(name==='campaigns') renderCampaigns();
+    else if(name==='products') renderProducts();
+    else if(name==='reco') renderRecos();
+    else if(name==='health') renderHealth();
+  },0);
+}
+
+/* ─── PLATFORM TABS ─── */
+document.querySelectorAll('.ptab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    S.platform=t.dataset.p;
+    if(S.platform==='shopee'){showPanel('shopee');}
+    else if(S.platform==='tiktok'){showPanel('tiktok');}
+    else{showPanel('overview');}
   });
+});
+
+/* ─── DATE GRAIN ─── */
+document.querySelectorAll('.date-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    if(b.dataset.d==='custom'){
+      document.getElementById('customRange').classList.toggle('show');
+      return;
+    }
+    document.querySelectorAll('.date-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    S.grain=b.dataset.d;
+    document.getElementById('customRange').classList.remove('show');
+    renderKPIs();
+    showPanel(S.nav);
+  });
+});
+function applyCustom(){
+  S.grain='custom';
+  document.querySelectorAll('.date-btn').forEach(x=>x.classList.remove('active'));
+  document.querySelector('[data-d="custom"]').classList.add('active');
+  renderKPIs();
+  showPanel(S.nav);
+}
+
+/* ─── SIDEBAR NAV ─── */
+document.querySelectorAll('.sb-item').forEach(i=>{
+  i.addEventListener('click',()=>showPanel(i.dataset.nav));
+});
+
+/* ─── GOOGLE DRIVE SYNC ─── */
+function parseGDriveUrl(url){
+  const m=url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(!m) return null;
+  const id=m[1];
+  const gid=(url.match(/gid=(\d+)/)||[])[1]||'0';
+  return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+}
+function setSyncStatus(status,msg){
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncText');
+  dot.className='sync-dot '+status;
+  if(status==='connected') txt.innerHTML=`<strong>🟢 Connected</strong> — Live data active · Last sync: ${new Date().toLocaleTimeString()}`;
+  else if(status==='fetching') txt.innerHTML=`<strong>🟡 Fetching Data Stream…</strong> — Connecting to Google Sheets`;
+  else if(status==='error') txt.innerHTML=`<strong>🔴 ${msg||'Connection Refused'}</strong> — Check sheet is public · Try "Publish to web" in Google Sheets`;
+  else txt.innerHTML=msg||'Connect Google Sheets for live data — mock data active';
+}
+async function doSync(){
+  const url=document.getElementById('driveInp').value.trim();
+  if(!url){setSyncStatus('error','No URL provided');return;}
+  const csvUrl=parseGDriveUrl(url);
+  if(!csvUrl){setSyncStatus('error','Invalid Google Sheets URL — paste full share link');return;}
+  setSyncStatus('fetching');
+  try{
+    const r=await fetch(csvUrl);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    parseAndApplyCSV(text);
+    localStorage.setItem('hygr_drive',url);
+    setSyncStatus('connected');
+  }catch(e){
+    setSyncStatus('error','CORS or permission error — ensure sheet is published to web');
+  }
+}
+async function doSyncPanel(){
+  const url=document.getElementById('syncPanelInp').value.trim();
+  document.getElementById('driveInp').value=url;
+  const csvUrl=parseGDriveUrl(url);
+  if(csvUrl) document.getElementById('resolvedUrl').textContent=csvUrl;
+  else{document.getElementById('resolvedUrl').textContent='Invalid URL';return;}
+  document.getElementById('syncLog').textContent='Connecting…';
+  await doSync();
+  document.getElementById('syncLog').textContent=document.getElementById('syncText').textContent;
+}
+document.getElementById('syncPanelInp').addEventListener('input',function(){
+  const u=parseGDriveUrl(this.value.trim());
+  document.getElementById('resolvedUrl').textContent=u||'Paste a valid Google Sheets URL above';
+});
+function clearSync(){
+  localStorage.removeItem('hygr_drive');
+  document.getElementById('driveInp').value='';
+  document.getElementById('syncPanelInp').value='';
+  document.getElementById('resolvedUrl').textContent='';
+  document.getElementById('syncLog').textContent='';
+  setSyncStatus('idle','Disconnected — using built-in mock data');
+}
+function parseAndApplyCSV(csv){
+  try{
+    const rows=csv.trim().split('\n').slice(1);
+    const parsed=rows.map(row=>{
+      const c=row.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+      return{m:c[0],s:parseFloat(c[1])||0,o:parseInt(c[2])||0,cr:parseFloat(c[3])||0,v:parseInt(c[4])||0,b:parseFloat(c[5])||0,cl:parseInt(c[6])||0};
+    }).filter(r=>r.m&&r.s);
+    if(parsed.length>0){D.shopee.m2026=parsed; renderKPIs(); showPanel(S.nav);}
+  }catch(e){console.warn('CSV parse error',e);}
+}
+
+/* ─── INIT ─── */
+window.addEventListener('DOMContentLoaded',()=>{
+  // restore saved URL
+  const saved=localStorage.getItem('hygr_drive');
+  if(saved){
+    document.getElementById('driveInp').value=saved;
+    document.getElementById('syncPanelInp').value=saved;
+    const u=parseGDriveUrl(saved);
+    if(u) document.getElementById('resolvedUrl').textContent=u;
+  }
+  renderKPIs();
+  showPanel('overview');
+});
 </script>
 </body>
 </html>
