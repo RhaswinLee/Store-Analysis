@@ -223,6 +223,40 @@ tr:hover td{background:rgba(0,0,0,.02)}
 .custom-range.show{display:flex}
 .date-inp{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;color:var(--t1);outline:none}
 .date-inp:focus{border-color:var(--indigo)}
+
+/* ── PERIOD PICKER ── */
+.period-wrap{position:relative}
+.period-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--card);border:1px solid var(--border);border-radius:7px;font-size:12px;font-weight:600;color:var(--t1);cursor:pointer;transition:all .15s;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.period-btn:hover,.period-btn.open{border-color:var(--indigo)}
+.period-btn.open{background:var(--indigo-d)}
+.period-btn .caret{font-size:9px;color:var(--t3);transition:transform .2s}
+.period-btn.open .caret{transform:rotate(180deg)}
+.period-dd{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.12);display:none;z-index:300;overflow:hidden;min-width:420px}
+.period-dd.show{display:flex}
+.pd-left{width:170px;padding:6px;border-right:1px solid #f1f5f9;flex-shrink:0}
+.pd-opt{padding:8px 12px;border-radius:7px;font-size:12px;color:var(--t2);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.pd-opt:hover{background:#f8fafc;color:var(--t1)}
+.pd-opt.active{background:var(--indigo);color:#fff}
+.pd-opt.active .pd-arrow{color:#fff}
+.pd-arrow{font-size:10px;color:var(--t3)}
+.pd-right{flex:1;padding:16px;min-width:230px}
+/* Year nav */
+.mp-year{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mp-ybtn{width:30px;height:30px;background:#f1f5f9;border:1px solid var(--border);border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;color:var(--t2);transition:all .15s}
+.mp-ybtn:hover{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+.mp-ylabel{font-size:16px;font-weight:700;color:var(--t1)}
+/* Month grid */
+.mp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mp-m{padding:9px 4px;border-radius:8px;font-size:12px;font-weight:500;color:var(--t2);cursor:pointer;text-align:center;background:#f8fafc;border:1px solid transparent;transition:all .15s}
+.mp-m:hover{background:var(--indigo-d);color:var(--indigo);border-color:var(--indigo)}
+.mp-m.sel{background:var(--indigo);color:#fff;border-color:var(--indigo)}
+/* Custom range in picker */
+.cp-field{margin-bottom:12px}
+.cp-field label{display:block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:5px}
+.cp-field input{width:100%;background:#f8fafc;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--t1);outline:none}
+.cp-field input:focus{border-color:var(--indigo)}
+.cp-apply{width:100%;padding:8px;background:var(--indigo);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px}
+.cp-apply:hover{opacity:.9}
 </style>
 </head>
 <body>
@@ -284,17 +318,21 @@ tr:hover td{background:rgba(0,0,0,.02)}
       <div class="ptab" data-p="shopee">🛒 Shopee</div>
       <div class="ptab" data-p="tiktok">🎵 TikTok</div>
     </div>
-    <div class="date-row">
-      <button class="date-btn" data-d="1m">Last Month</button>
-      <button class="date-btn active" data-d="3m">Last 3 Months</button>
-      <button class="date-btn" data-d="12m">Full Year</button>
-      <div class="vr"></div>
-      <button class="date-btn" data-d="custom">Custom ▾</button>
-      <div class="custom-range" id="customRange">
-        <input type="month" class="date-inp" id="customStart" value="2026-01">
-        <span style="color:var(--t3);font-size:11px">→</span>
-        <input type="month" class="date-inp" id="customEnd" value="2026-03">
-        <button class="btn-sm primary" onclick="applyCustom()">Apply</button>
+    <div class="period-wrap" id="periodWrap">
+      <button class="period-btn" id="periodBtn" onclick="togglePeriod(event)">
+        Period: <span id="periodLabel">All Time</span><span class="caret">▼</span>
+      </button>
+      <div class="period-dd" id="periodDd">
+        <div class="pd-left">
+          <div class="pd-opt active" data-opt="all">All Time</div>
+          <div class="pd-opt" data-opt="today">Today</div>
+          <div class="pd-opt" data-opt="yesterday">Yesterday</div>
+          <div class="pd-opt" data-opt="7d">Last 7 Days</div>
+          <div class="pd-opt" data-opt="30d">Last 30 Days</div>
+          <div class="pd-opt" data-opt="monthly">Monthly <span class="pd-arrow">▶</span></div>
+          <div class="pd-opt" data-opt="custom">Custom Range <span class="pd-arrow">▶</span></div>
+        </div>
+        <div class="pd-right" id="pdRight"></div>
       </div>
     </div>
   </div>
@@ -745,7 +783,7 @@ Chart.defaults.color='#94a3b8';
 const S = {
   nav:'overview',
   platform:'all',
-  grain:'3m',
+  grain:'all',
   driveUrl: localStorage.getItem('hygr_drive')||'',
   syncStatus:'idle',
   lastSync:null,
@@ -753,14 +791,42 @@ const S = {
 
 /* ─── FILTERED DATA ─── */
 function filteredShopee(){
-  if(S.grain==='1m') return D.shopee.m2026.slice(-1);
-  if(S.grain==='3m') return D.shopee.m2026;
-  return [...D.shopee.m2025,...D.shopee.m2026];
+  const all=[...D.shopee.m2025,...D.shopee.m2026];
+  if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopee.m2026.slice(-1);
+  if(S.grain==='monthly'&&S.selectedMonth){
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn=mNames[S.selectedMonth.month];
+    const yr=S.selectedMonth.year;
+    const src=yr===2025?D.shopee.m2025:D.shopee.m2026;
+    const r=src.find(x=>x.m===mn);
+    return r?[r]:D.shopee.m2026.slice(-1);
+  }
+  if(S.grain==='custom'&&S.customStart&&S.customEnd){
+    const [sy,sm]=S.customStart.split('-').map(Number);
+    const [ey,em]=S.customEnd.split('-').map(Number);
+    return all.filter(r=>{
+      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const mi=mNames.indexOf(r.m);
+      const yr=D.shopee.m2025.includes(r)?2025:2026;
+      return (yr>sy||(yr===sy&&mi+1>=sm))&&(yr<ey||(yr===ey&&mi+1<=em));
+    });
+  }
+  return D.shopee.m2026;
 }
 function filteredTT(){
-  if(S.grain==='1m') return D.tiktok.m2026.slice(-1);
-  if(S.grain==='3m') return D.tiktok.m2026;
-  return [...D.tiktok.m2025,...D.tiktok.m2026];
+  const all=[...D.tiktok.m2025,...D.tiktok.m2026];
+  if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktok.m2026.slice(-1);
+  if(S.grain==='monthly'&&S.selectedMonth){
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn=mNames[S.selectedMonth.month];
+    const yr=S.selectedMonth.year;
+    const src=yr===2025?D.tiktok.m2025:D.tiktok.m2026;
+    const r=src.find(x=>x.m===mn);
+    return r?[r]:D.tiktok.m2026.slice(-1);
+  }
+  return D.tiktok.m2026;
 }
 
 /* ─── CHARTS MAP ─── */
@@ -1196,28 +1262,110 @@ document.querySelectorAll('.ptab').forEach(t=>{
   });
 });
 
-/* ─── DATE GRAIN ─── */
-document.querySelectorAll('.date-btn').forEach(b=>{
-  b.addEventListener('click',()=>{
-    if(b.dataset.d==='custom'){
-      document.getElementById('customRange').classList.toggle('show');
-      return;
-    }
-    document.querySelectorAll('.date-btn').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    S.grain=b.dataset.d;
-    document.getElementById('customRange').classList.remove('show');
-    renderKPIs();
-    showPanel(S.nav);
-  });
+/* ─── PERIOD PICKER ─── */
+const PS = { open:false, sub:null, year:2026, selMonth:null, selYear:null };
+
+const PRESET_LABELS = {all:'All Time',today:'Today',yesterday:'Yesterday','7d':'Last 7 Days','30d':'Last 30 Days'};
+
+function togglePeriod(e){
+  e.stopPropagation();
+  PS.open=!PS.open;
+  document.getElementById('periodDd').classList.toggle('show',PS.open);
+  document.getElementById('periodBtn').classList.toggle('open',PS.open);
+  if(PS.open && !PS.sub) showPdSub(null);
+}
+function closePeriod(){
+  PS.open=false;
+  document.getElementById('periodDd').classList.remove('show');
+  document.getElementById('periodBtn').classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  if(!document.getElementById('periodWrap').contains(e.target)) closePeriod();
 });
-function applyCustom(){
-  S.grain='custom';
-  document.querySelectorAll('.date-btn').forEach(x=>x.classList.remove('active'));
-  document.querySelector('[data-d="custom"]').classList.add('active');
+
+// Highlight active option in left panel
+function setPdActive(opt){
+  document.querySelectorAll('.pd-opt').forEach(o=>{
+    o.classList.toggle('active', o.dataset.opt===opt);
+  });
+}
+
+function showPdSub(type){
+  PS.sub=type;
+  const right=document.getElementById('pdRight');
+  if(type==='monthly'){
+    renderMonthPicker();
+  } else if(type==='custom'){
+    right.innerHTML=`
+      <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px">Custom Range</div>
+      <div class="cp-field"><label>Start Month</label><input type="month" id="cpStart" value="2026-01"></div>
+      <div class="cp-field"><label>End Month</label><input type="month" id="cpEnd" value="2026-03"></div>
+      <button class="cp-apply" onclick="applyCustomPeriod()">Apply Range</button>`;
+  } else {
+    right.innerHTML='';
+  }
+}
+
+function renderMonthPicker(){
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const right=document.getElementById('pdRight');
+  right.innerHTML=`
+    <div class="mp-year">
+      <button class="mp-ybtn" onclick="pdYear(-1)">‹</button>
+      <span class="mp-ylabel" id="mpYear">${PS.year}</span>
+      <button class="mp-ybtn" onclick="pdYear(1)">›</button>
+    </div>
+    <div class="mp-grid">
+      ${months.map((m,i)=>`<div class="mp-m${PS.selMonth===i&&PS.selYear===PS.year?' sel':''}" onclick="selectMonth(${i})">${m}</div>`).join('')}
+    </div>`;
+}
+function pdYear(d){
+  PS.year+=d;
+  document.getElementById('mpYear').textContent=PS.year;
+  renderMonthPicker();
+}
+function selectMonth(idx){
+  PS.selMonth=idx;
+  PS.selYear=PS.year;
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('periodLabel').textContent=months[idx]+' '+PS.year;
+  S.grain='monthly';
+  S.selectedMonth={month:idx,year:PS.year};
   renderKPIs();
   showPanel(S.nav);
+  closePeriod();
 }
+function applyCustomPeriod(){
+  const s=document.getElementById('cpStart').value;
+  const e=document.getElementById('cpEnd').value;
+  if(!s||!e) return;
+  S.grain='custom';
+  S.customStart=s; S.customEnd=e;
+  const fmt=v=>{const[y,m]=v.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]+' '+y;};
+  document.getElementById('periodLabel').textContent=fmt(s)+' → '+fmt(e);
+  renderKPIs(); showPanel(S.nav); closePeriod();
+}
+
+// Left panel option clicks
+document.querySelectorAll('.pd-opt').forEach(opt=>{
+  opt.addEventListener('mouseenter',()=>{
+    const o=opt.dataset.opt;
+    if(o==='monthly'||o==='custom') showPdSub(o);
+    else showPdSub(null);
+  });
+  opt.addEventListener('click',e=>{
+    e.stopPropagation();
+    const o=opt.dataset.opt;
+    if(o==='monthly'||o==='custom'){showPdSub(o);setPdActive(o);return;}
+    setPdActive(o);
+    S.grain=o;
+    const labels={all:'All Time',today:'Today',yesterday:'Yesterday','7d':'Last 7 Days','30d':'Last 30 Days'};
+    document.getElementById('periodLabel').textContent=labels[o]||o;
+    renderKPIs(); showPanel(S.nav); closePeriod();
+  });
+});
+
+function applyCustom(){} // legacy stub
 
 /* ─── SIDEBAR NAV ─── */
 document.querySelectorAll('.sb-item').forEach(i=>{
