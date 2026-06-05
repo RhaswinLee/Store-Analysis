@@ -75,6 +75,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .ptab.active[data-p="all"]{background:var(--indigo);color:#fff}
 .ptab.active[data-p="shopee"]{background:var(--shopee);color:#fff}
 .ptab.active[data-p="tiktok"]{background:var(--tiktok);color:#fff}
+.ptab.active[data-p="shopee-sg"]{background:var(--shopee);color:#fff}
+.ptab.active[data-p="tiktok-sg"]{background:var(--tiktok);color:#fff}
+.ptab[data-p="shopee-sg"],.ptab[data-p="tiktok-sg"]{opacity:.8}
+.ptab[data-p="shopee-sg"]:hover,.ptab[data-p="tiktok-sg"]:hover{opacity:1}
+.sg-badge{display:inline-block;font-size:8px;font-weight:700;background:#e2e8f0;color:#64748b;border-radius:3px;padding:1px 4px;margin-left:3px;vertical-align:middle;letter-spacing:.3px}
 
 /* Date Controls */
 .date-row{display:flex;align-items:center;gap:4px}
@@ -316,8 +321,10 @@ tr:hover td{background:rgba(0,0,0,.02)}
     </div>
     <div class="ptabs" id="ptabs">
       <div class="ptab active" data-p="all">All Platforms</div>
-      <div class="ptab" data-p="shopee">🛒 Shopee</div>
-      <div class="ptab" data-p="tiktok">🎵 TikTok</div>
+      <div class="ptab" data-p="shopee">🛒 Shopee MY</div>
+      <div class="ptab" data-p="tiktok">🎵 TikTok MY</div>
+      <div class="ptab" data-p="shopee-sg">🛒 Shopee SG</div>
+      <div class="ptab" data-p="tiktok-sg">🎵 TikTok SG</div>
     </div>
     <div class="period-wrap" id="periodWrap">
       <button class="period-btn" id="periodBtn" onclick="togglePeriod(event)">
@@ -532,6 +539,106 @@ tr:hover td{background:rgba(0,0,0,.02)}
             </tbody></table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══ SHOPEE SG PANEL ═══ -->
+    <div class="panel" id="panel-shopee-sg">
+      <div class="preferred" style="background:linear-gradient(135deg,rgba(234,108,0,.06),rgba(234,108,0,.02));border-color:rgba(234,108,0,.2)">
+        <span style="font-size:20px">🇸🇬</span>
+        <div><strong style="color:var(--shopee)">Shopee Singapore</strong> — Market data in SGD · Q1 2026 performance · Early growth stage</div>
+        <div class="preferred-alert" style="background:var(--shopee-d);color:var(--shopee)">↑ 59.8% QoQ</div>
+      </div>
+      <div class="kpi-grid" id="shopeeSgKpi"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Shopee SG Monthly Revenue</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+            <span class="tag tag-s">Shopee SG</span>
+          </div>
+          <canvas id="shopeeSgRevChart" height="200"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub">Mar 2026 contribution · SGD</div></div></div>
+          <canvas id="shopeeSgChannelChart" height="200"></canvas>
+          <div id="shopeeSgChannelLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+      <div class="cg cg-3">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Monthly CR% · SG market</div></div></div>
+          <canvas id="shopeeSgCrChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Avg Order Value</div><div class="cc-sub">AOV trend · SGD</div></div></div>
+          <canvas id="shopeeSgAovChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">MY vs SG Comparison</div><div class="cc-sub">Revenue index (MY=100)</div></div></div>
+          <canvas id="shopeeSgCompChart" height="180"></canvas>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">Shopee SG Ads Performance</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+          <span class="tag tag-s">Shopee SG Ads</span>
+        </div>
+        <table class="ads-table">
+          <thead><tr><th>Month</th><th>Revenue</th><th>Ad Spend</th><th>ROI</th><th>Orders</th><th>Conv. Rate</th><th>AOV</th></tr></thead>
+          <tbody id="shopeeSgAdsTbl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ TIKTOK SG PANEL ═══ -->
+    <div class="panel" id="panel-tiktok-sg">
+      <div class="preferred" style="background:linear-gradient(135deg,rgba(225,29,72,.06),rgba(225,29,72,.02));border-color:rgba(225,29,72,.2)">
+        <span style="font-size:20px">🇸🇬</span>
+        <div><strong style="color:var(--tiktok)">TikTok Shop Singapore</strong> — Market data in SGD · Q1 2026 performance · Early growth stage</div>
+        <div class="preferred-alert" style="background:var(--tiktok-d);color:var(--tiktok)">↑ 72.6% QoQ</div>
+      </div>
+      <div class="kpi-grid" id="tiktokSgKpi"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">TikTok SG Monthly GMV</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+            <span class="tag tag-t">TikTok SG</span>
+          </div>
+          <canvas id="tiktokSgRevChart" height="200"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Sales Breakdown</div><div class="cc-sub">Product · Video · Live (2026)</div></div></div>
+          <canvas id="tiktokSgBreakChart" height="200"></canvas>
+          <div class="legend" style="margin-top:10px">
+            <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Product</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Video</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>Live</div>
+          </div>
+        </div>
+      </div>
+      <div class="cg cg-3">
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Monthly CR% · SG market</div></div></div>
+          <canvas id="tiktokSgCrChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Avg Order Value</div><div class="cc-sub">AOV trend · SGD</div></div></div>
+          <canvas id="tiktokSgAovChart" height="180"></canvas>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">MY vs SG Comparison</div><div class="cc-sub">Revenue index (MY=100)</div></div></div>
+          <canvas id="tiktokSgCompChart" height="180"></canvas>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">TikTok SG Affiliate & Ads</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+          <span class="tag tag-t">TikTok SG</span>
+        </div>
+        <table class="ads-table">
+          <thead><tr><th>Month</th><th>GMV</th><th>Ad Spend</th><th>ROI</th><th>Orders</th><th>Affiliate GMV</th><th>Creators</th></tr></thead>
+          <tbody id="tiktokSgAdsTbl"></tbody>
+        </table>
       </div>
     </div>
 
@@ -817,6 +924,30 @@ const D = {
       {m:'Jan',views:9755611,profile:42425,engage:96612},
       {m:'Feb',views:8801563,profile:33840,engage:53585},
       {m:'Mar',views:20805310,profile:181232,engage:342732},
+    ],
+  },
+  shopeeSG:{
+    m2026:[
+      {m:'Jan',s:42180,o:648,cr:2.94,v:22050,b:65.09,exp:8200,roi:5.14},
+      {m:'Feb',s:58420,o:821,cr:3.12,v:26313,b:71.16,exp:11400,roi:5.12},
+      {m:'Mar',s:67350,o:954,cr:3.38,v:28219,b:70.60,exp:13100,roi:5.14},
+    ],
+    channel:{
+      labels:['Product Card','Affiliate','Seller Live','Seller Video'],
+      mar:[38200,18400,8900,1850],
+      colors:['#f97316','#f43f5e','#6366f1','#3fb950'],
+    },
+  },
+  tiktokSG:{
+    m2026:[
+      {m:'Jan',s:18240,o:312,cr:3.24,v:8800,b:58.46,spend:3800,roi:4.80,aff:4200,creators:38},
+      {m:'Feb',s:24610,o:418,cr:3.67,v:10200,b:58.88,spend:5100,roi:4.83,aff:5800,creators:54},
+      {m:'Mar',s:31480,o:523,cr:4.18,v:12500,b:60.19,spend:6400,roi:4.92,aff:7200,creators:71},
+    ],
+    breakdown:[
+      {m:'Jan',prod:8820,vid:5940,live:3480},
+      {m:'Feb',prod:11820,vid:7980,live:4810},
+      {m:'Mar',prod:15120,vid:10210,live:6150},
     ],
   },
   promos:{
@@ -1332,6 +1463,151 @@ function renderHealth(){
     </div>`).join('');
 }
 
+/* ─── SHOPEE SG ─── */
+function renderShopeeSG(){
+  const d=D.shopeeSG.m2026;
+  const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
+  const last=d[d.length-1], prev=d[d.length-2];
+  const mom=((last.s-prev.s)/prev.s*100).toFixed(1);
+  const el=document.getElementById('shopeeSgKpi');
+  if(el) el.innerHTML=[
+    {l:'Total Revenue (Q1)',v:SGD(d.reduce((a,r)=>a+r.s,0)),ch:'↑ 59.8% QoQ',dir:'up',sub:'3 months Jan–Mar 2026',ico:'💵'},
+    {l:'Mar Revenue',v:SGD(last.s),ch:'↑ '+mom+'% MoM',dir:'up',sub:'vs '+SGD(prev.s)+' Feb',ico:'📈'},
+    {l:'Mar Orders',v:last.o.toLocaleString(),ch:'↑ '+((last.o-prev.o)/prev.o*100).toFixed(1)+'% MoM',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate (Mar)',v:last.cr+'%',ch:'Improving',dir:'up',sub:'Target 3.50%+',ico:'⚡'},
+    {l:'Avg Order Value',v:'SGD '+last.b.toFixed(2),ch:'Stable',dir:'up',sub:'Above MY AOV equiv.',ico:'🎯'},
+  ].map(k=>`
+    <div class="kpi">
+      <div class="kpi-ico">${k.ico}</div>
+      <div class="kpi-label">${k.l}</div>
+      <div class="kpi-val">${k.v}</div>
+      <span class="chip ${k.dir}">${k.ch}</span>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  const labs=d.map(r=>r.m+' 2026');
+  mkChart('shopeeSgRevChart',{type:'bar',data:{
+    labels:labs,
+    datasets:[{label:'Revenue (SGD)',data:d.map(r=>r.s),backgroundColor:d.map((_,i)=>i===d.length-1?'#f97316':'rgba(249,115,22,.45)'),borderRadius:5,maxBarThickness:52}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` Revenue: SGD ${c.raw.toLocaleString()}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)}}}}});
+
+  const ch=D.shopeeSG.channel;
+  const tot=ch.mar.reduce((a,v)=>a+v,0);
+  mkChart('shopeeSgChannelChart',{type:'doughnut',data:{
+    labels:ch.labels,datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
+  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: SGD ${c.raw.toLocaleString()} (${(c.raw/tot*100).toFixed(1)}%)`}}}}});
+  document.getElementById('shopeeSgChannelLegend').innerHTML=ch.labels.map((l,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
+      <span style="font-weight:700;color:var(--t1)">SGD ${ch.mar[i].toLocaleString()} <span style="color:var(--t3)">${(ch.mar[i]/tot*100).toFixed(1)}%</span></span>
+    </div>`).join('');
+
+  mkChart('shopeeSgCrChart',{type:'line',data:{labels:labs,
+    datasets:[{label:'CR%',data:d.map(r=>r.cr),borderColor:'#f97316',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f97316',tension:.4,fill:true,backgroundColor:'rgba(249,115,22,.08)'}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` CR: ${c.raw}%`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+
+  mkChart('shopeeSgAovChart',{type:'line',data:{labels:labs,
+    datasets:[{label:'AOV (SGD)',data:d.map(r=>r.b),borderColor:'#6366f1',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#6366f1',tension:.4}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` AOV: SGD ${c.raw}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>'SGD '+v}}}}});
+
+  // MY vs SG index chart (MY=100)
+  const myData=D.shopee.m2026;
+  mkChart('shopeeSgCompChart',{type:'bar',data:{
+    labels:labs,
+    datasets:[
+      {label:'MY (index 100)',data:myData.map(()=>100),backgroundColor:'rgba(249,115,22,.25)',borderRadius:3,maxBarThickness:28},
+      {label:'SG index',data:d.map((r,i)=>myData[i]?+(r.s/myData[i].s*100).toFixed(1):0),backgroundColor:'rgba(99,102,241,.65)',borderRadius:3,maxBarThickness:28},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v}}}}});
+
+  document.getElementById('shopeeSgAdsTbl').innerHTML=d.map(r=>`<tr>
+    <td>${r.m} 2026</td>
+    <td style="font-weight:700;color:var(--t1)">SGD ${r.s.toLocaleString()}</td>
+    <td>SGD ${r.exp.toLocaleString()}</td>
+    <td class="${r.roi>=5?'roi-good':'roi-warn'}">${r.roi}x</td>
+    <td>${r.o}</td>
+    <td>${r.cr}%</td>
+    <td>SGD ${r.b.toFixed(2)}</td>
+  </tr>`).join('');
+}
+
+/* ─── TIKTOK SG ─── */
+function renderTikTokSG(){
+  const d=D.tiktokSG.m2026;
+  const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
+  const last=d[d.length-1], prev=d[d.length-2];
+  const el=document.getElementById('tiktokSgKpi');
+  if(el) el.innerHTML=[
+    {l:'Total GMV (Q1)',v:SGD(d.reduce((a,r)=>a+r.s,0)),ch:'↑ 72.6% QoQ',dir:'up',sub:'3 months Jan–Mar 2026',ico:'🎵'},
+    {l:'Mar GMV',v:SGD(last.s),ch:'↑ '+((last.s-prev.s)/prev.s*100).toFixed(1)+'% MoM',dir:'up',sub:'vs '+SGD(prev.s)+' Feb',ico:'📈'},
+    {l:'Mar Orders',v:last.o.toLocaleString(),ch:'↑ '+((last.o-prev.o)/prev.o*100).toFixed(1)+'% MoM',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate (Mar)',v:last.cr+'%',ch:'Best yet',dir:'up',sub:'↑ from 3.67% Feb',ico:'⚡'},
+    {l:'Mar Affiliate GMV',v:SGD(last.aff),ch:last.creators+' creators',dir:'up',sub:'Growing network',ico:'🤝'},
+  ].map(k=>`
+    <div class="kpi">
+      <div class="kpi-ico">${k.ico}</div>
+      <div class="kpi-label">${k.l}</div>
+      <div class="kpi-val">${k.v}</div>
+      <span class="chip ${k.dir}">${k.ch}</span>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  const labs=d.map(r=>r.m+' 2026');
+  mkChart('tiktokSgRevChart',{type:'bar',data:{
+    labels:labs,
+    datasets:[{label:'GMV (SGD)',data:d.map(r=>r.s),backgroundColor:d.map((_,i)=>i===d.length-1?'#e11d48':'rgba(225,29,72,.4)'),borderRadius:5,maxBarThickness:52}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` GMV: SGD ${c.raw.toLocaleString()}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)}}}}});
+
+  const bk=D.tiktokSG.breakdown;
+  mkChart('tiktokSgBreakChart',{type:'bar',data:{
+    labels:bk.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Product',data:bk.map(r=>r.prod),backgroundColor:'#6366f1',borderRadius:3,maxBarThickness:28},
+      {label:'Video',data:bk.map(r=>r.vid),backgroundColor:'#f43f5e',borderRadius:3,maxBarThickness:28},
+      {label:'Live',data:bk.map(r=>r.live),backgroundColor:'#f97316',borderRadius:3,maxBarThickness:28},
+    ]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: SGD ${c.raw.toLocaleString()}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)}}}}});
+
+  mkChart('tiktokSgCrChart',{type:'line',data:{labels:labs,
+    datasets:[{label:'CR%',data:d.map(r=>r.cr),borderColor:'#e11d48',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#e11d48',tension:.4,fill:true,backgroundColor:'rgba(225,29,72,.08)'}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` CR: ${c.raw}%`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+
+  mkChart('tiktokSgAovChart',{type:'line',data:{labels:labs,
+    datasets:[{label:'AOV (SGD)',data:d.map(r=>r.b),borderColor:'#6366f1',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#6366f1',tension:.4}]
+  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` AOV: SGD ${c.raw}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>'SGD '+v}}}}});
+
+  // MY vs SG index
+  const myData=D.tiktok.m2026;
+  mkChart('tiktokSgCompChart',{type:'bar',data:{
+    labels:labs,
+    datasets:[
+      {label:'MY (index 100)',data:myData.map(()=>100),backgroundColor:'rgba(225,29,72,.2)',borderRadius:3,maxBarThickness:28},
+      {label:'SG index',data:d.map((r,i)=>myData[i]?+(r.s/myData[i].s*100).toFixed(1):0),backgroundColor:'rgba(99,102,241,.65)',borderRadius:3,maxBarThickness:28},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${c.raw}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10}}}}}});
+
+  document.getElementById('tiktokSgAdsTbl').innerHTML=d.map(r=>`<tr>
+    <td>${r.m} 2026</td>
+    <td style="font-weight:700;color:var(--t1)">SGD ${r.s.toLocaleString()}</td>
+    <td>SGD ${r.spend.toLocaleString()}</td>
+    <td class="${r.roi>=4.5?'roi-good':'roi-warn'}">${r.roi}x</td>
+    <td>${r.o}</td>
+    <td>SGD ${r.aff.toLocaleString()}</td>
+    <td>${r.creators}</td>
+  </tr>`).join('');
+}
+
 /* ─── PROMOTIONS ─── */
 function promoTypeTagStyle(type){
   const map={
@@ -1463,12 +1739,14 @@ function showPanel(name){
   const panel=document.getElementById('panel-'+name);
   if(panel) panel.classList.add('on');
   document.querySelector(`[data-nav="${name}"]`)?.classList.add('active');
-  const titles={overview:'Performance Overview',shopee:'Shopee Deep Dive',tiktok:'TikTok Deep Dive',campaigns:'Campaign Performance',promo:'Promotion Analytics',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
+  const titles={overview:'Performance Overview',shopee:'Shopee MY — Deep Dive',tiktok:'TikTok MY — Deep Dive','shopee-sg':'Shopee SG — Deep Dive','tiktok-sg':'TikTok SG — Deep Dive',campaigns:'Campaign Performance',promo:'Promotion Analytics',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
   document.getElementById('pageTitle').textContent=titles[name]||'Dashboard';
   setTimeout(()=>{
     if(name==='overview') renderOverview();
     else if(name==='shopee') renderShopee();
     else if(name==='tiktok') renderTikTok();
+    else if(name==='shopee-sg') renderShopeeSG();
+    else if(name==='tiktok-sg') renderTikTokSG();
     else if(name==='campaigns') renderCampaigns();
     else if(name==='promo') renderPromos();
     else if(name==='products') renderProducts();
@@ -1483,9 +1761,11 @@ document.querySelectorAll('.ptab').forEach(t=>{
     document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     S.platform=t.dataset.p;
-    if(S.platform==='shopee'){showPanel('shopee');}
-    else if(S.platform==='tiktok'){showPanel('tiktok');}
-    else{showPanel('overview');}
+    if(S.platform==='shopee') showPanel('shopee');
+    else if(S.platform==='tiktok') showPanel('tiktok');
+    else if(S.platform==='shopee-sg') showPanel('shopee-sg');
+    else if(S.platform==='tiktok-sg') showPanel('tiktok-sg');
+    else showPanel('overview');
   });
 });
 
