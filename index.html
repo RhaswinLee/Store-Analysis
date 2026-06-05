@@ -2004,8 +2004,8 @@ async function loadFolderContents(folderId, folderName='Folder'){
   setSyncStatus('fetching');
   try{
     const q=encodeURIComponent(`'${folderId}' in parents`);
-    const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime)');
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100`);
+    const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
     const data=await res.json();
     if(!res.ok) throw new Error(data.error?.message||'Drive API error '+res.status);
     const files=data.files||[];
@@ -2065,12 +2065,28 @@ async function fetchRawRows(file){
     const text=await res.text();
     return text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
   }
-  // xlsx / everything else
+  // xlsx: try multiple download methods in order
   if(typeof XLSX==='undefined') throw new Error('SheetJS library not loaded — refresh the page.');
-  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}`);
-  if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error?.message||'Download failed (HTTP '+res.status+')');}
-  const ab=await res.arrayBuffer();
+  const downloadAttempts=[
+    // 1. Drive API with acknowledgeAbuse (bypasses virus-scan 307 redirect)
+    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}&acknowledgeAbuse=true&supportsAllDrives=true`,
+    // 2. Public Drive download URL (works for "Anyone with link" without API key)
+    `https://drive.google.com/uc?export=download&id=${file.id}&confirm=t`,
+    // 3. webContentLink from Drive listing (if available)
+    ...(file.webContentLink?[file.webContentLink]:[]),
+  ];
+  let ab=null, lastErr='unknown error';
+  for(const url of downloadAttempts){
+    try{
+      const r=await fetch(url);
+      if(r.ok){ab=await r.arrayBuffer();break;}
+      const errJson=await r.json().catch(()=>({}));
+      lastErr=errJson.error?.message||'HTTP '+r.status;
+    }catch(e){lastErr=e.message;}
+  }
+  if(!ab) throw new Error(`Download failed after ${downloadAttempts.length} attempts: ${lastErr}. Ensure file is shared "Anyone with the link can view".`);
   const wb=XLSX.read(ab,{type:'array'});
+  if(!wb.SheetNames.length) throw new Error('No sheets found in xlsx file.');
   const ws=wb.Sheets[wb.SheetNames[0]];
   return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
 }
@@ -2291,8 +2307,8 @@ function startAutoRefresh(intervalMs=5*60*1000){
     const cur=folderNav[folderNav.length-1];
     try{
       const q=encodeURIComponent(`'${cur.id}' in parents`);
-      const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime)');
-      const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=50`);
+      const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
+      const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true`);
       const data=await res.json();
       if(!res.ok) return;
       const newFiles=(data.files||[]).filter(isLoadable);
