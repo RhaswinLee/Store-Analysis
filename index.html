@@ -2037,7 +2037,7 @@ function disconnectPlatform(platform){
   syncLog(`[${platform}] Disconnected.`);
 }
 
-// ── Load a platform's folder (scans sub-folders if needed) ──
+// ── Load a platform's folder (scans sub-folders if needed, filters to revenue files) ──
 async function loadPlatformFolder(platform,folderId,folderName){
   try{
     const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
@@ -2050,12 +2050,11 @@ async function loadPlatformFolder(platform,folderId,folderName){
     const folders=files.filter(f=>f.mimeType===FOLDER_MIME);
     PLAT_S[platform].nav=[{id:folderId,name:folderName}];
 
+    let allLoadables=[];
     if(loadables.length>0){
-      syncLog(`[${platform}] Found ${loadables.length} file(s) in "${folderName}"`);
-      await loadAllFilesInFolder(loadables,folderName,platform);
+      allLoadables=loadables;
     } else if(folders.length>0){
       syncLog(`[${platform}] Scanning ${folders.length} sub-folder(s)…`);
-      let allLoadables=[];
       for(const sf of folders){
         const r2=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${sf.id}' in parents`)}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
         const d2=await r2.json();
@@ -2065,20 +2064,38 @@ async function loadPlatformFolder(platform,folderId,folderName){
           allLoadables.push(...sfl);
         }
       }
-      if(allLoadables.length>0){
-        await loadAllFilesInFolder(allLoadables,folderName,platform);
-      } else {
-        setPlatformStatus(platform,'error','No xlsx/csv files found');
-        syncLog(`[${platform}] No data files found in folder or sub-folders.`,true);
-      }
-    } else {
-      setPlatformStatus(platform,'error','Folder is empty');
-      syncLog(`[${platform}] Folder is empty.`,true);
     }
+
+    if(!allLoadables.length){
+      setPlatformStatus(platform,'error','Folder is empty');
+      syncLog(`[${platform}] No data files found in folder or sub-folders.`,true);
+      return;
+    }
+
+    // Filter to revenue files only (e.g. Shopee shop-stats, TikTok Sales data)
+    const revFiles=filterRevFiles(allLoadables,platform);
+    const toLoad=revFiles.length?revFiles:allLoadables;
+    if(revFiles.length&&revFiles.length<allLoadables.length){
+      syncLog(`[${platform}] Using ${revFiles.length} revenue file(s) of ${allLoadables.length} total (skipped product files)`);
+    }
+    await loadAllFilesInFolder(toLoad,folderName,platform);
   }catch(e){
     setPlatformStatus(platform,'error',e.message.slice(0,50));
     syncLog(`[${platform}] Error: ${e.message}`,true);
   }
+}
+
+// Revenue filename prefixes per platform — only matching files update monthly revenue
+const PLAT_REV_PREFIX={
+  'shopee':    'hygr.malaysia.shopee-shop-stats.',
+  'tiktok':    'sales data',
+  'shopee-sg': null,
+  'tiktok-sg': null,
+};
+function filterRevFiles(files,platform){
+  const prefix=PLAT_REV_PREFIX[platform];
+  if(!prefix) return files;
+  return files.filter(f=>f.name.toLowerCase().startsWith(prefix.toLowerCase()));
 }
 
 const FOLDER_MIME='application/vnd.google-apps.folder';
@@ -2091,13 +2108,18 @@ function isLoadable(f){
     ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv');
 }
 
-// Extract month abbreviation from filename like "Report.20260501_20260531.xlsx"
+// Extract month abbreviation from filename
+// Supports: "Report.20260501_20260531.xlsx", "product_list_20260401.xlsx", "Sales Data April 2026.xlsx"
 function monthFromFilename(name){
-  const m=name.match(/[._\-](\d{4})(\d{2})\d{2}[_\-]/);
-  if(m){
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const idx=parseInt(m[2])-1;
-    return(idx>=0&&idx<12)?months[idx]:null;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Pattern 1: numeric date like _20260401. or _20260401_
+  const m1=name.match(/[._\-](\d{4})(\d{2})\d{2}[._\-]/);
+  if(m1){const idx=parseInt(m1[2])-1;return(idx>=0&&idx<12)?months[idx]:null;}
+  // Pattern 2: text month like "Sales Data April 2026.xlsx"
+  const m2=name.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i);
+  if(m2){
+    const tm={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+    return months[tm[m2[1].toLowerCase()]];
   }
   return null;
 }
