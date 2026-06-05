@@ -2040,16 +2040,172 @@ function isLoadable(f){
     ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv');
 }
 
+// Extract month abbreviation from filename like "Report.20260501_20260531.xlsx"
+function monthFromFilename(name){
+  const m=name.match(/[._\-](\d{4})(\d{2})\d{2}[_\-]/);
+  if(m){
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const idx=parseInt(m[2])-1;
+    return(idx>=0&&idx<12)?months[idx]:null;
+  }
+  return null;
+}
+
+// Fetch raw 2D row array from a Drive file (no side effects)
+async function fetchRawRows(file){
+  if(file.mimeType===SHEET_MIME){
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/A1:Z2000?key=${GS.apiKey}`);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error?.message||'Sheets API error '+res.status);
+    return data.values||[];
+  }
+  if(file.mimeType===CSV_MIME||file.name.toLowerCase().endsWith('.csv')){
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    return text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
+  }
+  // xlsx / everything else
+  if(typeof XLSX==='undefined') throw new Error('SheetJS library not loaded — refresh the page.');
+  const res=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}`);
+  if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error?.message||'Download failed (HTTP '+res.status+')');}
+  const ab=await res.arrayBuffer();
+  const wb=XLSX.read(ab,{type:'array'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+}
+
+// Parse 2D rows into month-aggregated data. Returns [] on failure.
+function rowsToMonths(rows,filename){
+  if(!rows||rows.length<2) return [];
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mFull={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',
+    july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
+  const headers=rows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+  const get=(row,...keys)=>{
+    for(const k of keys){
+      const i=headers.findIndex(h=>h===k||h.startsWith(k));
+      if(i>=0&&row[i]!==undefined&&String(row[i]).trim()!=='') return String(row[i]).trim();
+    }
+    return '';
+  };
+  const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
+  const acc={};
+  const initAcc=mk=>{if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};};
+  const addRow=(mk,row)=>{
+    initAcc(mk);
+    const a=acc[mk];
+    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales'));
+    const o=Math.round(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders','noofsuccessfulorders')));
+    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions')));
+    const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
+    const cr=num(get(row,'cr','convrate','conversion','conversionrate','buyerconversionrate','conversionratebasedonsession','convrate'));
+    const b=num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue'));
+    a.s+=s; a.o+=o; a.v+=v; a.cl+=cl;
+    if(cr>0){a.crSum+=cr;a.crN++;}
+    if(b>0){a.bSum+=b;a.bN++;}
+  };
+  const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate');
+  const hasMonth=headers.some(h=>h==='month'||h==='m'||h==='monthname');
+
+  if(hasDate&&!hasMonth){
+    // Daily rows — parse date → month index → aggregate
+    for(const row of rows.slice(1)){
+      const dateStr=get(row,'date','day','reportdate');
+      if(!dateStr) continue;
+      let mIdx=-1;
+      const d=new Date(dateStr);
+      if(!isNaN(d.getTime())) mIdx=d.getMonth();
+      else{
+        const parts=dateStr.split(/[\/\-\.]/);
+        if(parts.length>=3){const y=parseInt(parts[0]);mIdx=y>1900?parseInt(parts[1])-1:parseInt(parts[1])-1;}
+        if(mIdx<0){const m2=dateStr.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);if(m2) mIdx=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m2[1]);}
+      }
+      if(mIdx<0||mIdx>11) continue;
+      addRow(mNames[mIdx],row);
+    }
+  } else if(hasMonth){
+    // Month-based rows
+    for(const row of rows.slice(1)){
+      const mRaw=get(row,'month','m','monthname');
+      if(!mRaw) continue;
+      const mk=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
+      if(!mNames.includes(mk)) continue;
+      addRow(mk,row);
+    }
+  } else {
+    // Product-level or unknown — extract month from filename, sum all rows as one month total
+    const mk=monthFromFilename(filename);
+    if(!mk) return [];
+    for(const row of rows.slice(1)) addRow(mk,row);
+  }
+
+  return mNames.map(mk=>{
+    const a=acc[mk];
+    if(!a||(!a.s&&!a.o)) return null;
+    return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
+      cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
+      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+  }).filter(Boolean);
+}
+
+// Save parsed month array to state and re-render
+function applyMonths(months,name,fileId){
+  GS.fileId=fileId; GS.fileName=name;
+  localStorage.setItem('hygr_file_id',fileId);
+  localStorage.setItem('hygr_file_name',name);
+  D.shopee.m2026=months;
+  setSyncStatus('connected');
+  syncLog(`✓ Loaded ${months.length} month(s) from "${name}"`);
+  showActiveSource(name);
+  renderKPIs(); showPanel(S.nav);
+}
+
+// Load all files in a folder, merge by month, apply once
+async function loadAllFilesInFolder(loadables,folderName){
+  if(!loadables.length) return;
+  setSyncStatus('fetching');
+  syncLog(`Auto-loading all ${loadables.length} file(s) from "${folderName}"…`);
+  const sorted=[...loadables].sort((a,b)=>a.name.localeCompare(b.name));
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const merged={};
+  let ok=0,lastId='';
+  for(const f of sorted){
+    try{
+      const rows=await fetchRawRows(f);
+      const months=rowsToMonths(rows,f.name);
+      if(!months.length){syncLog(`  ⚠ No data in "${f.name}" — skipped`);continue;}
+      for(const mo of months){
+        if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
+        else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
+      }
+      ok++; lastId=f.id;
+      syncLog(`  ✓ ${f.name} → ${months.map(m=>m.m).join(', ')}`);
+    }catch(e){syncLog(`  ⚠ Skipped "${f.name}": ${e.message}`);}
+  }
+  const final=mNames.map(mk=>{
+    const a=merged[mk]; if(!a||(!a.s&&!a.o)) return null;
+    return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
+      cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
+      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+  }).filter(Boolean);
+  if(!final.length){
+    setSyncStatus('error','No valid data in any file.');
+    syncLog('Could not parse any file. If files lack a Date/Month column, ensure the filename includes dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".',true);
+    return;
+  }
+  syncLog(`✓ Merged ${ok} file(s) → ${final.length} month(s) of data`);
+  applyMonths(final,folderName+' (all files)',lastId);
+  startAutoRefresh();
+}
+
 function showFileBrowser(files,folderId,folderName){
-  // Maintain breadcrumb stack
   const existingIdx=folderNav.findIndex(f=>f.id===folderId);
   if(existingIdx>=0) folderNav.splice(existingIdx+1);
   else folderNav.push({id:folderId,name:folderName});
 
-  const browser=document.getElementById('driveBrowser');
-  browser.style.display='block';
+  document.getElementById('driveBrowser').style.display='block';
 
-  // Breadcrumb
   const crumb=folderNav.map((f,i)=>
     i<folderNav.length-1
       ?`<span onclick="navBreadcrumb(${i})" style="cursor:pointer;color:var(--indigo);font-weight:600;text-decoration:underline;text-underline-offset:2px">${f.name}</span>`
@@ -2067,14 +2223,17 @@ function showFileBrowser(files,folderId,folderName){
     return;
   }
 
-  // Sort: folders first, then loadable sheets, then others
   const sorted=[
     ...folders,
-    ...files.filter(f=>isLoadable(f)).sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime)),
+    ...loadables.sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime)),
     ...files.filter(f=>f.mimeType!==FOLDER_MIME&&!isLoadable(f)),
   ];
 
-  document.getElementById('driveFileList').innerHTML=sorted.map(f=>{
+  const loadAllBtn=loadables.length>1
+    ?`<tr><td colspan="4" style="padding:6px 0 2px"><button class="btn-sm primary" style="width:100%;font-size:11px;padding:5px 0" onclick="loadAllFilesInFolder(currentFolderLoadables,'${folderName.replace(/'/g,"\\'")}')">⚡ Load All ${loadables.length} Files →</button></td></tr>`
+    :'';
+
+  document.getElementById('driveFileList').innerHTML=loadAllBtn+sorted.map(f=>{
     const isFol=f.mimeType===FOLDER_MIME;
     const isSheet=f.mimeType===SHEET_MIME;
     const isXlsx=f.mimeType===XLSX_MIME||f.name.toLowerCase().endsWith('.xlsx');
@@ -2085,12 +2244,9 @@ function showFileBrowser(files,folderId,folderName){
     const dt=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}):'—';
     const safeName=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
     let action;
-    if(isFol)
-      action=`<button class="btn-sm ghost" style="font-size:10px;padding:2px 10px" onclick="openSubFolder('${f.id}','${safeName}')">Open →</button>`;
-    else if(load)
-      action=`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadFile('${f.id}','${safeName}','${f.mimeType}')">Load →</button>`;
-    else
-      action='<span style="font-size:10px;color:var(--t3)">—</span>';
+    if(isFol) action=`<button class="btn-sm ghost" style="font-size:10px;padding:2px 10px" onclick="openSubFolder('${f.id}','${safeName}')">Open →</button>`;
+    else if(load) action=`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadFile('${f.id}','${safeName}','${f.mimeType}')">Load →</button>`;
+    else action='<span style="font-size:10px;color:var(--t3)">—</span>';
     return `<tr>
       <td><span style="margin-right:7px;font-size:14px">${icon}</span>
         <strong style="color:${isFol?'var(--indigo)':'var(--t1)'}">${f.name}</strong></td>
@@ -2100,10 +2256,10 @@ function showFileBrowser(files,folderId,folderName){
     </tr>`;
   }).join('');
 
-  // Auto-load newest spreadsheet in this folder
+  // Auto-load all files in this folder
   if(loadables.length>0){
-    const newest=[...loadables].sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime))[0];
-    setTimeout(()=>loadFile(newest.id,newest.name,newest.mimeType),400);
+    window.currentFolderLoadables=loadables;
+    setTimeout(()=>loadAllFilesInFolder(loadables,folderName),400);
   }
 }
 
@@ -2111,65 +2267,22 @@ async function loadSheetById(sheetId, gid='0', name='Sheet'){
   syncLog(`Loading "${name}"…`);
   setSyncStatus('fetching');
   try{
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:Z1000?key=${GS.apiKey}`);
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error?.message||'Sheets API error '+res.status);
-    const rows=data.values||[];
+    const rows=await fetchRawRows({id:sheetId,mimeType:SHEET_MIME,name});
     if(rows.length<2) throw new Error('Sheet is empty or missing data rows.');
     applyParsedRows(rows,name,sheetId);
     startAutoRefresh();
-  }catch(e){
-    setSyncStatus('error',e.message);
-    syncLog('Error: '+e.message,true);
-  }
+  }catch(e){setSyncStatus('error',e.message);syncLog('Error: '+e.message,true);}
 }
 
-function loadFile(fileId, name, mimeType){
-  if(mimeType===SHEET_MIME) loadSheetById(fileId,'0',name);
-  else if(mimeType===CSV_MIME||name.toLowerCase().endsWith('.csv')) loadCsvById(fileId,name);
-  else loadXlsxById(fileId,name); // xlsx and everything else
-}
-
-async function loadXlsxById(fileId, name='File'){
-  syncLog(`Loading "${name}"…`);
-  setSyncStatus('fetching');
-  try{
-    if(typeof XLSX==='undefined') throw new Error('SheetJS library not loaded yet — refresh the page.');
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GS.apiKey}`);
-    if(!res.ok){
-      const err=await res.json().catch(()=>({}));
-      throw new Error(err.error?.message||'Download failed (HTTP '+res.status+')');
-    }
-    const ab=await res.arrayBuffer();
-    const wb=XLSX.read(ab,{type:'array'});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
-    if(rows.length<2) throw new Error('File is empty or has no data rows.');
+function loadFile(fileId,name,mimeType){
+  const f={id:fileId,name,mimeType};
+  fetchRawRows(f).then(rows=>{
     applyParsedRows(rows,name,fileId);
     startAutoRefresh();
-  }catch(e){
-    setSyncStatus('error',e.message);
-    syncLog('Error: '+e.message,true);
-  }
+  }).catch(e=>{setSyncStatus('error',e.message);syncLog('Error: '+e.message,true);});
 }
 
-async function loadCsvById(fileId, name='File'){
-  syncLog(`Loading "${name}"…`);
-  setSyncStatus('fetching');
-  try{
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${GS.apiKey}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text=await res.text();
-    const rows=text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
-    applyParsedRows(rows,name,fileId);
-    startAutoRefresh();
-  }catch(e){
-    setSyncStatus('error',e.message);
-    syncLog('Error: '+e.message,true);
-  }
-}
-
-// ── Auto-refresh ──
+// ── Auto-refresh every 5 min ──
 let _autoRefreshTimer=null;
 function startAutoRefresh(intervalMs=5*60*1000){
   if(_autoRefreshTimer) clearInterval(_autoRefreshTimer);
@@ -2179,13 +2292,14 @@ function startAutoRefresh(intervalMs=5*60*1000){
     try{
       const q=encodeURIComponent(`'${cur.id}' in parents`);
       const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime)');
-      const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=20`);
+      const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=50`);
       const data=await res.json();
       if(!res.ok) return;
-      const newest=(data.files||[]).filter(isLoadable).sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime))[0];
+      const newFiles=(data.files||[]).filter(isLoadable);
+      const newest=newFiles.sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime))[0];
       if(newest&&newest.id!==GS.fileId){
-        syncLog(`New file detected: "${newest.name}" — auto-loading…`);
-        loadFile(newest.id,newest.name,newest.mimeType);
+        syncLog(`New file detected: "${newest.name}" — reloading all files…`);
+        loadAllFilesInFolder(newFiles,cur.name);
       }
     }catch(e){}
   },intervalMs);
@@ -2212,99 +2326,15 @@ function applyParsedRows(rows,name,fileId){
     syncLog('Could not parse rows. File appears empty.',true);
     return;
   }
-  // Strip ALL non-alphanumeric chars so "Sales (MYR)", "% Conversion Rate" etc. match cleanly
-  const headers=rows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
-  const get=(row,...keys)=>{
-    for(const k of keys){
-      const i=headers.findIndex(h=>h===k||h.startsWith(k));
-      if(i>=0&&row[i]!==undefined&&String(row[i]).trim()!='')return String(row[i]).trim();
-    }
-    return '';
-  };
-  const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
-  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const mFull={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',
-    july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
-
-  // Detect date-based (daily) vs month-based data
-  const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate');
-  const hasMonth=headers.some(h=>h==='month'||h==='m');
-
-  let parsed=[];
-
-  if(hasDate&&!hasMonth){
-    // Daily rows — aggregate by month
-    const acc={};
-    for(const row of rows.slice(1)){
-      const dateStr=get(row,'date','day','reportdate');
-      if(!dateStr) continue;
-      let mIdx=-1;
-      const d=new Date(dateStr);
-      if(!isNaN(d.getTime())) mIdx=d.getMonth();
-      else{
-        // Try MM/DD/YYYY or DD/MM/YYYY or named month
-        const parts=dateStr.split(/[\/\-\.]/);
-        if(parts.length>=3){
-          // Try YYYY-MM-DD first
-          const y=parseInt(parts[0]),mo=parseInt(parts[1]),dy=parseInt(parts[2]);
-          if(y>1900) mIdx=mo-1;
-          else mIdx=parseInt(parts[1])-1; // DD/MM/YYYY
-        }
-        if(mIdx<0){
-          const m=dateStr.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
-          if(m) mIdx=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[1]);
-        }
-      }
-      if(mIdx<0||mIdx>11) continue;
-      const mk=mNames[mIdx];
-      const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue'));
-      const o=parseInt(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders')))||0;
-      const v=parseInt(num(get(row,'visitors','visits','uniquevisitors','pageviews','traffic','uniquebuyers','sessioncount')))||0;
-      const cl=parseInt(num(get(row,'clicks','click','productclicks')))||0;
-      const cr=num(get(row,'cr','convrate','conversion','conversionrate','convrate','buyerconversionrate'));
-      const b=num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue'));
-      if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};
-      const a=acc[mk];
-      a.s+=s; a.o+=o; a.v+=v; a.cl+=cl;
-      if(cr>0){a.crSum+=cr;a.crN++;}
-      if(b>0){a.bSum+=b;a.bN++;}
-    }
-    parsed=mNames.map(mk=>{
-      const a=acc[mk]; if(!a) return null;
-      return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
-        cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
-        b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
-    }).filter(Boolean);
-  } else {
-    // Month-based rows
-    parsed=rows.slice(1).map(row=>{
-      const mRaw=get(row,'month','m','monthname');
-      const s=num(get(row,'sales','gmv','revenue','salesmyr','totalsales','netsales'));
-      if(!mRaw||!s) return null;
-      const m=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
-      return{m,s,o:parseInt(num(get(row,'orders','order','nooforders')))||0,
-        cr:num(get(row,'cr','convrate','conversion','conversionrate')),
-        v:parseInt(num(get(row,'visitors','visits','uniquevisitors','pageviews','traffic')))||0,
-        b:num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize')),
-        cl:parseInt(num(get(row,'clicks','click')))||0};
-    }).filter(Boolean);
-  }
-
-  if(!parsed.length){
-    // Debug: log detected headers to help diagnose
-    syncLog(`Headers detected: ${headers.join(' | ')}`,true);
+  const months=rowsToMonths(rows,name);
+  if(!months.length){
+    const rawHeaders=rows[0].map(h=>String(h).trim()).join(' | ');
+    syncLog(`Headers detected: ${rawHeaders}`,true);
     setSyncStatus('error','No valid rows — check column headers.');
-    syncLog('Could not parse rows. See headers above — ensure Date/Month and Sales columns exist.',true);
+    syncLog('Could not parse rows. Ensure file has a Date or Month column plus a Sales/GMV column. If it\'s a product-level report, filename must include dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".',true);
     return;
   }
-  GS.fileId=fileId; GS.fileName=name;
-  localStorage.setItem('hygr_file_id',fileId);
-  localStorage.setItem('hygr_file_name',name);
-  D.shopee.m2026=parsed;
-  setSyncStatus('connected');
-  syncLog(`✓ Loaded ${parsed.length} month(s) from "${name}"`);
-  showActiveSource(name);
-  renderKPIs(); showPanel(S.nav);
+  applyMonths(months,name,fileId);
 }
 
 function showActiveSource(name){
