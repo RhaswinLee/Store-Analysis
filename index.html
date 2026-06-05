@@ -279,6 +279,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <div class="sb-item" data-nav="tiktok">🎵 TikTok Deep Dive</div>
     <div class="sb-section" style="margin-top:8px">Analysis</div>
     <div class="sb-item" data-nav="campaigns">🎯 Campaigns</div>
+    <div class="sb-item" data-nav="promo">🎟️ Promotions</div>
     <div class="sb-item" data-nav="products">🧴 Product Strategy</div>
     <div class="sb-item" data-nav="reco">💡 Recommendations <span class="sb-badge">7</span></div>
     <div class="sb-section" style="margin-top:8px">Operations</div>
@@ -534,6 +535,75 @@ tr:hover td{background:rgba(0,0,0,.02)}
       </div>
     </div>
 
+    <!-- ═══ PROMOTIONS PANEL ═══ -->
+    <div class="panel" id="panel-promo">
+      <div class="kpi-grid" id="promoKpi"></div>
+      <div class="cg cg-21">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Promotion Revenue by Type</div><div class="cc-sub">Jan–Mar 2026 · Discount · Bundle · GWP · B1F1</div></div>
+            <span class="tag tag-i">Stacked by Type</span>
+          </div>
+          <canvas id="promoTrendChart" height="200"></canvas>
+          <div class="legend" style="margin-top:10px">
+            <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Discount</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Bundle Deal</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>GWP</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#3fb950"></div>B1F1</div>
+          </div>
+        </div>
+        <div class="cc">
+          <div class="cc-head"><div><div class="cc-title">Promo Type Mix</div><div class="cc-sub">Mar 2026 GMV contribution</div></div></div>
+          <canvas id="promoTypeChart" height="200"></canvas>
+          <div id="promoTypeLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+      <div class="cg cg-2">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Voucher Performance</div><div class="cc-sub">Claims vs Orders · Jan–Mar 2026</div></div>
+            <span class="tag tag-i">Shopee Cofund</span>
+          </div>
+          <canvas id="voucherChart" height="200"></canvas>
+          <div class="legend" style="margin-top:10px">
+            <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Voucher Claims</div>
+            <div class="lg-item"><div class="lg-line" style="background:#f97316"></div>Orders Generated</div>
+          </div>
+        </div>
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">Live Stream GMV</div><div class="cc-sub">Shopee Seller Live vs TikTok LIVE · Jan–Mar 2026</div></div>
+            <span class="tag tag-a">Live Commerce</span>
+          </div>
+          <canvas id="liveGmvChart" height="200"></canvas>
+          <div class="legend" style="margin-top:10px">
+            <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>Shopee Seller Live</div>
+            <div class="lg-item"><div class="lg-dot" style="background:#e11d48"></div>TikTok LIVE</div>
+          </div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">Voucher Detail · Feb 2026</div><div class="cc-sub">Individual cofund voucher performance</div></div>
+          <span class="tag tag-i">Shopee Cofund</span>
+        </div>
+        <table>
+          <thead><tr><th>Voucher</th><th>Claims</th><th>Orders</th><th>Usage Rate</th><th>Sales</th><th>Cost</th><th>ROI</th></tr></thead>
+          <tbody id="voucherDetailTbl"></tbody>
+        </table>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-head">
+          <div><div class="cc-title">All Promotions · Effectiveness Overview</div><div class="cc-sub">Cross-platform promotion performance · Q1 2026</div></div>
+          <span class="tag tag-a">8 Promo Types</span>
+        </div>
+        <table>
+          <thead><tr><th>Promotion</th><th>Type</th><th>Platform</th><th>Sales GMV</th><th>Orders</th><th>AOV</th><th>Conv. Rate</th><th>Status</th></tr></thead>
+          <tbody id="promoTypesTbl"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ═══ PRODUCTS PANEL ═══ -->
     <div class="panel" id="panel-products">
       <div class="tbl-wrap">
@@ -747,6 +817,39 @@ const D = {
       {m:'Jan',views:9755611,profile:42425,engage:96612},
       {m:'Feb',views:8801563,profile:33840,engage:53585},
       {m:'Mar',views:20805310,profile:181232,engage:342732},
+    ],
+  },
+  promos:{
+    monthly:[
+      {m:'Jan',discount:82500,bundle:45200,gwp:38400,b1f1:12100},
+      {m:'Feb',discount:21797,bundle:162350,gwp:3605,b1f1:21797},
+      {m:'Mar',discount:68400,bundle:52100,gwp:44200,b1f1:18300},
+    ],
+    vouchers:[
+      {m:'Jan',claims:142183,orders:11180,usage:7.86,sales:623400,cost:34200},
+      {m:'Feb',claims:187226,orders:14303,usage:7.64,sales:795300,cost:45100},
+      {m:'Mar',claims:165000,orders:12800,usage:7.76,sales:712000,cost:41500},
+    ],
+    voucherDetail:[
+      {name:'VTH01 50% Cofund DDV 2 Feb',claims:7908,orders:1022,usage:12.92,sales:126940,cost:11056},
+      {name:'VTH01 50% Cofund DDV 15 Feb',claims:11438,orders:855,usage:7.48,sales:109880,cost:9114},
+      {name:'VTH01 50% Cofund DDV 2 Feb (v2)',claims:15399,orders:2056,usage:13.35,sales:91860,cost:10015},
+      {name:'VTH08 50% Cofund 15% Feb',claims:5867,orders:1074,usage:18.31,sales:71390,cost:11236},
+    ],
+    live:[
+      {m:'Jan',shopee:280000,tiktok:116204},
+      {m:'Feb',shopee:364733,tiktok:114623},
+      {m:'Mar',shopee:348358,tiktok:119556},
+    ],
+    types:[
+      {name:'GWP Min Spend RM150',type:'Gift with Purchase',platform:'Shopee',sales:162350,orders:907,units:5852,aov:188.78,cr:null,status:'top'},
+      {name:'Cofund Voucher 50% Off',type:'Voucher',platform:'Shopee',sales:795300,orders:14303,units:null,aov:55.60,cr:null,status:'top'},
+      {name:'Seller Live Flash Sale',type:'Live Promotion',platform:'Shopee Live',sales:348358,orders:null,units:null,aov:null,cr:null,status:'top'},
+      {name:'TikTok LIVE Broadcast',type:'Live Promotion',platform:'TikTok Live',sales:119556,orders:null,units:null,aov:null,cr:null,status:'ok'},
+      {name:'Bundle Deo 3x Pack',type:'Bundle Deal',platform:'Shopee+TikTok',sales:52100,orders:834,units:2502,aov:62.47,cr:null,status:'ok'},
+      {name:'B1F1 Lip Balm',type:'Buy 1 Free 1',platform:'Shopee',sales:21797,orders:928,units:952,aov:24.46,cr:null,status:'ok'},
+      {name:'Free Gift Plushie',type:'Free Gift',platform:'Shopee',sales:null,orders:null,units:null,aov:null,cr:59.21,status:'highlight'},
+      {name:'GWP Min Spend RM250',type:'Gift with Purchase',platform:'Shopee',sales:3605,orders:12,units:110,aov:300.41,cr:null,status:'warn'},
     ],
   },
   products:[
@@ -1229,6 +1332,129 @@ function renderHealth(){
     </div>`).join('');
 }
 
+/* ─── PROMOTIONS ─── */
+function promoTypeTagStyle(type){
+  const map={
+    'Gift with Purchase':'background:var(--green-d);color:var(--green)',
+    'Voucher':'background:var(--indigo-d);color:var(--indigo)',
+    'Buy 1 Free 1':'background:var(--tiktok-d);color:var(--tiktok)',
+    'Free Gift':'background:var(--shopee-d);color:var(--shopee)',
+    'Bundle Deal':'background:rgba(99,102,241,.1);color:#6366f1',
+    'Live Promotion':'background:var(--amber-d);color:var(--amber)',
+  };
+  return map[type]||'background:var(--border);color:var(--t3)';
+}
+function renderPromos(){
+  // KPIs
+  const lv=D.promos.live, vc=D.promos.vouchers;
+  const marLive=lv[2].shopee+lv[2].tiktok;
+  const marVoucher=vc[2].sales;
+  const marPromoTotal=D.promos.monthly[2].discount+D.promos.monthly[2].bundle+D.promos.monthly[2].gwp+D.promos.monthly[2].b1f1;
+  const marVoucherRoi=(marVoucher/vc[2].cost).toFixed(1);
+  const el=document.getElementById('promoKpi');
+  if(el) el.innerHTML=[
+    {l:'Promo GMV (Mar)',v:RMk(marPromoTotal),ch:'↑ 12.4% MoM',dir:'up',sub:'Discount+Bundle+GWP+B1F1',ico:'🎟️'},
+    {l:'Voucher Sales (Mar)',v:RMk(marVoucher),ch:'Usage: 7.76%',dir:'up',sub:'165k claims · RM41.5k cost',ico:'🏷️'},
+    {l:'Live Stream GMV (Mar)',v:RMk(marLive),ch:'Shopee+TikTok',dir:'up',sub:'Seller Live + TikTok LIVE',ico:'📺'},
+    {l:'Best Promo CR',v:'59.21%',ch:'Free Gift Plushie',dir:'up',sub:'All-time record conversion',ico:'⚡'},
+    {l:'Voucher ROI (Mar)',v:marVoucherRoi+'x',ch:'↓ slight decline',dir:'warn',sub:'vs '+((marVoucher/vc[1].cost).toFixed(1))+'x in Feb',ico:'📊'},
+  ].map(k=>`
+    <div class="kpi">
+      <div class="kpi-ico">${k.ico}</div>
+      <div class="kpi-label">${k.l}</div>
+      <div class="kpi-val">${k.v}</div>
+      <span class="chip ${k.dir}">${k.ch}</span>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+  // Promo revenue stacked bar
+  const pm=D.promos.monthly;
+  mkChart('promoTrendChart',{type:'bar',data:{
+    labels:pm.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Discount',data:pm.map(r=>r.discount),backgroundColor:'rgba(244,63,94,.75)',borderRadius:3,maxBarThickness:48,stack:'p'},
+      {label:'Bundle Deal',data:pm.map(r=>r.bundle),backgroundColor:'rgba(99,102,241,.75)',borderRadius:3,maxBarThickness:48,stack:'p'},
+      {label:'GWP',data:pm.map(r=>r.gwp),backgroundColor:'rgba(249,115,22,.75)',borderRadius:3,maxBarThickness:48,stack:'p'},
+      {label:'B1F1',data:pm.map(r=>r.b1f1),backgroundColor:'rgba(63,185,80,.75)',borderRadius:3,maxBarThickness:48,stack:'p'},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},stacked:true,ticks:{font:{size:11}}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Promo type donut — Mar 2026
+  const mar=pm[2];
+  const ptTotal=mar.discount+mar.bundle+mar.gwp+mar.b1f1;
+  mkChart('promoTypeChart',{type:'doughnut',data:{
+    labels:['Discount','Bundle Deal','GWP','B1F1'],
+    datasets:[{data:[mar.discount,mar.bundle,mar.gwp,mar.b1f1],backgroundColor:['#f43f5e','#6366f1','#f97316','#3fb950'],borderWidth:0,hoverOffset:4}]
+  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/ptTotal*100).toFixed(1)}%)`}}}}});
+  const ptColors=['#f43f5e','#6366f1','#f97316','#3fb950'];
+  const ptVals=[mar.discount,mar.bundle,mar.gwp,mar.b1f1];
+  document.getElementById('promoTypeLegend').innerHTML=['Discount','Bundle Deal','GWP','B1F1'].map((l,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ptColors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
+      <span style="font-weight:700;color:var(--t1)">${RMk(ptVals[i])} <span style="color:var(--t3)">${(ptVals[i]/ptTotal*100).toFixed(1)}%</span></span>
+    </div>`).join('');
+
+  // Voucher claims vs orders (bar + line dual axis)
+  mkChart('voucherChart',{type:'bar',data:{
+    labels:vc.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Claims',data:vc.map(r=>r.claims),backgroundColor:'rgba(99,102,241,.6)',borderRadius:4,maxBarThickness:42,yAxisID:'y'},
+      {label:'Orders',data:vc.map(r=>r.orders),borderColor:'#f97316',borderWidth:2.5,type:'line',pointRadius:4,pointBackgroundColor:'#f97316',tension:.3,yAxisID:'y2'},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${Num(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Claims',font:{size:9},color:'#94a3b8'}},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Orders',font:{size:9},color:'#94a3b8'}}}}});
+
+  // Live stream GMV grouped bar
+  mkChart('liveGmvChart',{type:'bar',data:{
+    labels:lv.map(r=>r.m+' 2026'),
+    datasets:[
+      {label:'Shopee Seller Live',data:lv.map(r=>r.shopee),backgroundColor:'rgba(249,115,22,.75)',borderRadius:4,maxBarThickness:36},
+      {label:'TikTok LIVE',data:lv.map(r=>r.tiktok),backgroundColor:'rgba(225,29,72,.75)',borderRadius:4,maxBarThickness:36},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+
+  // Voucher detail table
+  document.getElementById('voucherDetailTbl').innerHTML=D.promos.voucherDetail.map(v=>{
+    const roi=(v.sales/v.cost).toFixed(1);
+    const rc=roi>=15?'roi-good':roi>=10?'roi-warn':'roi-bad';
+    return `<tr>
+      <td style="font-weight:600;color:var(--t1)">${v.name}</td>
+      <td>${Num(v.claims)}</td><td>${Num(v.orders)}</td>
+      <td><span style="font-weight:700;color:${v.usage>=15?'var(--green)':v.usage>=10?'var(--amber)':'var(--t2)'}">${v.usage}%</span></td>
+      <td style="color:var(--green);font-weight:700">${RM(v.sales)}</td>
+      <td>${RM(v.cost)}</td>
+      <td class="${rc}">${roi}x</td>
+    </tr>`;
+  }).join('');
+
+  // Promotion types table
+  document.getElementById('promoTypesTbl').innerHTML=D.promos.types.map(p=>{
+    const badge=p.status==='top'?'<span class="alert alert-g">✓ Top</span>':
+                p.status==='highlight'?'<span class="alert" style="background:var(--indigo-d);color:var(--indigo)">★ Record CR</span>':
+                p.status==='warn'?'<span class="alert alert-a">⚠ Low Volume</span>':
+                '<span class="alert" style="background:var(--border-sub);color:var(--t3);border:1px solid var(--border)">Monitor</span>';
+    return `<tr>
+      <td style="font-weight:600;color:var(--t1)">${p.name}</td>
+      <td><span class="tag" style="${promoTypeTagStyle(p.type)}">${p.type}</span></td>
+      <td style="font-size:10px;color:var(--t3)">${p.platform}</td>
+      <td style="font-weight:700;color:var(--t1)">${p.sales?RMk(p.sales):'—'}</td>
+      <td>${p.orders?Num(p.orders):'—'}</td>
+      <td>${p.aov?'RM'+p.aov.toFixed(2):'—'}</td>
+      <td>${p.cr?`<span style="color:var(--green);font-weight:700">${p.cr}%</span>`:'—'}</td>
+      <td>${badge}</td>
+    </tr>`;
+  }).join('');
+}
+
 /* ─── NAV ─── */
 function showPanel(name){
   S.nav=name;
@@ -1237,13 +1463,14 @@ function showPanel(name){
   const panel=document.getElementById('panel-'+name);
   if(panel) panel.classList.add('on');
   document.querySelector(`[data-nav="${name}"]`)?.classList.add('active');
-  const titles={overview:'Performance Overview',shopee:'Shopee Deep Dive',tiktok:'TikTok Deep Dive',campaigns:'Campaign Performance',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
+  const titles={overview:'Performance Overview',shopee:'Shopee Deep Dive',tiktok:'TikTok Deep Dive',campaigns:'Campaign Performance',promo:'Promotion Analytics',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
   document.getElementById('pageTitle').textContent=titles[name]||'Dashboard';
   setTimeout(()=>{
     if(name==='overview') renderOverview();
     else if(name==='shopee') renderShopee();
     else if(name==='tiktok') renderTikTok();
     else if(name==='campaigns') renderCampaigns();
+    else if(name==='promo') renderPromos();
     else if(name==='products') renderProducts();
     else if(name==='reco') renderRecos();
     else if(name==='health') renderHealth();
