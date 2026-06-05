@@ -782,92 +782,94 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <!-- ═══ SYNC PANEL ═══ -->
     <div class="panel" id="panel-sync">
 
-      <!-- Row 1: API Key + Drive Link -->
-      <div class="cg cg-2" style="max-width:860px">
-        <div class="cc">
-          <div class="cc-head">
-            <div><div class="cc-title">🔑 Google API Key</div><div class="cc-sub">Required to browse folders and read sheets</div></div>
-            <span class="tag" id="apiKeyTag" style="background:var(--border-sub);color:var(--t3)">Not set</span>
-          </div>
-          <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.65">
-            Create a free key in <strong style="color:var(--t1)">Google Cloud Console</strong> with
-            <strong style="color:var(--t1)">Drive API</strong> and <strong style="color:var(--t1)">Sheets API</strong> enabled.
-          </div>
-          <input class="sync-inp" id="apiKeyInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px" placeholder="AIzaSy…">
-          <div style="display:flex;gap:8px;align-items:center">
-            <button class="btn-sm primary" onclick="saveApiKey()" style="padding:5px 14px">✓ Save Key</button>
-            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="font-size:11px;color:var(--indigo);text-decoration:none">→ Create API Key ↗</a>
-          </div>
-          <div style="font-size:10px;color:var(--t3);margin-top:7px;line-height:1.5">
-            In Cloud Console: Enable <em>Google Drive API</em> + <em>Google Sheets API</em>, then create a credential → API key.
-          </div>
-        </div>
-
-        <div class="cc">
-          <div class="cc-head">
-            <div><div class="cc-title">📁 Google Drive Link</div><div class="cc-sub">Paste a folder URL or a spreadsheet URL</div></div>
-          </div>
-          <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.65">
-            Paste a <strong style="color:var(--t1)">Drive folder link</strong> to browse all files inside,
-            or a <strong style="color:var(--t1)">Google Sheets link</strong> to connect directly.
-            Sharing must be set to <strong style="color:var(--green)">Anyone with the link can view</strong>.
-          </div>
-          <input class="sync-inp" id="driveLinkInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px"
-            placeholder="https://drive.google.com/drive/folders/… or …/spreadsheets/d/…">
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-sm primary" onclick="browseOrConnect()" style="padding:5px 14px">🔍 Browse / Connect</button>
-            <button class="btn-sm ghost" onclick="clearSync()" style="padding:5px 14px">✕ Disconnect</button>
-          </div>
-          <div id="syncLog" style="font-size:10px;min-height:15px;margin-top:7px;color:var(--t3)"></div>
-        </div>
+  <!-- Row 1: API Key + Sync Overview -->
+  <div class="cg cg-2" style="max-width:860px">
+    <div class="cc">
+      <div class="cc-head">
+        <div><div class="cc-title">🔑 Google API Key</div><div class="cc-sub">Required to browse folders and read sheets</div></div>
+        <span class="tag" id="apiKeyTag" style="background:var(--border-sub);color:var(--t3)">Not set</span>
       </div>
-
-      <!-- Active Source Banner -->
-      <div id="activeSourceBanner" style="display:none;max-width:860px;margin-bottom:14px">
-        <div style="background:var(--green-d);border:1px solid rgba(22,163,74,.25);border-radius:9px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0"></div>
-          <div style="flex:1">
-            <div style="font-size:12px;font-weight:700;color:var(--t1)" id="activeSourceName">—</div>
-            <div style="font-size:10px;color:var(--t3)" id="activeSourceTime">—</div>
-          </div>
-          <button class="btn-sm ghost" onclick="clearSync()" style="font-size:10px;padding:3px 10px">Disconnect</button>
-        </div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.65">
+        Create a free key in <strong style="color:var(--t1)">Google Cloud Console</strong> with
+        <strong style="color:var(--t1)">Drive API</strong> and <strong style="color:var(--t1)">Sheets API</strong> enabled.
       </div>
-
-      <!-- Drive Folder File Browser -->
-      <div id="driveBrowser" style="display:none;max-width:860px;margin-bottom:14px">
-        <div class="tbl-wrap" style="margin-bottom:0">
-          <div class="tbl-head">
-            <div><div class="cc-title" id="browserTitle">📁 Drive Folder Contents</div><div class="cc-sub" id="browserSub">—</div></div>
-            <button class="btn-sm ghost" onclick="refreshBrowser()" style="font-size:10px;padding:3px 10px">⟳ Refresh</button>
-          </div>
-          <table>
-            <thead><tr><th>File Name</th><th>Type</th><th>Last Modified</th><th>Action</th></tr></thead>
-            <tbody id="driveFileList"></tbody>
-          </table>
-        </div>
+      <input class="sync-inp" id="apiKeyInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px" placeholder="AIzaSy…">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-sm primary" onclick="saveApiKey()" style="padding:5px 14px">✓ Save Key</button>
+        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="font-size:11px;color:var(--indigo);text-decoration:none">→ Create API Key ↗</a>
       </div>
-
-      <!-- Format Help -->
-      <div class="cc" style="max-width:860px">
-        <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:10px">Expected Sheet Column Format</div>
-        <div style="font-size:10px;color:var(--t3);background:var(--bg);padding:10px 12px;border-radius:6px;border:1px solid var(--border);font-family:monospace;line-height:1.9">
-          Month, Sales, Orders, CR, Visitors, BasketSize, Clicks<br>
-          January, 841242.53, 13935, 2.87, 508683, 60.37, 485263<br>
-          February, 919249.76, 16845, 3.48, 390201, 54.57, 484084<br>
-          March, 884739.27, 16112, 3.63, 441066, 54.91, 444062
-        </div>
-        <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.6">
-          Column names are flexible — auto-detected:
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">month/m</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">sales/gmv/revenue</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">orders</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">cr/convrate</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">visitors/traffic</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">basketsize/aov</code>
-          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">clicks</code>
-        </div>
+      <div style="font-size:10px;color:var(--t3);margin-top:7px;line-height:1.5">Enable <em>Google Drive API</em> + <em>Google Sheets API</em> in Cloud Console, then create a credential → API key.</div>
+    </div>
+    <div class="cc">
+      <div class="cc-title" style="margin-bottom:8px">⚡ Auto-Sync Overview</div>
+      <div style="font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:12px">
+        Paste a <strong style="color:var(--t1)">Drive folder URL</strong> for each platform. The dashboard auto-loads <strong style="color:var(--t1)">all files</strong> inside and re-checks every <strong style="color:var(--t1)">5 minutes</strong> for new uploads. Folder must be shared <strong style="color:var(--green)">Anyone with the link can view</strong>.
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px">
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee)">🛒 Shopee MY</div><div id="statusLine_shopee" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok)">🎵 TikTok MY</div><div id="statusLine_tiktok" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee);opacity:.8">🛒 Shopee SG</div><div id="statusLine_shopeesg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok);opacity:.8">🎵 TikTok SG</div><div id="statusLine_tiktoksg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 Platform Folder Cards -->
+  <div style="max-width:860px;margin-bottom:14px">
+    <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Connect Platform Folders</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="cc" style="padding:13px">
+        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px">🛒 Shopee MY</div>
+        <input class="sync-inp" id="pLink_shopee" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee')" style="font-size:10px;padding:4px 8px">✕</button></div>
+      </div>
+      <div class="cc" style="padding:13px">
+        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px">🎵 TikTok MY</div>
+        <input class="sync-inp" id="pLink_tiktok" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok')" style="font-size:10px;padding:4px 8px">✕</button></div>
+      </div>
+      <div class="cc" style="padding:13px">
+        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px;opacity:.85">🛒 Shopee SG</div>
+        <input class="sync-inp" id="pLink_shopeesg" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee-sg')" style="font-size:10px;padding:4px 8px">✕</button></div>
+      </div>
+      <div class="cc" style="padding:13px">
+        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px;opacity:.85">🎵 TikTok SG</div>
+        <input class="sync-inp" id="pLink_tiktoksg" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok-sg')" style="font-size:10px;padding:4px 8px">✕</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Log -->
+  <div class="cc" style="max-width:860px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:700;color:var(--t2)">Sync Log</div>
+      <button class="btn-sm ghost" onclick="document.getElementById('syncLog').innerHTML=''" style="font-size:9px;padding:2px 8px">Clear</button>
+    </div>
+    <div id="syncLog" style="font-size:10px;min-height:30px;color:var(--t3);font-family:monospace;max-height:150px;overflow-y:auto;line-height:1.8">—</div>
+  </div>
+
+  <!-- Format Help -->
+  <div class="cc" style="max-width:860px">
+    <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:10px">Expected Column Format</div>
+    <div style="font-size:10px;color:var(--t3);background:var(--bg);padding:10px 12px;border-radius:6px;border:1px solid var(--border);font-family:monospace;line-height:1.9">
+      Month, Sales, Orders, CR, Visitors, BasketSize, Clicks<br>
+      January, 841242.53, 13935, 2.87, 508683, 60.37, 485263<br>
+      February, 919249.76, 16845, 3.48, 390201, 54.57, 484084<br>
+      March, 884739.27, 16112, 3.63, 441066, 54.91, 444062
+    </div>
+    <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.6">
+      Column names are auto-detected:
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">month/m/date</code>
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">sales/gmv/revenue</code>
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">orders</code>
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">cr/convrate</code>
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">visitors/pageviews</code>
+      <code style="background:var(--bg);padding:1px 4px;border-radius:3px">basketsize/aov</code>
+      · Shopee daily exports (Date column) automatically aggregated by month.
+    </div>
+  </div>
 
     </div>
 
@@ -1935,30 +1937,44 @@ document.querySelectorAll('.sb-item').forEach(i=>{
 });
 
 /* ─── GOOGLE DRIVE SYNC ─── */
-const GS = {
-  apiKey:   localStorage.getItem('hygr_gapi')      || '',
-  fileId:   localStorage.getItem('hygr_file_id')   || '',
-  fileName: localStorage.getItem('hygr_file_name') || '',
-  folderUrl:localStorage.getItem('hygr_drive')     || '',
+const GS = { apiKey: localStorage.getItem('hygr_gapi') || '' };
+const _ls = k => localStorage.getItem(k) || '';
+const PLAT_D = { shopee:'shopee', tiktok:'tiktok', 'shopee-sg':'shopeeSG', 'tiktok-sg':'tiktokSG' };
+const PLAT_S = {
+  shopee:     { url:_ls('hygr_url_shopee')||_ls('hygr_drive'),    fileId:_ls('hygr_fid_shopee')||_ls('hygr_file_id'),  name:_ls('hygr_fnm_shopee')||_ls('hygr_file_name'), nav:[] },
+  tiktok:     { url:_ls('hygr_url_tiktok'),    fileId:_ls('hygr_fid_tiktok'),    name:_ls('hygr_fnm_tiktok'),    nav:[] },
+  'shopee-sg':{ url:_ls('hygr_url_shopeesg'),  fileId:_ls('hygr_fid_shopeesg'),  name:_ls('hygr_fnm_shopeesg'),  nav:[] },
+  'tiktok-sg':{ url:_ls('hygr_url_tiktoksg'),  fileId:_ls('hygr_fid_tiktoksg'),  name:_ls('hygr_fnm_tiktoksg'),  nav:[] },
 };
 
-function setSyncStatus(status, msg){
+function setSyncStatus(status,msg){
   const dot=document.getElementById('syncDot');
   const txt=document.getElementById('syncText');
-  dot.className='sync-dot '+status;
-  if(status==='connected')
-    txt.innerHTML=`<strong>🟢 Connected</strong> — Live data active · <strong>${GS.fileName||'Sheet'}</strong>`;
-  else if(status==='fetching')
-    txt.innerHTML=`<strong>🟡 Fetching…</strong> — Reading from Google`;
-  else if(status==='error')
+  const conn=Object.values(PLAT_S).filter(p=>p.name).length;
+  if(conn>0){
+    dot.className='sync-dot connected';
+    txt.innerHTML=`<strong>🟢 Live</strong> — ${conn} platform${conn>1?'s':''} synced from Google Drive`;
+  } else if(status==='fetching'){
+    dot.className='sync-dot fetching';
+    txt.innerHTML=`<strong>🟡 Fetching…</strong> — Reading from Google Drive`;
+  } else if(status==='error'){
+    dot.className='sync-dot error';
     txt.innerHTML=`<strong>🔴 Error</strong> — ${msg||'Connection failed'}`;
-  else
+  } else {
+    dot.className='sync-dot idle';
     txt.innerHTML=`Not connected — using built-in demo data · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px;margin-left:2px">Configure ↗</button>`;
+  }
 }
 
-function syncLog(msg, isError=false){
+function syncLog(msg,isError=false){
   const el=document.getElementById('syncLog');
-  if(el) el.innerHTML=`<span style="color:${isError?'var(--red)':'var(--t3)'}">${msg}</span>`;
+  if(!el) return;
+  const t=new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line=`<div style="color:${isError?'var(--red)':'var(--t3)'}">${t} ${msg}</div>`;
+  el.innerHTML=(el.innerHTML==='—'?'':el.innerHTML)+line;
+  el.scrollTop=el.scrollHeight;
+  const lines=el.querySelectorAll('div');
+  if(lines.length>30) lines[0].remove();
 }
 
 function saveApiKey(){
@@ -1980,54 +1996,89 @@ function parseDriveLink(url){
   return null;
 }
 
-const folderNav=[]; // breadcrumb stack [{id,name}]
-
-async function browseOrConnect(){
-  const url=document.getElementById('driveLinkInp').value.trim();
-  if(!url){syncLog('Paste a Google Drive or Sheets link first.',true);return;}
-  const parsed=parseDriveLink(url);
-  if(!parsed){syncLog('Unrecognised URL — paste a Drive folder link or Google Sheets link.',true);return;}
-  localStorage.setItem('hygr_drive',url);
-  GS.folderUrl=url;
-  if(parsed.type==='folder'){
-    if(!GS.apiKey){syncLog('⚠ Enter and save your Google API key first.',true);return;}
-    folderNav.length=0; // reset breadcrumb on fresh browse
-    await loadFolderContents(parsed.id,'My Drive');
-  } else {
-    if(GS.apiKey) await loadSheetById(parsed.id,'0','Google Sheet');
-    else await loadSheetCsv(parsed.id,'0');
-  }
+// ── Per-platform status ──
+function setPlatformStatus(platform,status,msg=''){
+  const k=platform.replace(/-/g,'');
+  const el=document.getElementById(`statusLine_${k}`);
+  if(!el) return;
+  const icons={connected:'🟢 ',fetching:'🟡 ',error:'🔴 ',idle:''};
+  const colors={connected:'var(--green)',fetching:'#f59e0b',error:'var(--red)',idle:'var(--t3)'};
+  el.style.color=colors[status]||'var(--t3)';
+  el.textContent=(icons[status]||'')+msg;
+  setSyncStatus();
 }
 
-async function loadFolderContents(folderId, folderName='Folder'){
-  syncLog('Browsing folder…');
-  setSyncStatus('fetching');
+// ── Connect a platform ──
+async function connectPlatform(platform){
+  const k=platform.replace(/-/g,'');
+  const inp=document.getElementById(`pLink_${k}`);
+  if(!inp) return;
+  const url=inp.value.trim();
+  if(!url){syncLog(`⚠ Paste a Drive folder URL for ${platform}.`,true);return;}
+  if(!GS.apiKey){syncLog('⚠ Enter and save your Google API key first.',true);return;}
+  const parsed=parseDriveLink(url);
+  if(!parsed||parsed.type!=='folder'){syncLog('⚠ Unrecognised URL — paste a Drive folder link (not a file link).',true);return;}
+  PLAT_S[platform].url=url;
+  PLAT_S[platform].nav=[];
+  localStorage.setItem(`hygr_url_${k}`,url);
+  setPlatformStatus(platform,'fetching','Connecting…');
+  syncLog(`[${platform}] Connecting to folder…`);
+  await loadPlatformFolder(platform,parsed.id,'My Drive');
+}
+
+// ── Disconnect a platform ──
+function disconnectPlatform(platform){
+  const k=platform.replace(/-/g,'');
+  PLAT_S[platform]={url:'',fileId:'',name:'',nav:[]};
+  [`hygr_url_${k}`,`hygr_fid_${k}`,`hygr_fnm_${k}`].forEach(key=>localStorage.removeItem(key));
+  const inp=document.getElementById(`pLink_${k}`);
+  if(inp) inp.value='';
+  setPlatformStatus(platform,'idle','Not connected');
+  syncLog(`[${platform}] Disconnected.`);
+}
+
+// ── Load a platform's folder (scans sub-folders if needed) ──
+async function loadPlatformFolder(platform,folderId,folderName){
   try{
-    const q=encodeURIComponent(`'${folderId}' in parents`);
     const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
+    const q=encodeURIComponent(`'${folderId}' in parents`);
     const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
     const data=await res.json();
     if(!res.ok) throw new Error(data.error?.message||'Drive API error '+res.status);
     const files=data.files||[];
-    const folders=files.filter(f=>f.mimeType==='application/vnd.google-apps.folder').length;
-    const sheets=files.filter(f=>f.mimeType==='application/vnd.google-apps.spreadsheet').length;
-    syncLog(`Found ${files.length} item${files.length!==1?'s':''} · ${folders} folder${folders!==1?'s':''} · ${sheets} sheet${sheets!==1?'s':''}.`);
-    setSyncStatus('idle');
-    showFileBrowser(files,folderId,folderName);
+    const loadables=files.filter(isLoadable);
+    const folders=files.filter(f=>f.mimeType===FOLDER_MIME);
+    PLAT_S[platform].nav=[{id:folderId,name:folderName}];
+
+    if(loadables.length>0){
+      syncLog(`[${platform}] Found ${loadables.length} file(s) in "${folderName}"`);
+      await loadAllFilesInFolder(loadables,folderName,platform);
+    } else if(folders.length>0){
+      syncLog(`[${platform}] Scanning ${folders.length} sub-folder(s)…`);
+      let allLoadables=[];
+      for(const sf of folders){
+        const r2=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${sf.id}' in parents`)}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+        const d2=await r2.json();
+        if(r2.ok){
+          const sfl=(d2.files||[]).filter(isLoadable);
+          if(sfl.length) syncLog(`  → "${sf.name}": ${sfl.length} file(s)`);
+          allLoadables.push(...sfl);
+        }
+      }
+      if(allLoadables.length>0){
+        await loadAllFilesInFolder(allLoadables,folderName,platform);
+      } else {
+        setPlatformStatus(platform,'error','No xlsx/csv files found');
+        syncLog(`[${platform}] No data files found in folder or sub-folders.`,true);
+      }
+    } else {
+      setPlatformStatus(platform,'error','Folder is empty');
+      syncLog(`[${platform}] Folder is empty.`,true);
+    }
   }catch(e){
-    setSyncStatus('error',e.message);
-    syncLog('Error: '+e.message,true);
+    setPlatformStatus(platform,'error',e.message.slice(0,50));
+    syncLog(`[${platform}] Error: ${e.message}`,true);
   }
-}
-
-async function openSubFolder(folderId, folderName){
-  await loadFolderContents(folderId, folderName);
-}
-
-async function navBreadcrumb(index){
-  const target=folderNav[index];
-  folderNav.splice(index); // trim stack — showFileBrowser will re-push
-  await loadFolderContents(target.id, target.name);
 }
 
 const FOLDER_MIME='application/vnd.google-apps.folder';
@@ -2166,22 +2217,23 @@ function rowsToMonths(rows,filename){
 }
 
 // Save parsed month array to state and re-render
-function applyMonths(months,name,fileId){
-  GS.fileId=fileId; GS.fileName=name;
-  localStorage.setItem('hygr_file_id',fileId);
-  localStorage.setItem('hygr_file_name',name);
-  D.shopee.m2026=months;
-  setSyncStatus('connected');
-  syncLog(`✓ Loaded ${months.length} month(s) from "${name}"`);
-  showActiveSource(name);
+function applyMonths(months,name,fileId,platform='shopee'){
+  const k=platform.replace(/-/g,'');
+  PLAT_S[platform].fileId=fileId; PLAT_S[platform].name=name;
+  localStorage.setItem(`hygr_fid_${k}`,fileId);
+  localStorage.setItem(`hygr_fnm_${k}`,name);
+  const dKey=PLAT_D[platform];
+  if(D[dKey]) D[dKey].m2026=months;
+  setPlatformStatus(platform,'connected',`${months.length} months · ${name.slice(0,30)}`);
+  syncLog(`[${platform}] ✓ ${months.length} month(s) loaded from "${name}"`);
   renderKPIs(); showPanel(S.nav);
 }
 
 // Load all files in a folder, merge by month, apply once
-async function loadAllFilesInFolder(loadables,folderName){
+async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   if(!loadables.length) return;
-  setSyncStatus('fetching');
-  syncLog(`Auto-loading all ${loadables.length} file(s) from "${folderName}"…`);
+  setPlatformStatus(platform,'fetching',`Loading ${loadables.length} file(s)…`);
+  syncLog(`[${platform}] Auto-loading all ${loadables.length} file(s) from "${folderName}"…`);
   const sorted=[...loadables].sort((a,b)=>a.name.localeCompare(b.name));
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const merged={};
@@ -2206,96 +2258,39 @@ async function loadAllFilesInFolder(loadables,folderName){
       b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
   }).filter(Boolean);
   if(!final.length){
-    setSyncStatus('error','No valid data in any file.');
-    syncLog('Could not parse any file. If files lack a Date/Month column, ensure the filename includes dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".',true);
+    setPlatformStatus(platform,'error','No valid data in any file.');
+    syncLog(`[${platform}] Could not parse any file. If files lack a Date/Month column, ensure the filename includes dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".`,true);
     return;
   }
-  syncLog(`✓ Merged ${ok} file(s) → ${final.length} month(s) of data`);
-  applyMonths(final,folderName+' (all files)',lastId);
+  syncLog(`[${platform}] ✓ Merged ${ok} file(s) → ${final.length} month(s) of data`);
+  applyMonths(final,folderName+' (all files)',lastId,platform);
   startAutoRefresh();
 }
 
-function showFileBrowser(files,folderId,folderName){
-  const existingIdx=folderNav.findIndex(f=>f.id===folderId);
-  if(existingIdx>=0) folderNav.splice(existingIdx+1);
-  else folderNav.push({id:folderId,name:folderName});
-
-  document.getElementById('driveBrowser').style.display='block';
-
-  const crumb=folderNav.map((f,i)=>
-    i<folderNav.length-1
-      ?`<span onclick="navBreadcrumb(${i})" style="cursor:pointer;color:var(--indigo);font-weight:600;text-decoration:underline;text-underline-offset:2px">${f.name}</span>`
-      :`<span style="color:var(--t1);font-weight:700">${f.name}</span>`
-  ).join('<span style="color:var(--t3);margin:0 5px">/</span>');
-  document.getElementById('browserTitle').innerHTML=`📁 ${crumb}`;
-
-  const loadables=files.filter(isLoadable);
-  const folders=files.filter(f=>f.mimeType===FOLDER_MIME);
-  document.getElementById('browserSub').textContent=
-    `${files.length} items · ${folders.length} folder${folders.length!==1?'s':''} · ${loadables.length} spreadsheet${loadables.length!==1?'s':''}`;
-
-  if(!files.length){
-    document.getElementById('driveFileList').innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:20px">This folder is empty.</td></tr>';
-    return;
-  }
-
-  const sorted=[
-    ...folders,
-    ...loadables.sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime)),
-    ...files.filter(f=>f.mimeType!==FOLDER_MIME&&!isLoadable(f)),
-  ];
-
-  const loadAllBtn=loadables.length>1
-    ?`<tr><td colspan="4" style="padding:6px 0 2px"><button class="btn-sm primary" style="width:100%;font-size:11px;padding:5px 0" onclick="loadAllFilesInFolder(currentFolderLoadables,'${folderName.replace(/'/g,"\\'")}')">⚡ Load All ${loadables.length} Files →</button></td></tr>`
-    :'';
-
-  document.getElementById('driveFileList').innerHTML=loadAllBtn+sorted.map(f=>{
-    const isFol=f.mimeType===FOLDER_MIME;
-    const isSheet=f.mimeType===SHEET_MIME;
-    const isXlsx=f.mimeType===XLSX_MIME||f.name.toLowerCase().endsWith('.xlsx');
-    const isCsv=f.mimeType===CSV_MIME||f.name.toLowerCase().endsWith('.csv');
-    const load=isLoadable(f);
-    const icon=isSheet?'📊':isFol?'📁':isXlsx?'📗':isCsv?'📄':'📄';
-    const typeLabel=isSheet?'Google Sheet':isFol?'Folder':isXlsx?'Excel (.xlsx)':isCsv?'CSV':'File';
-    const dt=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}):'—';
-    const safeName=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    let action;
-    if(isFol) action=`<button class="btn-sm ghost" style="font-size:10px;padding:2px 10px" onclick="openSubFolder('${f.id}','${safeName}')">Open →</button>`;
-    else if(load) action=`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadFile('${f.id}','${safeName}','${f.mimeType}')">Load →</button>`;
-    else action='<span style="font-size:10px;color:var(--t3)">—</span>';
-    return `<tr>
-      <td><span style="margin-right:7px;font-size:14px">${icon}</span>
-        <strong style="color:${isFol?'var(--indigo)':'var(--t1)'}">${f.name}</strong></td>
-      <td style="font-size:10px;color:var(--t3)">${typeLabel}</td>
-      <td style="font-size:11px;color:var(--t2)">${dt}</td>
-      <td>${action}</td>
-    </tr>`;
-  }).join('');
-
-  // Auto-load all files in this folder
-  if(loadables.length>0){
-    window.currentFolderLoadables=loadables;
-    setTimeout(()=>loadAllFilesInFolder(loadables,folderName),400);
-  }
-}
-
-async function loadSheetById(sheetId, gid='0', name='Sheet'){
-  syncLog(`Loading "${name}"…`);
-  setSyncStatus('fetching');
+async function loadSheetById(sheetId,gid='0',name='Sheet',platform='shopee'){
+  syncLog(`[${platform}] Loading sheet "${name}"…`);
+  setPlatformStatus(platform,'fetching','Loading…');
   try{
     const rows=await fetchRawRows({id:sheetId,mimeType:SHEET_MIME,name});
     if(rows.length<2) throw new Error('Sheet is empty or missing data rows.');
-    applyParsedRows(rows,name,sheetId);
+    applyParsedRows(rows,name,sheetId,platform);
     startAutoRefresh();
-  }catch(e){setSyncStatus('error',e.message);syncLog('Error: '+e.message,true);}
+  }catch(e){
+    setPlatformStatus(platform,'error',e.message.slice(0,50));
+    syncLog(`Error: ${e.message}`,true);
+  }
 }
 
-function loadFile(fileId,name,mimeType){
+function loadFile(fileId,name,mimeType,platform='shopee'){
   const f={id:fileId,name,mimeType};
+  setPlatformStatus(platform,'fetching','Loading…');
   fetchRawRows(f).then(rows=>{
-    applyParsedRows(rows,name,fileId);
+    applyParsedRows(rows,name,fileId,platform);
     startAutoRefresh();
-  }).catch(e=>{setSyncStatus('error',e.message);syncLog('Error: '+e.message,true);});
+  }).catch(e=>{
+    setPlatformStatus(platform,'error',e.message.slice(0,50));
+    syncLog(`Error: ${e.message}`,true);
+  });
 }
 
 // ── Auto-refresh every 5 min ──
@@ -2303,116 +2298,77 @@ let _autoRefreshTimer=null;
 function startAutoRefresh(intervalMs=5*60*1000){
   if(_autoRefreshTimer) clearInterval(_autoRefreshTimer);
   _autoRefreshTimer=setInterval(async()=>{
-    if(!folderNav.length||!GS.apiKey) return;
-    const cur=folderNav[folderNav.length-1];
-    try{
-      const q=encodeURIComponent(`'${cur.id}' in parents`);
-      const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
-      const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-      const data=await res.json();
-      if(!res.ok) return;
-      const newFiles=(data.files||[]).filter(isLoadable);
-      const newest=newFiles.sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime))[0];
-      if(newest&&newest.id!==GS.fileId){
-        syncLog(`New file detected: "${newest.name}" — reloading all files…`);
-        loadAllFilesInFolder(newFiles,cur.name);
-      }
-    }catch(e){}
+    if(!GS.apiKey) return;
+    for(const plat of Object.keys(PLAT_S)){
+      const ps=PLAT_S[plat];
+      if(!ps.url||!ps.nav||!ps.nav.length) continue;
+      const cur=ps.nav[ps.nav.length-1];
+      try{
+        const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
+        const q=encodeURIComponent(`'${cur.id}' in parents`);
+        const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=modifiedTime+desc&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+        const data=await res.json();
+        if(!res.ok) continue;
+        const newFiles=(data.files||[]).filter(isLoadable);
+        const newest=newFiles.sort((a,b)=>new Date(b.modifiedTime)-new Date(a.modifiedTime))[0];
+        if(newest&&newest.id!==ps.fileId){
+          syncLog(`[${plat}] New file detected: "${newest.name}" — reloading…`);
+          await loadAllFilesInFolder(newFiles,cur.name,plat);
+        }
+      }catch(e){}
+    }
   },intervalMs);
 }
 
-async function loadSheetCsv(sheetId, gid='0'){
-  syncLog('Connecting via CSV export (no API key)…');
-  setSyncStatus('fetching');
-  try{
-    const res=await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text=await res.text();
-    const rows=text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
-    applyParsedRows(rows,'Google Sheet',sheetId);
-  }catch(e){
-    setSyncStatus('error','CORS or permission error');
-    syncLog('Failed — sheet must be "Published to web" (File → Share → Publish to web).',true);
-  }
-}
-
-function applyParsedRows(rows,name,fileId){
+function applyParsedRows(rows,name,fileId,platform='shopee'){
   if(!rows||rows.length<2){
-    setSyncStatus('error','No valid rows — check column headers.');
     syncLog('Could not parse rows. File appears empty.',true);
     return;
   }
   const months=rowsToMonths(rows,name);
   if(!months.length){
     const rawHeaders=rows[0].map(h=>String(h).trim()).join(' | ');
-    syncLog(`Headers detected: ${rawHeaders}`,true);
-    setSyncStatus('error','No valid rows — check column headers.');
-    syncLog('Could not parse rows. Ensure file has a Date or Month column plus a Sales/GMV column. If it\'s a product-level report, filename must include dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".',true);
+    syncLog(`Headers: ${rawHeaders}`,true);
+    syncLog('No parseable data. Ensure file has Date/Month and Sales columns.',true);
     return;
   }
-  applyMonths(months,name,fileId);
+  applyMonths(months,name,fileId,platform);
 }
 
-function showActiveSource(name){
-  const b=document.getElementById('activeSourceBanner');
-  if(b) b.style.display='block';
-  const n=document.getElementById('activeSourceName');
-  const t=document.getElementById('activeSourceTime');
-  if(n) n.textContent='📊 '+name;
-  if(t) t.textContent='Last synced: '+new Date().toLocaleString('en-MY');
-}
-
-function refreshBrowser(){
-  // Re-open the current folder in the breadcrumb stack
-  if(folderNav.length){
-    const cur=folderNav[folderNav.length-1];
-    folderNav.pop();
-    loadFolderContents(cur.id,cur.name);
-  } else {
-    const url=document.getElementById('driveLinkInp').value.trim()||GS.folderUrl;
-    if(!url) return;
-    const p=parseDriveLink(url);
-    if(p?.type==='folder'){folderNav.length=0;loadFolderContents(p.id,'My Drive');}
-  }
-}
-
-function clearSync(){
-  GS.fileId=''; GS.fileName=''; GS.folderUrl='';
-  folderNav.length=0;
-  if(_autoRefreshTimer){clearInterval(_autoRefreshTimer);_autoRefreshTimer=null;}
-  ['hygr_drive','hygr_file_id','hygr_file_name'].forEach(k=>localStorage.removeItem(k));
-  const inp=document.getElementById('driveLinkInp');
-  if(inp) inp.value='';
-  const br=document.getElementById('driveBrowser');
-  if(br) br.style.display='none';
-  const ab=document.getElementById('activeSourceBanner');
-  if(ab) ab.style.display='none';
-  setSyncStatus('idle');
-  syncLog('Disconnected. Using built-in demo data.');
-}
-
-// Legacy stubs
-function doSync(){}
-function doSyncPanel(){}
-function parseAndApplyCSV(){}
-function parseGDriveUrl(){}
+// Legacy stubs (kept for any lingering references)
+function clearSync(){ disconnectPlatform('shopee'); }
+function doSync(){} function doSyncPanel(){} function parseAndApplyCSV(){} function parseGDriveUrl(){}
 
 /* ─── INIT ─── */
 window.addEventListener('DOMContentLoaded',()=>{
-  // Restore API key
+  // Restore API key UI
   if(GS.apiKey){
     const inp=document.getElementById('apiKeyInp');
     if(inp) inp.value=GS.apiKey;
     const tag=document.getElementById('apiKeyTag');
     if(tag){tag.textContent='✓ Saved';tag.style.cssText='background:var(--green-d);color:var(--green)';}
   }
-  // Restore drive link input
-  const dli=document.getElementById('driveLinkInp');
-  if(dli&&GS.folderUrl) dli.value=GS.folderUrl;
-  // Restore active connection
-  if(GS.fileName){showActiveSource(GS.fileName);setSyncStatus('connected');}
+  // Restore platform inputs and status
+  Object.keys(PLAT_S).forEach(p=>{
+    const k=p.replace(/-/g,'');
+    const inp=document.getElementById(`pLink_${k}`);
+    if(inp&&PLAT_S[p].url) inp.value=PLAT_S[p].url;
+    if(PLAT_S[p].name) setPlatformStatus(p,'connected',`${PLAT_S[p].name} · last session`);
+  });
+  setSyncStatus();
   renderKPIs();
   showPanel('overview');
+  // Auto-reconnect all platforms that have a saved URL and API key
+  if(GS.apiKey){
+    Object.keys(PLAT_S).forEach(async p=>{
+      if(PLAT_S[p].url){
+        const parsed=parseDriveLink(PLAT_S[p].url);
+        if(parsed&&parsed.type==='folder'){
+          await loadPlatformFolder(p,parsed.id,'My Drive');
+        }
+      }
+    });
+  }
 });
 </script>
 </body>
