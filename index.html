@@ -1979,6 +1979,8 @@ function parseDriveLink(url){
   return null;
 }
 
+const folderNav=[]; // breadcrumb stack [{id,name}]
+
 async function browseOrConnect(){
   const url=document.getElementById('driveLinkInp').value.trim();
   if(!url){syncLog('Paste a Google Drive or Sheets link first.',true);return;}
@@ -1988,14 +1990,15 @@ async function browseOrConnect(){
   GS.folderUrl=url;
   if(parsed.type==='folder'){
     if(!GS.apiKey){syncLog('⚠ Enter and save your Google API key first.',true);return;}
-    await loadFolderContents(parsed.id);
+    folderNav.length=0; // reset breadcrumb on fresh browse
+    await loadFolderContents(parsed.id,'My Drive');
   } else {
     if(GS.apiKey) await loadSheetById(parsed.id,'0','Google Sheet');
     else await loadSheetCsv(parsed.id,'0');
   }
 }
 
-async function loadFolderContents(folderId){
+async function loadFolderContents(folderId, folderName='Folder'){
   syncLog('Browsing folder…');
   setSyncStatus('fetching');
   try{
@@ -2005,39 +2008,79 @@ async function loadFolderContents(folderId){
     const data=await res.json();
     if(!res.ok) throw new Error(data.error?.message||'Drive API error '+res.status);
     const files=data.files||[];
-    syncLog(`Found ${files.length} file${files.length!==1?'s':''}.`);
+    const folders=files.filter(f=>f.mimeType==='application/vnd.google-apps.folder').length;
+    const sheets=files.filter(f=>f.mimeType==='application/vnd.google-apps.spreadsheet').length;
+    syncLog(`Found ${files.length} item${files.length!==1?'s':''} · ${folders} folder${folders!==1?'s':''} · ${sheets} sheet${sheets!==1?'s':''}.`);
     setSyncStatus('idle');
-    showFileBrowser(files,folderId);
+    showFileBrowser(files,folderId,folderName);
   }catch(e){
     setSyncStatus('error',e.message);
     syncLog('Error: '+e.message,true);
   }
 }
 
-function showFileBrowser(files,folderId){
+async function openSubFolder(folderId, folderName){
+  await loadFolderContents(folderId, folderName);
+}
+
+async function navBreadcrumb(index){
+  const target=folderNav[index];
+  folderNav.splice(index); // trim stack — showFileBrowser will re-push
+  await loadFolderContents(target.id, target.name);
+}
+
+function showFileBrowser(files,folderId,folderName){
+  // Maintain breadcrumb stack
+  const existingIdx=folderNav.findIndex(f=>f.id===folderId);
+  if(existingIdx>=0) folderNav.splice(existingIdx+1);
+  else folderNav.push({id:folderId,name:folderName});
+
   const browser=document.getElementById('driveBrowser');
   browser.style.display='block';
-  document.getElementById('browserSub').textContent=`${files.length} file${files.length!==1?'s':''} · ID: ${folderId}`;
+
+  // Render breadcrumb in title
+  const crumb=folderNav.map((f,i)=>
+    i<folderNav.length-1
+      ?`<span onclick="navBreadcrumb(${i})" style="cursor:pointer;color:var(--indigo);text-decoration:underline;text-underline-offset:2px">${f.name}</span>`
+      :`<span style="color:var(--t1)">${f.name}</span>`
+  ).join('<span style="color:var(--t3);margin:0 5px">/</span>');
+  document.getElementById('browserTitle').innerHTML=`📁 ${crumb}`;
+  document.getElementById('browserSub').textContent=`${files.length} item${files.length!==1?'s':''} in this folder`;
+
   if(!files.length){
-    document.getElementById('driveFileList').innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:20px">No files found in this folder.</td></tr>';
+    document.getElementById('driveFileList').innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:20px">This folder is empty.</td></tr>';
     return;
   }
-  const sheets=files.filter(f=>f.mimeType==='application/vnd.google-apps.spreadsheet');
-  const others=files.filter(f=>f.mimeType!=='application/vnd.google-apps.spreadsheet');
-  document.getElementById('driveFileList').innerHTML=[...sheets,...others].map(f=>{
-    const isSheet=f.mimeType==='application/vnd.google-apps.spreadsheet';
-    const icon=isSheet?'📊':'📄';
-    const typeLabel=isSheet?'Google Sheet':(f.mimeType?.split('.').pop()||'File');
+
+  // Sort: folders first, then sheets, then others
+  const FOLDER='application/vnd.google-apps.folder';
+  const SHEET='application/vnd.google-apps.spreadsheet';
+  const sorted=[
+    ...files.filter(f=>f.mimeType===FOLDER),
+    ...files.filter(f=>f.mimeType===SHEET),
+    ...files.filter(f=>f.mimeType!==FOLDER&&f.mimeType!==SHEET),
+  ];
+
+  document.getElementById('driveFileList').innerHTML=sorted.map(f=>{
+    const isSheet=f.mimeType===SHEET;
+    const isFolder=f.mimeType===FOLDER;
+    const icon=isSheet?'📊':isFolder?'📁':'📄';
+    const typeLabel=isSheet?'Google Sheet':isFolder?'Folder':(f.mimeType?.split('.').pop()||'File');
     const dt=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}):'—';
-    const safeName=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const safeName=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    let action;
+    if(isFolder)
+      action=`<button class="btn-sm ghost" style="font-size:10px;padding:2px 10px" onclick="openSubFolder('${f.id}','${safeName}')">Open →</button>`;
+    else if(isSheet)
+      action=`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadSheetById('${f.id}','0','${safeName}')">Load →</button>`;
+    else
+      action='<span style="font-size:10px;color:var(--t3)">—</span>';
     return `<tr>
-      <td><span style="margin-right:7px;font-size:14px">${icon}</span><strong style="color:var(--t1)">${f.name}</strong></td>
+      <td><span style="margin-right:7px;font-size:14px">${icon}</span>
+          <strong style="color:${isFolder?'var(--indigo)':'var(--t1)'}">${f.name}</strong></td>
       <td style="font-size:10px;color:var(--t3)">${typeLabel}</td>
       <td style="font-size:11px;color:var(--t2)">${dt}</td>
-      <td>${isSheet
-        ?`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadSheetById('${f.id}','0','${safeName}')">Load →</button>`
-        :'<span style="font-size:10px;color:var(--t3)">—</span>'
-      }</td>
+      <td>${action}</td>
     </tr>`;
   }).join('');
 }
@@ -2114,14 +2157,22 @@ function showActiveSource(name){
 }
 
 function refreshBrowser(){
-  const url=document.getElementById('driveLinkInp').value.trim()||GS.folderUrl;
-  if(!url) return;
-  const p=parseDriveLink(url);
-  if(p?.type==='folder') loadFolderContents(p.id);
+  // Re-open the current folder in the breadcrumb stack
+  if(folderNav.length){
+    const cur=folderNav[folderNav.length-1];
+    folderNav.pop();
+    loadFolderContents(cur.id,cur.name);
+  } else {
+    const url=document.getElementById('driveLinkInp').value.trim()||GS.folderUrl;
+    if(!url) return;
+    const p=parseDriveLink(url);
+    if(p?.type==='folder'){folderNav.length=0;loadFolderContents(p.id,'My Drive');}
+  }
 }
 
 function clearSync(){
   GS.fileId=''; GS.fileName=''; GS.folderUrl='';
+  folderNav.length=0;
   ['hygr_drive','hygr_file_id','hygr_file_name'].forEach(k=>localStorage.removeItem(k));
   const inp=document.getElementById('driveLinkInp');
   if(inp) inp.value='';
