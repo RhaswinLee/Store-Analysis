@@ -2037,46 +2037,60 @@ function disconnectPlatform(platform){
   syncLog(`[${platform}] Disconnected.`);
 }
 
-// ── Load a platform's folder (scans sub-folders if needed, filters to revenue files) ──
+// ── Load a platform's folder ──
+// Strategy: if a "Sales Data" sub-folder exists, load ONLY from it (revenue only).
+// Otherwise scan all sub-folders and apply filename pattern filter.
 async function loadPlatformFolder(platform,folderId,folderName){
   try{
     const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime,webContentLink)');
-    const q=encodeURIComponent(`'${folderId}' in parents`);
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error?.message||'Drive API error '+res.status);
-    const files=data.files||[];
-    const loadables=files.filter(isLoadable);
-    const folders=files.filter(f=>f.mimeType===FOLDER_MIME);
+    const fetchFolder=async id=>{
+      const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${id}' in parents`)}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.error?.message||'Drive API error '+r.status);
+      return d.files||[];
+    };
+
+    const rootFiles=await fetchFolder(folderId);
+    const loadables=rootFiles.filter(isLoadable);
+    const subfolders=rootFiles.filter(f=>f.mimeType===FOLDER_MIME);
     PLAT_S[platform].nav=[{id:folderId,name:folderName}];
 
-    let allLoadables=[];
+    let toLoad=[];
+
     if(loadables.length>0){
-      allLoadables=loadables;
-    } else if(folders.length>0){
-      syncLog(`[${platform}] Scanning ${folders.length} sub-folder(s)…`);
-      for(const sf of folders){
-        const r2=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${sf.id}' in parents`)}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100&supportsAllDrives=true&includeItemsFromAllDrives=true`);
-        const d2=await r2.json();
-        if(r2.ok){
-          const sfl=(d2.files||[]).filter(isLoadable);
+      // Files directly in connected folder — apply filename filter
+      const rev=filterRevFiles(loadables,platform);
+      toLoad=rev.length?rev:loadables;
+      syncLog(`[${platform}] Found ${toLoad.length} revenue file(s) in "${folderName}"`);
+    } else if(subfolders.length>0){
+      // Prefer "Sales Data" sub-folder — skip Product Performance entirely
+      const salesFolder=subfolders.find(f=>f.name.toLowerCase()==='sales data');
+      if(salesFolder){
+        syncLog(`[${platform}] Loading from "Sales Data" sub-folder only…`);
+        const sfl=(await fetchFolder(salesFolder.id)).filter(isLoadable);
+        const rev=filterRevFiles(sfl,platform);
+        toLoad=rev.length?rev:sfl;
+        syncLog(`  → ${toLoad.length} file(s) to load`);
+      } else {
+        // No "Sales Data" sub-folder — scan all, filter by filename pattern
+        syncLog(`[${platform}] Scanning ${subfolders.length} sub-folder(s)…`);
+        let all=[];
+        for(const sf of subfolders){
+          const sfl=(await fetchFolder(sf.id)).filter(isLoadable);
           if(sfl.length) syncLog(`  → "${sf.name}": ${sfl.length} file(s)`);
-          allLoadables.push(...sfl);
+          all.push(...sfl);
         }
+        const rev=filterRevFiles(all,platform);
+        toLoad=rev.length?rev:all;
+        if(rev.length&&rev.length<all.length)
+          syncLog(`[${platform}] Using ${rev.length} revenue file(s) of ${all.length} total`);
       }
     }
 
-    if(!allLoadables.length){
-      setPlatformStatus(platform,'error','Folder is empty');
-      syncLog(`[${platform}] No data files found in folder or sub-folders.`,true);
+    if(!toLoad.length){
+      setPlatformStatus(platform,'error','No xlsx/csv files found');
+      syncLog(`[${platform}] No data files found.`,true);
       return;
-    }
-
-    // Filter to revenue files only (e.g. Shopee shop-stats, TikTok Sales data)
-    const revFiles=filterRevFiles(allLoadables,platform);
-    const toLoad=revFiles.length?revFiles:allLoadables;
-    if(revFiles.length&&revFiles.length<allLoadables.length){
-      syncLog(`[${platform}] Using ${revFiles.length} revenue file(s) of ${allLoadables.length} total (skipped product files)`);
     }
     await loadAllFilesInFolder(toLoad,folderName,platform);
   }catch(e){
