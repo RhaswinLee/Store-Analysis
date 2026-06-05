@@ -2207,24 +2207,94 @@ async function loadSheetCsv(sheetId, gid='0'){
 }
 
 function applyParsedRows(rows,name,fileId){
-  const headers=rows[0].map(h=>h.trim().toLowerCase().replace(/[\s_-]/g,''));
+  if(!rows||rows.length<2){
+    setSyncStatus('error','No valid rows — check column headers.');
+    syncLog('Could not parse rows. File appears empty.',true);
+    return;
+  }
+  // Strip ALL non-alphanumeric chars so "Sales (MYR)", "% Conversion Rate" etc. match cleanly
+  const headers=rows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
   const get=(row,...keys)=>{
-    for(const k of keys){const i=headers.indexOf(k);if(i>=0&&row[i]!==undefined&&row[i]!=='')return row[i];}
+    for(const k of keys){
+      const i=headers.findIndex(h=>h===k||h.startsWith(k));
+      if(i>=0&&row[i]!==undefined&&String(row[i]).trim()!='')return String(row[i]).trim();
+    }
     return '';
   };
-  const mMap={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
-  const parsed=rows.slice(1).map(row=>{
-    const mRaw=get(row,'month','m'); const s=parseFloat(get(row,'sales','gmv','revenue'))||0;
-    if(!mRaw||!s) return null;
-    const m=mMap[mRaw.toLowerCase()]||mRaw.substring(0,3);
-    return{m,s,o:parseInt(get(row,'orders','order'))||0,cr:parseFloat(get(row,'cr','convrate','conversion','conversionrate'))||0,
-      v:parseInt(get(row,'visitors','visits','traffic','pageviews'))||0,
-      b:parseFloat(get(row,'basketsize','aov','avgorder','averageorder'))||0,
-      cl:parseInt(get(row,'clicks','click'))||0};
-  }).filter(Boolean);
+  const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mFull={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',
+    july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
+
+  // Detect date-based (daily) vs month-based data
+  const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate');
+  const hasMonth=headers.some(h=>h==='month'||h==='m');
+
+  let parsed=[];
+
+  if(hasDate&&!hasMonth){
+    // Daily rows — aggregate by month
+    const acc={};
+    for(const row of rows.slice(1)){
+      const dateStr=get(row,'date','day','reportdate');
+      if(!dateStr) continue;
+      let mIdx=-1;
+      const d=new Date(dateStr);
+      if(!isNaN(d.getTime())) mIdx=d.getMonth();
+      else{
+        // Try MM/DD/YYYY or DD/MM/YYYY or named month
+        const parts=dateStr.split(/[\/\-\.]/);
+        if(parts.length>=3){
+          // Try YYYY-MM-DD first
+          const y=parseInt(parts[0]),mo=parseInt(parts[1]),dy=parseInt(parts[2]);
+          if(y>1900) mIdx=mo-1;
+          else mIdx=parseInt(parts[1])-1; // DD/MM/YYYY
+        }
+        if(mIdx<0){
+          const m=dateStr.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+          if(m) mIdx=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[1]);
+        }
+      }
+      if(mIdx<0||mIdx>11) continue;
+      const mk=mNames[mIdx];
+      const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue'));
+      const o=parseInt(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders')))||0;
+      const v=parseInt(num(get(row,'visitors','visits','uniquevisitors','pageviews','traffic','uniquebuyers','sessioncount')))||0;
+      const cl=parseInt(num(get(row,'clicks','click','productclicks')))||0;
+      const cr=num(get(row,'cr','convrate','conversion','conversionrate','convrate','buyerconversionrate'));
+      const b=num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue'));
+      if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};
+      const a=acc[mk];
+      a.s+=s; a.o+=o; a.v+=v; a.cl+=cl;
+      if(cr>0){a.crSum+=cr;a.crN++;}
+      if(b>0){a.bSum+=b;a.bN++;}
+    }
+    parsed=mNames.map(mk=>{
+      const a=acc[mk]; if(!a) return null;
+      return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
+        cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
+        b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+    }).filter(Boolean);
+  } else {
+    // Month-based rows
+    parsed=rows.slice(1).map(row=>{
+      const mRaw=get(row,'month','m','monthname');
+      const s=num(get(row,'sales','gmv','revenue','salesmyr','totalsales','netsales'));
+      if(!mRaw||!s) return null;
+      const m=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
+      return{m,s,o:parseInt(num(get(row,'orders','order','nooforders')))||0,
+        cr:num(get(row,'cr','convrate','conversion','conversionrate')),
+        v:parseInt(num(get(row,'visitors','visits','uniquevisitors','pageviews','traffic')))||0,
+        b:num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize')),
+        cl:parseInt(num(get(row,'clicks','click')))||0};
+    }).filter(Boolean);
+  }
+
   if(!parsed.length){
+    // Debug: log detected headers to help diagnose
+    syncLog(`Headers detected: ${headers.join(' | ')}`,true);
     setSyncStatus('error','No valid rows — check column headers.');
-    syncLog('Could not parse rows. Ensure headers match expected format below.',true);
+    syncLog('Could not parse rows. See headers above — ensure Date/Month and Sales columns exist.',true);
     return;
   }
   GS.fileId=fileId; GS.fileName=name;
@@ -2232,7 +2302,7 @@ function applyParsedRows(rows,name,fileId){
   localStorage.setItem('hygr_file_name',name);
   D.shopee.m2026=parsed;
   setSyncStatus('connected');
-  syncLog(`✓ Loaded ${parsed.length} rows from "${name}"`);
+  syncLog(`✓ Loaded ${parsed.length} month(s) from "${name}"`);
   showActiveSource(name);
   renderKPIs(); showPanel(S.nav);
 }
