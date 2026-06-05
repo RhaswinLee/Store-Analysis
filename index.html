@@ -308,10 +308,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
   <!-- SYNC BANNER -->
   <div class="sync-banner">
     <div class="sync-dot idle" id="syncDot"></div>
-    <div class="sync-text" id="syncText">Connect Google Sheets for live data — mock data active</div>
-    <input class="sync-inp" id="driveInp" placeholder="Paste Google Sheets share link…" />
-    <button class="btn-sm primary" onclick="doSync()">⟳ Sync</button>
-    <button class="btn-sm ghost" onclick="clearSync()">Clear</button>
+    <div class="sync-text" id="syncText">Not connected — using built-in demo data · <button class="btn-sm ghost" onclick="showPanel('sync');document.querySelector('[data-nav=sync]').classList.add('active')" style="font-size:10px;padding:2px 8px;margin-left:2px">Configure ↗</button></div>
   </div>
 
   <!-- TOPBAR -->
@@ -783,37 +780,94 @@ tr:hover td{background:rgba(0,0,0,.02)}
 
     <!-- ═══ SYNC PANEL ═══ -->
     <div class="panel" id="panel-sync">
-      <div class="cc" style="max-width:600px">
-        <div class="cc-head"><div><div class="cc-title">🔗 Google Drive Data Sync</div><div class="cc-sub">Connect a Google Sheets report for live data override</div></div></div>
-        <div style="font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.7">
-          Paste your <strong style="color:var(--t1)">Google Sheets share link</strong> below. The system converts it to a direct CSV export URL and fetches it automatically.
-          <br>The sheet must be set to <strong style="color:var(--green)">Anyone with the link can view</strong> or <strong style="color:var(--green)">Published to web</strong>.
+
+      <!-- Row 1: API Key + Drive Link -->
+      <div class="cg cg-2" style="max-width:860px">
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">🔑 Google API Key</div><div class="cc-sub">Required to browse folders and read sheets</div></div>
+            <span class="tag" id="apiKeyTag" style="background:var(--border-sub);color:var(--t3)">Not set</span>
+          </div>
+          <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.65">
+            Create a free key in <strong style="color:var(--t1)">Google Cloud Console</strong> with
+            <strong style="color:var(--t1)">Drive API</strong> and <strong style="color:var(--t1)">Sheets API</strong> enabled.
+          </div>
+          <input class="sync-inp" id="apiKeyInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px" placeholder="AIzaSy…">
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-sm primary" onclick="saveApiKey()" style="padding:5px 14px">✓ Save Key</button>
+            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="font-size:11px;color:var(--indigo);text-decoration:none">→ Create API Key ↗</a>
+          </div>
+          <div style="font-size:10px;color:var(--t3);margin-top:7px;line-height:1.5">
+            In Cloud Console: Enable <em>Google Drive API</em> + <em>Google Sheets API</em>, then create a credential → API key.
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div>
-            <div style="font-size:10px;color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Share Link</div>
-            <input class="sync-inp" id="syncPanelInp" style="width:100%;padding:8px 12px;font-size:12px" placeholder="https://docs.google.com/spreadsheets/d/…/edit?usp=sharing">
+
+        <div class="cc">
+          <div class="cc-head">
+            <div><div class="cc-title">📁 Google Drive Link</div><div class="cc-sub">Paste a folder URL or a spreadsheet URL</div></div>
           </div>
-          <div>
-            <div style="font-size:10px;color:var(--t3);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Resolved Export URL</div>
-            <div id="resolvedUrl" style="font-size:11px;color:var(--t3);background:var(--bg);border:1px solid var(--border);border-radius:5px;padding:8px 12px;word-break:break-all;min-height:36px"></div>
+          <div style="font-size:11px;color:var(--t2);margin-bottom:10px;line-height:1.65">
+            Paste a <strong style="color:var(--t1)">Drive folder link</strong> to browse all files inside,
+            or a <strong style="color:var(--t1)">Google Sheets link</strong> to connect directly.
+            Sharing must be set to <strong style="color:var(--green)">Anyone with the link can view</strong>.
           </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn-sm primary" style="padding:6px 16px;font-size:12px" onclick="doSyncPanel()">⟳ Connect & Sync</button>
-            <button class="btn-sm ghost" style="padding:6px 16px;font-size:12px" onclick="clearSync()">✕ Disconnect</button>
+          <input class="sync-inp" id="driveLinkInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px"
+            placeholder="https://drive.google.com/drive/folders/… or …/spreadsheets/d/…">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sm primary" onclick="browseOrConnect()" style="padding:5px 14px">🔍 Browse / Connect</button>
+            <button class="btn-sm ghost" onclick="clearSync()" style="padding:5px 14px">✕ Disconnect</button>
           </div>
-          <div id="syncLog" style="font-size:11px;color:var(--t3);margin-top:4px"></div>
-        </div>
-        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-sub)">
-          <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:8px">Expected CSV Column Format</div>
-          <div style="font-size:10px;color:var(--t3);background:var(--bg);padding:10px;border-radius:6px;border:1px solid var(--border);font-family:monospace;line-height:1.8">
-            Month, Sales, Orders, CR, Visitors, BasketSize, Clicks<br>
-            January, 841242.53, 13935, 2.87, 508683, 60.37, 485263<br>
-            February, 919249.76, 16845, 3.48, 390201, 54.57, 484084<br>
-            March, 884739.27, 16112, 3.63, 441066, 54.91, 444062
-          </div>
+          <div id="syncLog" style="font-size:10px;min-height:15px;margin-top:7px;color:var(--t3)"></div>
         </div>
       </div>
+
+      <!-- Active Source Banner -->
+      <div id="activeSourceBanner" style="display:none;max-width:860px;margin-bottom:14px">
+        <div style="background:var(--green-d);border:1px solid rgba(22,163,74,.25);border-radius:9px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--t1)" id="activeSourceName">—</div>
+            <div style="font-size:10px;color:var(--t3)" id="activeSourceTime">—</div>
+          </div>
+          <button class="btn-sm ghost" onclick="clearSync()" style="font-size:10px;padding:3px 10px">Disconnect</button>
+        </div>
+      </div>
+
+      <!-- Drive Folder File Browser -->
+      <div id="driveBrowser" style="display:none;max-width:860px;margin-bottom:14px">
+        <div class="tbl-wrap" style="margin-bottom:0">
+          <div class="tbl-head">
+            <div><div class="cc-title" id="browserTitle">📁 Drive Folder Contents</div><div class="cc-sub" id="browserSub">—</div></div>
+            <button class="btn-sm ghost" onclick="refreshBrowser()" style="font-size:10px;padding:3px 10px">⟳ Refresh</button>
+          </div>
+          <table>
+            <thead><tr><th>File Name</th><th>Type</th><th>Last Modified</th><th>Action</th></tr></thead>
+            <tbody id="driveFileList"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Format Help -->
+      <div class="cc" style="max-width:860px">
+        <div style="font-size:11px;font-weight:700;color:var(--t2);margin-bottom:10px">Expected Sheet Column Format</div>
+        <div style="font-size:10px;color:var(--t3);background:var(--bg);padding:10px 12px;border-radius:6px;border:1px solid var(--border);font-family:monospace;line-height:1.9">
+          Month, Sales, Orders, CR, Visitors, BasketSize, Clicks<br>
+          January, 841242.53, 13935, 2.87, 508683, 60.37, 485263<br>
+          February, 919249.76, 16845, 3.48, 390201, 54.57, 484084<br>
+          March, 884739.27, 16112, 3.63, 441066, 54.91, 444062
+        </div>
+        <div style="font-size:10px;color:var(--t3);margin-top:8px;line-height:1.6">
+          Column names are flexible — auto-detected:
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">month/m</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">sales/gmv/revenue</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">orders</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">cr/convrate</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">visitors/traffic</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">basketsize/aov</code>
+          <code style="background:var(--bg);padding:1px 4px;border-radius:3px">clicks</code>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /content -->
@@ -1880,82 +1934,225 @@ document.querySelectorAll('.sb-item').forEach(i=>{
 });
 
 /* ─── GOOGLE DRIVE SYNC ─── */
-function parseGDriveUrl(url){
-  const m=url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-  if(!m) return null;
-  const id=m[1];
-  const gid=(url.match(/gid=(\d+)/)||[])[1]||'0';
-  return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
-}
-function setSyncStatus(status,msg){
+const GS = {
+  apiKey:   localStorage.getItem('hygr_gapi')      || '',
+  fileId:   localStorage.getItem('hygr_file_id')   || '',
+  fileName: localStorage.getItem('hygr_file_name') || '',
+  folderUrl:localStorage.getItem('hygr_drive')     || '',
+};
+
+function setSyncStatus(status, msg){
   const dot=document.getElementById('syncDot');
   const txt=document.getElementById('syncText');
   dot.className='sync-dot '+status;
-  if(status==='connected') txt.innerHTML=`<strong>🟢 Connected</strong> — Live data active · Last sync: ${new Date().toLocaleTimeString()}`;
-  else if(status==='fetching') txt.innerHTML=`<strong>🟡 Fetching Data Stream…</strong> — Connecting to Google Sheets`;
-  else if(status==='error') txt.innerHTML=`<strong>🔴 ${msg||'Connection Refused'}</strong> — Check sheet is public · Try "Publish to web" in Google Sheets`;
-  else txt.innerHTML=msg||'Connect Google Sheets for live data — mock data active';
+  if(status==='connected')
+    txt.innerHTML=`<strong>🟢 Connected</strong> — Live data active · <strong>${GS.fileName||'Sheet'}</strong>`;
+  else if(status==='fetching')
+    txt.innerHTML=`<strong>🟡 Fetching…</strong> — Reading from Google`;
+  else if(status==='error')
+    txt.innerHTML=`<strong>🔴 Error</strong> — ${msg||'Connection failed'}`;
+  else
+    txt.innerHTML=`Not connected — using built-in demo data · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px;margin-left:2px">Configure ↗</button>`;
 }
-async function doSync(){
-  const url=document.getElementById('driveInp').value.trim();
-  if(!url){setSyncStatus('error','No URL provided');return;}
-  const csvUrl=parseGDriveUrl(url);
-  if(!csvUrl){setSyncStatus('error','Invalid Google Sheets URL — paste full share link');return;}
-  setSyncStatus('fetching');
-  try{
-    const r=await fetch(csvUrl);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const text=await r.text();
-    parseAndApplyCSV(text);
-    localStorage.setItem('hygr_drive',url);
-    setSyncStatus('connected');
-  }catch(e){
-    setSyncStatus('error','CORS or permission error — ensure sheet is published to web');
+
+function syncLog(msg, isError=false){
+  const el=document.getElementById('syncLog');
+  if(el) el.innerHTML=`<span style="color:${isError?'var(--red)':'var(--t3)'}">${msg}</span>`;
+}
+
+function saveApiKey(){
+  const key=document.getElementById('apiKeyInp').value.trim();
+  if(!key){syncLog('Please enter an API key.',true);return;}
+  GS.apiKey=key;
+  localStorage.setItem('hygr_gapi',key);
+  const tag=document.getElementById('apiKeyTag');
+  tag.textContent='✓ Saved';
+  tag.style.cssText='background:var(--green-d);color:var(--green)';
+  syncLog('API key saved.');
+}
+
+function parseDriveLink(url){
+  const sheet=url.match(/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(sheet){const gid=(url.match(/gid=(\d+)/)||[])[1]||'0';return{type:'sheet',id:sheet[1],gid};}
+  const folder=url.match(/folders\/([a-zA-Z0-9-_]+)/);
+  if(folder) return{type:'folder',id:folder[1]};
+  return null;
+}
+
+async function browseOrConnect(){
+  const url=document.getElementById('driveLinkInp').value.trim();
+  if(!url){syncLog('Paste a Google Drive or Sheets link first.',true);return;}
+  const parsed=parseDriveLink(url);
+  if(!parsed){syncLog('Unrecognised URL — paste a Drive folder link or Google Sheets link.',true);return;}
+  localStorage.setItem('hygr_drive',url);
+  GS.folderUrl=url;
+  if(parsed.type==='folder'){
+    if(!GS.apiKey){syncLog('⚠ Enter and save your Google API key first.',true);return;}
+    await loadFolderContents(parsed.id);
+  } else {
+    if(GS.apiKey) await loadSheetById(parsed.id,'0','Google Sheet');
+    else await loadSheetCsv(parsed.id,'0');
   }
 }
-async function doSyncPanel(){
-  const url=document.getElementById('syncPanelInp').value.trim();
-  document.getElementById('driveInp').value=url;
-  const csvUrl=parseGDriveUrl(url);
-  if(csvUrl) document.getElementById('resolvedUrl').textContent=csvUrl;
-  else{document.getElementById('resolvedUrl').textContent='Invalid URL';return;}
-  document.getElementById('syncLog').textContent='Connecting…';
-  await doSync();
-  document.getElementById('syncLog').textContent=document.getElementById('syncText').textContent;
-}
-document.getElementById('syncPanelInp').addEventListener('input',function(){
-  const u=parseGDriveUrl(this.value.trim());
-  document.getElementById('resolvedUrl').textContent=u||'Paste a valid Google Sheets URL above';
-});
-function clearSync(){
-  localStorage.removeItem('hygr_drive');
-  document.getElementById('driveInp').value='';
-  document.getElementById('syncPanelInp').value='';
-  document.getElementById('resolvedUrl').textContent='';
-  document.getElementById('syncLog').textContent='';
-  setSyncStatus('idle','Disconnected — using built-in mock data');
-}
-function parseAndApplyCSV(csv){
+
+async function loadFolderContents(folderId){
+  syncLog('Browsing folder…');
+  setSyncStatus('fetching');
   try{
-    const rows=csv.trim().split('\n').slice(1);
-    const parsed=rows.map(row=>{
-      const c=row.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
-      return{m:c[0],s:parseFloat(c[1])||0,o:parseInt(c[2])||0,cr:parseFloat(c[3])||0,v:parseInt(c[4])||0,b:parseFloat(c[5])||0,cl:parseInt(c[6])||0};
-    }).filter(r=>r.m&&r.s);
-    if(parsed.length>0){D.shopee.m2026=parsed; renderKPIs(); showPanel(S.nav);}
-  }catch(e){console.warn('CSV parse error',e);}
+    const q=encodeURIComponent(`'${folderId}' in parents`);
+    const fields=encodeURIComponent('files(id,name,mimeType,modifiedTime)');
+    const res=await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&key=${GS.apiKey}&fields=${fields}&orderBy=name&pageSize=100`);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error?.message||'Drive API error '+res.status);
+    const files=data.files||[];
+    syncLog(`Found ${files.length} file${files.length!==1?'s':''}.`);
+    setSyncStatus('idle');
+    showFileBrowser(files,folderId);
+  }catch(e){
+    setSyncStatus('error',e.message);
+    syncLog('Error: '+e.message,true);
+  }
 }
+
+function showFileBrowser(files,folderId){
+  const browser=document.getElementById('driveBrowser');
+  browser.style.display='block';
+  document.getElementById('browserSub').textContent=`${files.length} file${files.length!==1?'s':''} · ID: ${folderId}`;
+  if(!files.length){
+    document.getElementById('driveFileList').innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--t3);padding:20px">No files found in this folder.</td></tr>';
+    return;
+  }
+  const sheets=files.filter(f=>f.mimeType==='application/vnd.google-apps.spreadsheet');
+  const others=files.filter(f=>f.mimeType!=='application/vnd.google-apps.spreadsheet');
+  document.getElementById('driveFileList').innerHTML=[...sheets,...others].map(f=>{
+    const isSheet=f.mimeType==='application/vnd.google-apps.spreadsheet';
+    const icon=isSheet?'📊':'📄';
+    const typeLabel=isSheet?'Google Sheet':(f.mimeType?.split('.').pop()||'File');
+    const dt=f.modifiedTime?new Date(f.modifiedTime).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'}):'—';
+    const safeName=f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<tr>
+      <td><span style="margin-right:7px;font-size:14px">${icon}</span><strong style="color:var(--t1)">${f.name}</strong></td>
+      <td style="font-size:10px;color:var(--t3)">${typeLabel}</td>
+      <td style="font-size:11px;color:var(--t2)">${dt}</td>
+      <td>${isSheet
+        ?`<button class="btn-sm primary" style="font-size:10px;padding:2px 10px" onclick="loadSheetById('${f.id}','0','${safeName}')">Load →</button>`
+        :'<span style="font-size:10px;color:var(--t3)">—</span>'
+      }</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadSheetById(sheetId, gid='0', name='Sheet'){
+  syncLog(`Loading "${name}"…`);
+  setSyncStatus('fetching');
+  try{
+    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A1:Z1000?key=${GS.apiKey}`);
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error?.message||'Sheets API error '+res.status);
+    const rows=data.values||[];
+    if(rows.length<2) throw new Error('Sheet is empty or missing data rows.');
+    applyParsedRows(rows,name,sheetId);
+  }catch(e){
+    setSyncStatus('error',e.message);
+    syncLog('Error: '+e.message,true);
+  }
+}
+
+async function loadSheetCsv(sheetId, gid='0'){
+  syncLog('Connecting via CSV export (no API key)…');
+  setSyncStatus('fetching');
+  try{
+    const res=await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const rows=text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
+    applyParsedRows(rows,'Google Sheet',sheetId);
+  }catch(e){
+    setSyncStatus('error','CORS or permission error');
+    syncLog('Failed — sheet must be "Published to web" (File → Share → Publish to web).',true);
+  }
+}
+
+function applyParsedRows(rows,name,fileId){
+  const headers=rows[0].map(h=>h.trim().toLowerCase().replace(/[\s_-]/g,''));
+  const get=(row,...keys)=>{
+    for(const k of keys){const i=headers.indexOf(k);if(i>=0&&row[i]!==undefined&&row[i]!=='')return row[i];}
+    return '';
+  };
+  const mMap={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
+  const parsed=rows.slice(1).map(row=>{
+    const mRaw=get(row,'month','m'); const s=parseFloat(get(row,'sales','gmv','revenue'))||0;
+    if(!mRaw||!s) return null;
+    const m=mMap[mRaw.toLowerCase()]||mRaw.substring(0,3);
+    return{m,s,o:parseInt(get(row,'orders','order'))||0,cr:parseFloat(get(row,'cr','convrate','conversion','conversionrate'))||0,
+      v:parseInt(get(row,'visitors','visits','traffic','pageviews'))||0,
+      b:parseFloat(get(row,'basketsize','aov','avgorder','averageorder'))||0,
+      cl:parseInt(get(row,'clicks','click'))||0};
+  }).filter(Boolean);
+  if(!parsed.length){
+    setSyncStatus('error','No valid rows — check column headers.');
+    syncLog('Could not parse rows. Ensure headers match expected format below.',true);
+    return;
+  }
+  GS.fileId=fileId; GS.fileName=name;
+  localStorage.setItem('hygr_file_id',fileId);
+  localStorage.setItem('hygr_file_name',name);
+  D.shopee.m2026=parsed;
+  setSyncStatus('connected');
+  syncLog(`✓ Loaded ${parsed.length} rows from "${name}"`);
+  showActiveSource(name);
+  renderKPIs(); showPanel(S.nav);
+}
+
+function showActiveSource(name){
+  const b=document.getElementById('activeSourceBanner');
+  if(b) b.style.display='block';
+  const n=document.getElementById('activeSourceName');
+  const t=document.getElementById('activeSourceTime');
+  if(n) n.textContent='📊 '+name;
+  if(t) t.textContent='Last synced: '+new Date().toLocaleString('en-MY');
+}
+
+function refreshBrowser(){
+  const url=document.getElementById('driveLinkInp').value.trim()||GS.folderUrl;
+  if(!url) return;
+  const p=parseDriveLink(url);
+  if(p?.type==='folder') loadFolderContents(p.id);
+}
+
+function clearSync(){
+  GS.fileId=''; GS.fileName=''; GS.folderUrl='';
+  ['hygr_drive','hygr_file_id','hygr_file_name'].forEach(k=>localStorage.removeItem(k));
+  const inp=document.getElementById('driveLinkInp');
+  if(inp) inp.value='';
+  const br=document.getElementById('driveBrowser');
+  if(br) br.style.display='none';
+  const ab=document.getElementById('activeSourceBanner');
+  if(ab) ab.style.display='none';
+  setSyncStatus('idle');
+  syncLog('Disconnected. Using built-in demo data.');
+}
+
+// Legacy stubs
+function doSync(){}
+function doSyncPanel(){}
+function parseAndApplyCSV(){}
+function parseGDriveUrl(){}
 
 /* ─── INIT ─── */
 window.addEventListener('DOMContentLoaded',()=>{
-  // restore saved URL
-  const saved=localStorage.getItem('hygr_drive');
-  if(saved){
-    document.getElementById('driveInp').value=saved;
-    document.getElementById('syncPanelInp').value=saved;
-    const u=parseGDriveUrl(saved);
-    if(u) document.getElementById('resolvedUrl').textContent=u;
+  // Restore API key
+  if(GS.apiKey){
+    const inp=document.getElementById('apiKeyInp');
+    if(inp) inp.value=GS.apiKey;
+    const tag=document.getElementById('apiKeyTag');
+    if(tag){tag.textContent='✓ Saved';tag.style.cssText='background:var(--green-d);color:var(--green)';}
   }
+  // Restore drive link input
+  const dli=document.getElementById('driveLinkInp');
+  if(dli&&GS.folderUrl) dli.value=GS.folderUrl;
+  // Restore active connection
+  if(GS.fileName){showActiveSource(GS.fileName);setSyncStatus('connected');}
   renderKPIs();
   showPanel('overview');
 });
