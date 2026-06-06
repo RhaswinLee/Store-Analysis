@@ -2174,8 +2174,12 @@ async function fetchRawRows(file){
   if(!ab) throw new Error(`Download failed after ${downloadAttempts.length} attempts: ${lastErr}. Ensure file is shared "Anyone with the link can view".`);
   const wb=XLSX.read(ab,{type:'array'});
   if(!wb.SheetNames.length) throw new Error('No sheets found in xlsx file.');
-  const ws=wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+  // Use first sheet that has actual data rows (some exports put data on sheet 2+)
+  for(const sn of wb.SheetNames){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    if(rows.length>=2) return rows;
+  }
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
 }
 
 // Parse 2D rows into month-aggregated data. Returns [] on failure.
@@ -2198,9 +2202,9 @@ function rowsToMonths(rows,filename){
   const addRow=(mk,row)=>{
     initAcc(mk);
     const a=acc[mk];
-    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales'));
-    const o=Math.round(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders','noofsuccessfulorders')));
-    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions')));
+    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount'));
+    const o=Math.round(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
+    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions','productviews','views','productimpressions','impressions')));
     const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
     const cr=num(get(row,'cr','convrate','conversion','conversionrate','buyerconversionrate','conversionratebasedonsession','convrate'));
     const b=num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue'));
@@ -2208,13 +2212,13 @@ function rowsToMonths(rows,filename){
     if(cr>0){a.crSum+=cr;a.crN++;}
     if(b>0){a.bSum+=b;a.bN++;}
   };
-  const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate');
+  const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate'||h==='time'||h==='period'||h==='orderdate'||h==='createdate'||h==='statisticsdate');
   const hasMonth=headers.some(h=>h==='month'||h==='m'||h==='monthname');
 
   if(hasDate&&!hasMonth){
     // Daily rows — parse date → month index → aggregate
     for(const row of rows.slice(1)){
-      const dateStr=get(row,'date','day','reportdate');
+      const dateStr=get(row,'date','day','reportdate','time','period','orderdate','createdate','statisticsdate');
       if(!dateStr) continue;
       let mIdx=-1;
       const d=new Date(dateStr);
@@ -2278,7 +2282,11 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     try{
       const rows=await fetchRawRows(f);
       const months=rowsToMonths(rows,f.name);
-      if(!months.length){syncLog(`  ⚠ No data in "${f.name}" — skipped`);continue;}
+      if(!months.length){
+        const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
+        syncLog(`  ⚠ No data in "${f.name}" — columns: ${hdrs}`);
+        continue;
+      }
       for(const mo of months){
         if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
         else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
