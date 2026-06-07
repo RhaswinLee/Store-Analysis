@@ -352,7 +352,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Revenue Trend</div><div class="cc-sub">Monthly GMV · Shopee + TikTok</div></div>
+            <div><div class="cc-title">Revenue Trend</div><div class="cc-sub">Monthly GMV · All Platforms</div></div>
             <span class="tag tag-g" id="revTag"></span>
           </div>
           <canvas id="revChart" height="200"></canvas>
@@ -383,6 +383,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <!-- ═══ SHOPEE PANEL ═══ -->
     <div class="panel" id="panel-shopee">
       <div class="kpi-grid" id="shopeeKpi"></div>
+      <div class="kpi-grid" id="shopeeMetrics2" style="grid-template-columns:repeat(6,1fr);margin-top:-8px"></div>
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
@@ -391,14 +392,17 @@ tr:hover td{background:rgba(0,0,0,.02)}
           </div>
           <canvas id="shopeeRevChart" height="200"></canvas>
           <div class="legend">
-            <div class="lg-item"><div class="lg-line" style="background:#f97316"></div>2025</div>
-            <div class="lg-item"><div class="lg-line" style="background:#6366f1;border-top:2px dashed #6366f1"></div>2026</div>
+            <div class="lg-item"><div class="lg-line" style="background:#8b949e;border-top:2px dashed #8b949e"></div>2025</div>
+            <div class="lg-item"><div class="lg-line" style="background:#f97316"></div>2026</div>
           </div>
         </div>
         <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub">Mar 2026 contribution</div></div></div>
-          <canvas id="channelDonut" height="180"></canvas>
-          <div class="donut-legend" id="channelLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+          <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
+          <canvas id="channelBarChart" height="140"></canvas>
+          <div id="trafficSourceWrap" style="margin-top:10px;display:none">
+            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">Product Card Traffic Sources</div>
+            <div id="trafficSourceList" style="display:flex;flex-direction:column;gap:4px"></div>
+          </div>
         </div>
       </div>
       <div class="cg cg-3">
@@ -521,6 +525,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
         <div class="preferred-alert" style="background:var(--shopee-d);color:var(--shopee)">↑ 59.8% QoQ</div>
       </div>
       <div class="kpi-grid" id="shopeeSgKpi"></div>
+      <div class="kpi-grid" id="shopeeSgMetrics2" style="grid-template-columns:repeat(6,1fr);margin-top:-8px"></div>
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
@@ -555,7 +560,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
           <span class="tag tag-s">Shopee SG Ads</span>
         </div>
         <table class="ads-table">
-          <thead><tr><th>Month</th><th>Revenue</th><th>Ad Spend</th><th>ROI</th><th>Orders</th><th>Conv. Rate</th><th>AOV</th></tr></thead>
+          <thead><tr><th>Month</th><th>Revenue</th><th>Orders</th><th>Conv. Rate</th><th>AOV</th><th>Cancelled</th><th>Returns</th></tr></thead>
           <tbody id="shopeeSgAdsTbl"></tbody>
         </table>
       </div>
@@ -846,9 +851,9 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, buyers:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, trafficSources:null, buyers:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
-  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null },
+  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, trafficSources:null },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
   promos:   { monthly:[], vouchers:[], voucherDetail:[], live:[], types:[] },
   products: [],
@@ -921,6 +926,34 @@ function filteredTT(){
   }
   return D.tiktok.m2026;
 }
+function filteredShopeeSG(){
+  const all=[...D.shopeeSG.m2025,...D.shopeeSG.m2026];
+  if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopeeSG.m2026.slice(-1);
+  if(S.grain==='monthly'&&S.selectedMonth){
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn=mNames[S.selectedMonth.month];
+    const yr=S.selectedMonth.year;
+    const src=yr===2025?D.shopeeSG.m2025:D.shopeeSG.m2026;
+    const r=src.find(x=>x.m===mn);
+    return r?[r]:D.shopeeSG.m2026.slice(-1);
+  }
+  return D.shopeeSG.m2026;
+}
+function filteredTiktokSG(){
+  const all=[...D.tiktokSG.m2025,...D.tiktokSG.m2026];
+  if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktokSG.m2026.slice(-1);
+  if(S.grain==='monthly'&&S.selectedMonth){
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mn=mNames[S.selectedMonth.month];
+    const yr=S.selectedMonth.year;
+    const src=yr===2025?D.tiktokSG.m2025:D.tiktokSG.m2026;
+    const r=src.find(x=>x.m===mn);
+    return r?[r]:D.tiktokSG.m2026.slice(-1);
+  }
+  return D.tiktokSG.m2026;
+}
 
 /* ─── CHARTS MAP ─── */
 const charts={};
@@ -982,39 +1015,42 @@ function renderKPIs(){
 /* ─── OVERVIEW CHARTS ─── */
 function renderOverview(){
   const sf=filteredShopee(), tf=filteredTT();
-  const sLabels=sf.map(r=>r.m), tLabels=tf.map(r=>r.m);
+  const sgf=filteredShopeeSG(), ttsgf=filteredTiktokSG();
+  const sLabels=sf.map(r=>r.m);
 
-  // Revenue trend
+  // Revenue trend — all 4 platforms, aligned to Shopee MY labels
   mkChart('revChart',{type:'line',data:{
     labels:sLabels,
     datasets:[
-      {label:'Shopee',data:sf.map(r=>r.s),borderColor:'#f97316',borderWidth:2.5,fill:true,backgroundColor:'rgba(249,115,22,.08)',pointRadius:3,pointBackgroundColor:'#f97316',tension:.4},
-      {label:'TikTok',data:sf.map((r,i)=>tf[i]?tf[i].s:null),borderColor:'#f43f5e',borderWidth:2.5,fill:true,backgroundColor:'rgba(244,63,94,.08)',pointRadius:3,pointBackgroundColor:'#f43f5e',tension:.4},
+      {label:'Shopee MY',data:sf.map(r=>r.s),borderColor:'#f97316',borderWidth:2.5,fill:true,backgroundColor:'rgba(249,115,22,.08)',pointRadius:3,pointBackgroundColor:'#f97316',tension:.4},
+      {label:'TikTok MY',data:sLabels.map(m=>{const r=tf.find(x=>x.m===m);return r?r.s:null;}),borderColor:'#f43f5e',borderWidth:2.5,fill:true,backgroundColor:'rgba(244,63,94,.08)',pointRadius:3,pointBackgroundColor:'#f43f5e',tension:.4},
+      {label:'Shopee SG',data:sLabels.map(m=>{const r=sgf.find(x=>x.m===m);return r?r.s:null;}),borderColor:'#fb923c',borderWidth:2,borderDash:[4,3],fill:false,pointRadius:3,pointBackgroundColor:'#fb923c',tension:.4},
+      {label:'TikTok SG',data:sLabels.map(m=>{const r=ttsgf.find(x=>x.m===m);return r?r.s:null;}),borderColor:'#fb7185',borderWidth:2,borderDash:[4,3],fill:false,pointRadius:3,pointBackgroundColor:'#fb7185',tension:.4},
     ]
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>' '+c.dataset.label+': '+RMk(c.raw)}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
 
-  // Platform split donut (2026)
+  // Platform split donut — all 4 platforms
   const shopeeTotal=D.shopee.m2026.reduce((a,r)=>a+r.s,0);
   const ttTotal=D.tiktok.m2026.reduce((a,r)=>a+r.s,0);
+  const sgTotal=D.shopeeSG.m2026.reduce((a,r)=>a+r.s,0);
+  const ttSGTotal=D.tiktokSG.m2026.reduce((a,r)=>a+r.s,0);
+  const grandTotal=shopeeTotal+ttTotal+sgTotal+ttSGTotal||1;
+  const allPlatLabels=['Shopee MY','TikTok MY','Shopee SG','TikTok SG'];
+  const allPlatData=[shopeeTotal,ttTotal,sgTotal,ttSGTotal];
+  const allPlatColors=['#f97316','#f43f5e','#fb923c','#fb7185'];
   mkChart('splitChart',{type:'doughnut',data:{
-    labels:['Shopee','TikTok'],
-    datasets:[{data:[shopeeTotal,ttTotal],backgroundColor:['#f97316','#f43f5e'],borderWidth:0,hoverOffset:6}]
+    labels:allPlatLabels,
+    datasets:[{data:allPlatData,backgroundColor:allPlatColors,borderWidth:0,hoverOffset:6}]
   },options:{responsive:true,cutout:'68%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)}`}}}}});
-  document.getElementById('splitLegend').innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-        <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#f97316;border-radius:2px"></span><span style="color:var(--t2)">Shopee</span></span>
-        <span style="font-weight:700;color:var(--t1)">${RMk(shopeeTotal)} <span style="color:var(--t3);font-weight:400">${(shopeeTotal/(shopeeTotal+ttTotal)*100).toFixed(1)}%</span></span>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-        <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:#f43f5e;border-radius:2px"></span><span style="color:var(--t2)">TikTok</span></span>
-        <span style="font-weight:700;color:var(--t1)">${RMk(ttTotal)} <span style="color:var(--t3);font-weight:400">${(ttTotal/(shopeeTotal+ttTotal)*100).toFixed(1)}%</span></span>
-      </div>
-    </div>`;
+  document.getElementById('splitLegend').innerHTML=allPlatLabels.map((l,i)=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+      <span style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:8px;height:8px;background:${allPlatColors[i]};border-radius:2px"></span><span style="color:var(--t2)">${l}</span></span>
+      <span style="font-weight:700;color:var(--t1)">${RMk(allPlatData[i])} <span style="color:var(--t3);font-weight:400">${(allPlatData[i]/grandTotal*100).toFixed(1)}%</span></span>
+    </div>`).join('');
 
-  document.getElementById('revTag').textContent='Combined '+RMk(shopeeTotal+ttTotal);
+  document.getElementById('revTag').textContent='Combined '+RMk(grandTotal);
 
   // Orders
   mkChart('ordersChart',{type:'bar',data:{
@@ -1049,6 +1085,25 @@ function renderOverview(){
 
 /* ─── SHOPEE CHARTS ─── */
 function renderShopee(){
+  const sf=filteredShopee();
+  // Order quality metrics row
+  const totCO=sf.reduce((a,r)=>a+(r.co||0),0);
+  const totCS=sf.reduce((a,r)=>a+(r.cs||0),0);
+  const totRO=sf.reduce((a,r)=>a+(r.ro||0),0);
+  const totRS=sf.reduce((a,r)=>a+(r.rs||0),0);
+  const totCL=sf.reduce((a,r)=>a+(r.cl||0),0);
+  const totBU=sf.reduce((a,r)=>a+(r.bu||0),0);
+  const totO=sf.reduce((a,r)=>a+r.o,0);
+  const m2El=document.getElementById('shopeeMetrics2');
+  if(m2El) m2El.innerHTML=[
+    {l:'Cancelled Orders',v:totCO?Num(totCO):'—',ch:totO&&totCO?'−'+(totCO/totO*100).toFixed(1)+'% of orders':'No data',dir:'warn',sub:'Total cancelled',ico:'❌'},
+    {l:'Cancelled Sales',v:totCS?RMk(totCS):'—',ch:'Gross value lost',dir:'warn',sub:'MYR cancelled',ico:'💸'},
+    {l:'Return/Refund Orders',v:totRO?Num(totRO):'—',ch:totO&&totRO?'−'+(totRO/totO*100).toFixed(1)+'% of orders':'No data',dir:'warn',sub:'Returned orders',ico:'↩️'},
+    {l:'Return/Refund Sales',v:totRS?RMk(totRS):'—',ch:'Value returned',dir:'warn',sub:'MYR refunded',ico:'🔄'},
+    {l:'Product Clicks',v:totCL?Num(totCL):'—',ch:'Store traffic',dir:'up',sub:'Total product clicks',ico:'👆'},
+    {l:'Unique Buyers',v:totBU?Num(totBU):'—',ch:'Paying customers',dir:'up',sub:'Monthly buyers',ico:'👥'},
+  ].map(k=>`<div class="kpi"><div class="kpi-ico">${k.ico}</div><div class="kpi-label">${k.l}</div><div class="kpi-val" style="font-size:18px">${k.v}</div><span class="chip ${k.dir}">${k.ch}</span><div class="kpi-sub">${k.sub}</div></div>`).join('');
+
   // Revenue 2025 vs 2026
   const lab25=D.shopee.m2025.map(r=>r.m);
   const lab26=D.shopee.m2026.map(r=>r.m);
@@ -1062,19 +1117,36 @@ function renderShopee(){
   },options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
 
-  // Channel donut
+  // Sales Channel Mix — horizontal bar chart with traffic source breakdown
   const ch=D.shopee.channel;
-  if(ch&&ch.mar&&ch.mar.length){
-    const total=ch.mar.reduce((a,v)=>a+v,0);
-    mkChart('channelDonut',{type:'doughnut',data:{
+  const ts=D.shopee.trafficSources;
+  if(ch&&ch.mar&&ch.mar.some(v=>v>0)){
+    const latestM=D.shopee.m2026.length?D.shopee.m2026[D.shopee.m2026.length-1].m:'';
+    const subEl=document.getElementById('channelMixSub');
+    if(subEl&&latestM) subEl.textContent=latestM+' 2026 · Confirmed orders by channel';
+    mkChart('channelBarChart',{type:'bar',data:{
       labels:ch.labels,
-      datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
-    },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});
-    document.getElementById('channelLegend').innerHTML=ch.labels.map((l,i)=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-        <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
-        <span style="font-weight:700;color:var(--t1)">${RMk(ch.mar[i])} <span style="color:var(--t3)">${(ch.mar[i]/total*100).toFixed(1)}%</span></span>
-      </div>`).join('');
+      datasets:[{label:'Sales (MYR)',data:ch.mar,backgroundColor:ch.colors,borderRadius:4,maxBarThickness:22}]
+    },options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
+      tooltip:{...cTooltip,callbacks:{label:c=>` ${RMk(c.raw)} (${ch.mar.reduce((a,v)=>a+v,0)?+(c.raw/ch.mar.reduce((a,v)=>a+v,0)*100).toFixed(1):0}%)`}}},
+      scales:{x:{grid:{color:'#f1f5f9'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+        y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
+    // Traffic source breakdown for Product Card
+    const tsWrap=document.getElementById('trafficSourceWrap');
+    const tsList=document.getElementById('trafficSourceList');
+    if(tsWrap&&tsList&&ts&&ts.productCard&&ts.productCard.length){
+      tsWrap.style.display='block';
+      const topSrc=ts.productCard.slice(0,6);
+      tsList.innerHTML=topSrc.map(s=>`
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px">
+          <span style="color:var(--t2);width:88px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
+          <div style="flex:1;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden">
+            <div style="width:${s.pct}%;height:100%;background:#f97316;border-radius:3px"></div>
+          </div>
+          <span style="color:var(--t1);font-weight:600;width:50px;text-align:right">${RMk(s.s)}</span>
+          <span style="color:var(--t3);width:32px">${s.pct.toFixed(1)}%</span>
+        </div>`).join('');
+    } else if(tsWrap){tsWrap.style.display='none';}
   }
 
   // ROI chart
@@ -1436,22 +1508,26 @@ function renderHealth(){
 
 /* ─── SHOPEE SG ─── */
 function renderShopeeSG(){
-  const d=D.shopeeSG.m2026;
-  if(!d||d.length<2){
+  const d=filteredShopeeSG();
+  if(!d||d.length<1){
     const el=document.getElementById('shopeeSgKpi');
     if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect Shopee SG folder to load data</div></div>';
     return;
   }
   const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
-  const last=d[d.length-1], prev=d[d.length-2];
-  const mom=((last.s-prev.s)/prev.s*100).toFixed(1);
+  const totS=d.reduce((a,r)=>a+r.s,0);
+  const totO=d.reduce((a,r)=>a+r.o,0);
+  const last=d[d.length-1], prev=d.length>1?d[d.length-2]:null;
+  const momS=prev?((last.s-prev.s)/prev.s*100).toFixed(1):null;
+  const momO=prev?((last.o-prev.o)/prev.o*100).toFixed(1):null;
+  const latestM=last.m+(d===D.shopeeSG.m2026?' 2026':' 2025');
   const el=document.getElementById('shopeeSgKpi');
   if(el) el.innerHTML=[
-    {l:'Total Revenue (Q1)',v:SGD(d.reduce((a,r)=>a+r.s,0)),ch:'↑ 59.8% QoQ',dir:'up',sub:'3 months Jan–Mar 2026',ico:'💵'},
-    {l:'Mar Revenue',v:SGD(last.s),ch:'↑ '+mom+'% MoM',dir:'up',sub:'vs '+SGD(prev.s)+' Feb',ico:'📈'},
-    {l:'Mar Orders',v:last.o.toLocaleString(),ch:'↑ '+((last.o-prev.o)/prev.o*100).toFixed(1)+'% MoM',dir:'up',sub:'Confirmed orders',ico:'📦'},
-    {l:'Conv. Rate (Mar)',v:last.cr+'%',ch:'Improving',dir:'up',sub:'Target 3.50%+',ico:'⚡'},
-    {l:'Avg Order Value',v:'SGD '+last.b.toFixed(2),ch:'Stable',dir:'up',sub:'Above MY AOV equiv.',ico:'🎯'},
+    {l:'Total Revenue',v:SGD(totS),ch:momS?'↑ '+momS+'% MoM':'—',dir:'up',sub:`${d.length} month${d.length>1?'s':''} selected`,ico:'💵'},
+    {l:latestM+' Revenue',v:SGD(last.s),ch:momS?'↑ '+momS+'% MoM':'—',dir:'up',sub:prev?'vs '+SGD(prev.s)+' prev':'First month',ico:'📈'},
+    {l:'Total Orders',v:totO.toLocaleString(),ch:momO?'↑ '+momO+'% MoM':'—',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate',v:last.cr+'%',ch:'Latest month',dir:'up',sub:'Buyer conversion',ico:'⚡'},
+    {l:'Avg Order Value',v:'SGD '+last.b.toFixed(2),sub:'Latest month AOV',ico:'🎯',ch:'AOV',dir:'up'},
   ].map(k=>`
     <div class="kpi">
       <div class="kpi-ico">${k.ico}</div>
@@ -1461,7 +1537,29 @@ function renderShopeeSG(){
       <div class="kpi-sub">${k.sub}</div>
     </div>`).join('');
 
-  const labs=d.map(r=>r.m+' 2026');
+  // 6 extra metrics
+  const totCO=d.reduce((a,r)=>a+(r.co||0),0);
+  const totCS=d.reduce((a,r)=>a+(r.cs||0),0);
+  const totRO=d.reduce((a,r)=>a+(r.ro||0),0);
+  const totRS=d.reduce((a,r)=>a+(r.rs||0),0);
+  const totCL=d.reduce((a,r)=>a+(r.cl||0),0);
+  const totBU=d.reduce((a,r)=>a+(r.bu||0),0);
+  const m2El=document.getElementById('shopeeSgMetrics2');
+  if(m2El) m2El.innerHTML=[
+    {l:'Cancelled Orders',v:totCO?totCO.toLocaleString():'—',ch:'Orders cancelled',dir:'warn'},
+    {l:'Cancelled Sales',v:totCS?SGD(totCS):'—',ch:'Sales cancelled',dir:'warn'},
+    {l:'Return/Refund Orders',v:totRO?totRO.toLocaleString():'—',ch:'Returned/refunded',dir:'warn'},
+    {l:'Return/Refund Sales',v:totRS?SGD(totRS):'—',ch:'Refund value',dir:'warn'},
+    {l:'Product Clicks',v:totCL?totCL.toLocaleString():'—',ch:'Total clicks',dir:'up'},
+    {l:'Unique Buyers',v:totBU?totBU.toLocaleString():'—',ch:'Confirmed buyers',dir:'up'},
+  ].map(k=>`
+    <div class="kpi">
+      <div class="kpi-label">${k.l}</div>
+      <div class="kpi-val" style="font-size:16px">${k.v}</div>
+      <span class="chip ${k.dir}">${k.ch}</span>
+    </div>`).join('');
+
+  const labs=d.map(r=>r.m);
   mkChart('shopeeSgRevChart',{type:'bar',data:{
     labels:labs,
     datasets:[{label:'Revenue (SGD)',data:d.map(r=>r.s),backgroundColor:d.map((_,i)=>i===d.length-1?'#f97316':'rgba(249,115,22,.45)'),borderRadius:5,maxBarThickness:52}]
@@ -1504,13 +1602,13 @@ function renderShopeeSG(){
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v}}}}});
 
   document.getElementById('shopeeSgAdsTbl').innerHTML=d.map(r=>`<tr>
-    <td>${r.m} 2026</td>
+    <td>${r.m}</td>
     <td style="font-weight:700;color:var(--t1)">SGD ${r.s.toLocaleString()}</td>
-    <td>SGD ${r.exp.toLocaleString()}</td>
-    <td class="${r.roi>=5?'roi-good':'roi-warn'}">${r.roi}x</td>
-    <td>${r.o}</td>
+    <td>${r.o.toLocaleString()}</td>
     <td>${r.cr}%</td>
     <td>SGD ${r.b.toFixed(2)}</td>
+    <td>${r.co||'—'}</td>
+    <td>${r.ro||'—'}</td>
   </tr>`).join('');
 }
 
@@ -2172,6 +2270,48 @@ function extractExtraSheets(wb,platform,fname){
     // Skip primary revenue/product sheets already handled
     if(/confirmedorder|placedorder|topperforming/i.test(sn)) continue;
 
+    // ── Traffic Sources (Confirmed Order) → Sales Channel Mix ──
+    if(/traffic.*source/i.test(sn)&&/confirm/i.test(sn)){
+      const rows=getRows(sn); if(!rows) continue;
+      const hIdx=findHeaderRow(rows);
+      const dr=hIdx>0?rows.slice(hIdx):rows;
+      if(dr.length<2) continue;
+      const hdrs=dr[0].map(h=>String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+      const numC=v=>parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
+      const gC=makeGetter(hdrs);
+      const sumRow=dr[1]; if(!sumRow) continue;
+      const pc=numC(gC(sumRow,'salesfromproductcard','fromproductcard','productcard'));
+      const sl2=numC(gC(sumRow,'salesfromsellerlive','fromsellerlive','sellerlive'));
+      const sv2=numC(gC(sumRow,'salesfromsellervideo','fromsellervideo','sellervideo'));
+      const af=numC(gC(sumRow,'salesfromaffiliate','fromaffiliate','affiliate'));
+      const sa=numC(gC(sumRow,'salesfromshopeads','fromshopeads','shopeads'));
+      if(pc||sl2||af||sa){
+        D[dKey].channel={
+          labels:['Product Card','Seller Live','Seller Video','Affiliate','Shopee Ads'],
+          colors:['#f97316','#6366f1','#f43f5e','#3fb950','#64748b'],
+          mar:[pc,sl2,sv2,af,sa]
+        };
+      }
+      // Parse Product Card and Seller Live sub-breakdowns
+      const sections={productCard:[],sellerLive:[]};
+      let curSec=null;
+      for(let i=2;i<dr.length;i++){
+        const row=dr[i];
+        const fc=String(row[0]||'').trim();
+        if(!fc) continue;
+        if(/^product card$/i.test(fc)){curSec='productCard';continue;}
+        if(/^seller live$/i.test(fc)){curSec='sellerLive';continue;}
+        if(/^traffic source|^seller video|^affiliate|^shopee ads/i.test(fc)){curSec=null;continue;}
+        if(!curSec||/^traffic source$/i.test(fc)) continue;
+        const pct=numC(String(row[1]||'').replace('%',''));
+        const sales=numC(String(row[2]||''));
+        if(fc&&(pct>0||sales>0)&&!/^100\.00/i.test(String(row[1]||'')))
+          sections[curSec].push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2)});
+      }
+      if(sections.productCard.length||sections.sellerLive.length) D[dKey].trafficSources=sections;
+      continue;
+    }
+
     const rows=getRows(sn); if(!rows) continue;
     const hIdx=findHeaderRow(rows);
     const dataRows=hIdx>0?rows.slice(hIdx):rows;
@@ -2296,20 +2436,27 @@ function rowsToMonths(rows,filename){
     return '';
   };
   const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
-  // Separate accumulators per year
   const acc25={}, acc26={};
-  const initA=(acc,mk)=>{if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};};
+  const initA=(acc,mk)=>{if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0,co:0,cs:0,ro:0,rs:0,bu:0,nbu:0,ebu:0};};
   const addRow=(mk,row,yr)=>{
     const acc=yr===2025?acc25:acc26;
     initA(acc,mk);
     const a=acc[mk];
     const s=num(get(row,'confirmedsales','confirmedrevenue','confirmedgmv','confirmedordersales','confirmedorderrevenue','sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount','grossrevenue'));
     const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','order','nooforders','successfulorders','ordersplaced','totalorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
-    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions','productviews','views','productimpressions','impressions')));
+    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','sessioncount','sessions','productviews','productimpressions','impressions')));
     const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
     const cr=num(get(row,'orderconversionrate','convrate','conversion','conversionrate','buyerconversionrate','conversionratebasedonsession','cr'));
     const b=num(get(row,'salesperorder','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue','basketsize'));
+    const co=Math.round(num(get(row,'cancelledorders','cancelledorder','noofcancelledorders','cancelledordercount')));
+    const cs=num(get(row,'cancelledsales','cancelledsalesmyr','cancelledsalesamount','cancelledsalesvalue'));
+    const ro=Math.round(num(get(row,'returnedrefundedorders','returnedorders','refundedorders','returnorders','noofreturnedorders')));
+    const rs=num(get(row,'returnedrefundedsales','returnedsales','refundedsales','returnedrefundedsalesamount','returnedrefundedsalesmyr'));
+    const bu=Math.round(num(get(row,'ofbuyers','buyers','numberofbuyers','noofbuyers','uniquebuyers','totalbuyers')));
+    const nbu=Math.round(num(get(row,'ofnewbuyers','newbuyers','numberofnewbuyers','noofnewbuyers')));
+    const ebu=Math.round(num(get(row,'ofexistingbuyers','existingbuyers','numberofexistingbuyers','noofexistingbuyers')));
     a.s+=s; a.o+=o; a.v+=v; a.cl+=cl;
+    a.co+=co; a.cs+=cs; a.ro+=ro; a.rs+=rs; a.bu+=bu; a.nbu+=nbu; a.ebu+=ebu;
     if(cr>0){a.crSum+=cr;a.crN++;}
     if(b>0){a.bSum+=b;a.bN++;}
   };
@@ -2318,7 +2465,9 @@ function rowsToMonths(rows,filename){
     if(!a||(!a.s&&!a.o)) return null;
     return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
       cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
-      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0),
+      co:a.co,cs:+a.cs.toFixed(2),ro:a.ro,rs:+a.rs.toFixed(2),
+      bu:a.bu,nbu:a.nbu,ebu:a.ebu};
   }).filter(Boolean);
 
   const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate'||h==='time'||h==='period'||h==='orderdate'||h==='createdate'||h==='statisticsdate');
@@ -2327,10 +2476,20 @@ function rowsToMonths(rows,filename){
   const fileMonth=monthFromFilename(filename);
   const isTotalRow=row=>/^(total|grand|sum|subtotal|合计|รวม)/i.test(String(row[0]||'').trim());
   const isDateRange=str=>{
-    // Detect summary rows with date ranges like "01-01-2025-31" (4 segments, one is a 4-digit year)
     const p=str.split(/[\/\-\.]/);
     return p.length>=4&&p.some(x=>/^\d{4}$/.test(x));
   };
+  // Detect Shopee shop-stats files: duplicate header at dataRows[3] (row 4 of file)
+  // When found, use summary row (dataRows[1]) directly — avoids daily-row aggregation issues
+  const looksLikeHeader=row=>row&&row.some(c=>/^date$/i.test(String(c||'').trim()));
+  const hasDupHeader=dataRows.length>3&&looksLikeHeader(dataRows[3]);
+  if(fileMonth&&fileYear&&hasDupHeader&&dataRows.length>1){
+    const summaryRow=dataRows[1];
+    if(summaryRow&&summaryRow.some(v=>String(v||'').trim()!=='')){
+      addRow(fileMonth,summaryRow,fileYear);
+    }
+    return{m2025:buildFinal(acc25),m2026:buildFinal(acc26)};
+  }
 
   if(hasDate&&!hasMonth){
     for(const row of dataRows.slice(1)){
@@ -2338,18 +2497,15 @@ function rowsToMonths(rows,filename){
       const dateStr=get(row,'date','day','reportdate','time','period','orderdate','createdate','statisticsdate');
       if(!dateStr) continue;
       if(/^(total|grand|sum|subtotal)/i.test(dateStr)) continue;
-      if(isDateRange(dateStr)) continue; // skip Shopee monthly summary row e.g. "01-01-2025-31"
-      // When fileMonth is known from filename, use it directly to avoid DD-MM-YYYY vs MM-DD-YYYY ambiguity
+      if(isDateRange(dateStr)) continue;
       if(fileMonth){
         const yrMatch=dateStr.match(/\b(20\d{2})\b/);
         const rowYear=yrMatch?parseInt(yrMatch[1]):(fileYear||2026);
         if(fileYear&&rowYear!==fileYear) continue;
-        // Ensure row has a year-like number to be a valid date row
         if(!/\b20\d{2}\b/.test(dateStr)&&!/\d{2}[\/\-\.]\d{2}/.test(dateStr)) continue;
         addRow(fileMonth,row,rowYear);
         continue;
       }
-      // No fileMonth: parse month index from date string
       let mIdx=-1,rowYear=null;
       const d=new Date(dateStr);
       if(!isNaN(d.getTime())){mIdx=d.getMonth();rowYear=d.getFullYear();}
@@ -2377,7 +2533,6 @@ function rowsToMonths(rows,filename){
       addRow(mk,row,fileYear||2026);
     }
   } else {
-    // Product-level or no date column — use month from filename
     const mk=monthFromFilename(filename);
     if(!mk) return {m2025:[],m2026:[]};
     const yr=fileYear||2026;
@@ -2478,7 +2633,11 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   const merged25={},merged26={};
   const mergeInto=(merged,mo)=>{
     if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
-    else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
+    else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;
+      a.co=(a.co||0)+(mo.co||0);a.cs=(a.cs||0)+(mo.cs||0);
+      a.ro=(a.ro||0)+(mo.ro||0);a.rs=(a.rs||0)+(mo.rs||0);
+      a.bu=(a.bu||0)+(mo.bu||0);a.nbu=(a.nbu||0)+(mo.nbu||0);a.ebu=(a.ebu||0)+(mo.ebu||0);
+      if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
   };
   let ok=0,lastId='';
   for(const f of sorted){
