@@ -2278,16 +2278,15 @@ async function fetchRawRows(file){
   return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
 }
 
-// Parse 2D rows into month-aggregated data. Returns [] on failure.
+// Parse 2D rows → {m2025:[], m2026:[]} separated by year. Each entry: {m,s,o,v,cl,cr,b}.
 function rowsToMonths(rows,filename){
-  if(!rows||rows.length<2) return [];
+  if(!rows||rows.length<2) return {m2025:[],m2026:[]};
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const mFull={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',
     july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
-  // Find actual header row (handles TikTok multi-section and Shopee summary-first files)
   const hIdx=findHeaderRow(rows);
   const dataRows=hIdx>0?rows.slice(hIdx):rows;
-  if(dataRows.length<2) return [];
+  if(dataRows.length<2) return {m2025:[],m2026:[]};
   const headers=dataRows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
   const get=(row,...keys)=>{
     for(const k of keys){
@@ -2297,10 +2296,12 @@ function rowsToMonths(rows,filename){
     return '';
   };
   const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
-  const acc={};
-  const initAcc=mk=>{if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};};
-  const addRow=(mk,row)=>{
-    initAcc(mk);
+  // Separate accumulators per year
+  const acc25={}, acc26={};
+  const initA=(acc,mk)=>{if(!acc[mk]) acc[mk]={m:mk,s:0,o:0,v:0,cl:0,crSum:0,crN:0,bSum:0,bN:0};};
+  const addRow=(mk,row,yr)=>{
+    const acc=yr===2025?acc25:acc26;
+    initA(acc,mk);
     const a=acc[mk];
     const s=num(get(row,'confirmedsales','confirmedrevenue','confirmedgmv','confirmedordersales','confirmedorderrevenue','sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount','grossrevenue'));
     const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','order','nooforders','successfulorders','ordersplaced','totalorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
@@ -2312,19 +2313,43 @@ function rowsToMonths(rows,filename){
     if(cr>0){a.crSum+=cr;a.crN++;}
     if(b>0){a.bSum+=b;a.bN++;}
   };
+  const buildFinal=acc=>mNames.map(mk=>{
+    const a=acc[mk];
+    if(!a||(!a.s&&!a.o)) return null;
+    return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
+      cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
+      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+  }).filter(Boolean);
+
   const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate'||h==='time'||h==='period'||h==='orderdate'||h==='createdate'||h==='statisticsdate');
   const hasMonth=headers.some(h=>h==='month'||h==='m'||h==='monthname');
   const fileYear=yearFromFilename(filename);
-  const fileMonth=monthFromFilename(filename); // e.g. 'May' for 202605 files
+  const fileMonth=monthFromFilename(filename);
   const isTotalRow=row=>/^(total|grand|sum|subtotal|合计|รวม)/i.test(String(row[0]||'').trim());
+  const isDateRange=str=>{
+    // Detect summary rows with date ranges like "01-01-2025-31" (4 segments, one is a 4-digit year)
+    const p=str.split(/[\/\-\.]/);
+    return p.length>=4&&p.some(x=>/^\d{4}$/.test(x));
+  };
 
   if(hasDate&&!hasMonth){
-    // Daily rows — parse date + year, filter to fileYear/fileMonth to prevent cross-contamination
     for(const row of dataRows.slice(1)){
       if(isTotalRow(row)) continue;
       const dateStr=get(row,'date','day','reportdate','time','period','orderdate','createdate','statisticsdate');
       if(!dateStr) continue;
       if(/^(total|grand|sum|subtotal)/i.test(dateStr)) continue;
+      if(isDateRange(dateStr)) continue; // skip Shopee monthly summary row e.g. "01-01-2025-31"
+      // When fileMonth is known from filename, use it directly to avoid DD-MM-YYYY vs MM-DD-YYYY ambiguity
+      if(fileMonth){
+        const yrMatch=dateStr.match(/\b(20\d{2})\b/);
+        const rowYear=yrMatch?parseInt(yrMatch[1]):(fileYear||2026);
+        if(fileYear&&rowYear!==fileYear) continue;
+        // Ensure row has a year-like number to be a valid date row
+        if(!/\b20\d{2}\b/.test(dateStr)&&!/\d{2}[\/\-\.]\d{2}/.test(dateStr)) continue;
+        addRow(fileMonth,row,rowYear);
+        continue;
+      }
+      // No fileMonth: parse month index from date string
       let mIdx=-1,rowYear=null;
       const d=new Date(dateStr);
       if(!isNaN(d.getTime())){mIdx=d.getMonth();rowYear=d.getFullYear();}
@@ -2333,42 +2358,36 @@ function rowsToMonths(rows,filename){
         if(parts.length>=3){
           const y=parseInt(parts[0]);
           if(y>1900){mIdx=parseInt(parts[1])-1;rowYear=y;}
-          else{mIdx=parseInt(parts[1])-1;}
+          else{const yl=parseInt(parts[parts.length-1]);if(yl>1900) rowYear=yl; mIdx=parseInt(parts[1])-1;}
         }
         if(mIdx<0){const m2=dateStr.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);if(m2) mIdx=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m2[1]);}
       }
       if(mIdx<0||mIdx>11) continue;
-      if(fileYear&&rowYear&&rowYear!==fileYear) continue; // skip rows from wrong year
-      if(fileMonth&&mNames[mIdx]!==fileMonth) continue; // skip rows outside the file's month
-      addRow(mNames[mIdx],row);
+      const yr=rowYear||fileYear||2026;
+      if(fileYear&&rowYear&&rowYear!==fileYear) continue;
+      addRow(mNames[mIdx],row,yr);
     }
   } else if(hasMonth){
-    // Month-based rows
     for(const row of dataRows.slice(1)){
       if(isTotalRow(row)) continue;
       const mRaw=get(row,'month','m','monthname');
       if(!mRaw) continue;
       const mk=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
       if(!mNames.includes(mk)) continue;
-      addRow(mk,row);
+      addRow(mk,row,fileYear||2026);
     }
   } else {
-    // Product-level or unknown — extract month from filename, sum all rows as one month total
+    // Product-level or no date column — use month from filename
     const mk=monthFromFilename(filename);
-    if(!mk) return [];
+    if(!mk) return {m2025:[],m2026:[]};
+    const yr=fileYear||2026;
     for(const row of dataRows.slice(1)){
-      if(isTotalRow(row)) continue; // skip Total/Grand Total summary rows
-      addRow(mk,row);
+      if(isTotalRow(row)) continue;
+      addRow(mk,row,yr);
     }
   }
 
-  return mNames.map(mk=>{
-    const a=acc[mk];
-    if(!a||(!a.s&&!a.o)) return null;
-    return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
-      cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
-      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
-  }).filter(Boolean);
+  return {m2025:buildFinal(acc25), m2026:buildFinal(acc26)};
 }
 
 // Parse 2D rows into product array. Returns [] on failure.
@@ -2431,8 +2450,8 @@ function rowsToProducts(rows,filename){
     .slice(0,20); // top 20 products
 }
 
-// Save parsed month array to state and re-render
-function applyMonths(months,name,fileId,platform='shopee'){
+// Save month arrays (2026 + 2025) to state and re-render
+function applyMonths(months,months25,name,fileId,platform='shopee'){
   const k=platform.replace(/-/g,'');
   PLAT_S[platform].fileId=fileId; PLAT_S[platform].name=name;
   localStorage.setItem(`hygr_fid_${k}`,fileId);
@@ -2440,38 +2459,42 @@ function applyMonths(months,name,fileId,platform='shopee'){
   const dKey=PLAT_D[platform];
   if(D[dKey]){
     D[dKey].m2026=months;
-    // Derive campaign data from monthly revenue as fallback (if no dedicated campaign sheet found)
+    if(months25&&months25.length) D[dKey].m2025=months25;
     if(D[dKey].camps26!==undefined&&!D[dKey].camps26.length)
       D[dKey].camps26=months.map(r=>({m:r.m,s:r.s,o:r.o,cr:r.cr}));
   }
-  setPlatformStatus(platform,'connected',`${months.length} months · ${name.slice(0,30)}`);
-  syncLog(`[${platform}] ✓ ${months.length} month(s) loaded from "${name}"`);
+  setPlatformStatus(platform,'connected',`${months.length} mo 2026 · ${months25?.length||0} mo 2025 · ${name.slice(0,25)}`);
+  syncLog(`[${platform}] ✓ 2026: ${months.length} month(s), 2025: ${months25?.length||0} month(s)`);
   renderKPIs(); showPanel(S.nav);
 }
 
-// Load all files in a folder, merge by month, apply once
+// Load all files in a folder, merge by month+year, apply once
 async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   if(!loadables.length) return;
   setPlatformStatus(platform,'fetching',`Loading ${loadables.length} file(s)…`);
   syncLog(`[${platform}] Auto-loading all ${loadables.length} file(s) from "${folderName}"…`);
   const sorted=[...loadables].sort((a,b)=>a.name.localeCompare(b.name));
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const merged={};
+  const merged25={},merged26={};
+  const mergeInto=(merged,mo)=>{
+    if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
+    else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
+  };
   let ok=0,lastId='';
   for(const f of sorted){
     try{
       const rows=await fetchRawRows(f);
-      const months=rowsToMonths(rows,f.name);
-      if(!months.length){
+      const {m2025,m2026}=rowsToMonths(rows,f.name);
+      if(!m2025.length&&!m2026.length){
         const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
         syncLog(`  ⚠ No data in "${f.name}" — columns: ${hdrs}`);
       } else {
-        for(const mo of months){
-          if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
-          else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
-        }
+        for(const mo of m2025) mergeInto(merged25,mo);
+        for(const mo of m2026) mergeInto(merged26,mo);
         ok++; lastId=f.id;
-        syncLog(`  ✓ ${f.name} → ${months.map(m=>m.m).join(', ')}`);
+        const y25=m2025.map(m=>m.m).join(',');
+        const y26=m2026.map(m=>m.m).join(',');
+        syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]`);
       }
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
       const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
@@ -2480,19 +2503,21 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       }
     }catch(e){syncLog(`  ⚠ Skipped "${f.name}": ${e.message}`);}
   }
-  const final=mNames.map(mk=>{
+  const buildFinal=merged=>mNames.map(mk=>{
     const a=merged[mk]; if(!a||(!a.s&&!a.o)) return null;
     return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
       cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
       b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
   }).filter(Boolean);
-  if(!final.length){
+  const final26=buildFinal(merged26);
+  const final25=buildFinal(merged25);
+  if(!final26.length&&!final25.length){
     setPlatformStatus(platform,'error','No valid data in any file.');
-    syncLog(`[${platform}] Could not parse any file. If files lack a Date/Month column, ensure the filename includes dates like "Report.YYYYMMDD_YYYYMMDD.xlsx".`,true);
+    syncLog(`[${platform}] Could not parse any file. Ensure filenames contain dates like YYYYMMDD-YYYYMMDD or YYYYMM.`,true);
     return;
   }
-  syncLog(`[${platform}] ✓ Merged ${ok} file(s) → ${final.length} month(s) of data`);
-  applyMonths(final,folderName+' (all files)',lastId,platform);
+  syncLog(`[${platform}] ✓ Merged ${ok} file(s) → 2026:${final26.length}mo, 2025:${final25.length}mo`);
+  applyMonths(final26,final25,folderName+' (all files)',lastId,platform);
   startAutoRefresh();
 }
 
@@ -2580,14 +2605,14 @@ function applyParsedRows(rows,name,fileId,platform='shopee'){
     syncLog('Could not parse rows. File appears empty.',true);
     return;
   }
-  const months=rowsToMonths(rows,name);
-  if(!months.length){
+  const {m2025,m2026}=rowsToMonths(rows,name);
+  if(!m2026.length&&!m2025.length){
     const rawHeaders=rows[0].map(h=>String(h).trim()).join(' | ');
     syncLog(`Headers: ${rawHeaders}`,true);
     syncLog('No parseable data. Ensure file has Date/Month and Sales columns.',true);
     return;
   }
-  applyMonths(months,name,fileId,platform);
+  applyMonths(m2026,m2025,name,fileId,platform);
 }
 
 // Legacy stubs (kept for any lingering references)
