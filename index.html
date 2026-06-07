@@ -885,130 +885,12 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null,
-    camps25:[
-      {m:'1.1',s:55394,o:1057,v:28580,b:52.41,cr:5.11},
-      {m:'2.2',s:50951,o:995,v:44421,b:51.21,cr:4.65},
-      {m:'3.3',s:55660,o:1287,v:63415,b:43.25,cr:4.77},
-      {m:'4.4',s:40204,o:795,v:34071,b:50.57,cr:5.50},
-      {m:'5.5',s:64903,o:1383,v:80413,b:46.93,cr:4.70},
-      {m:'6.6',s:54750,o:1136,v:39197,b:48.20,cr:3.43},
-      {m:'7.7',s:72004,o:1431,v:39995,b:50.32,cr:4.97},
-      {m:'8.8',s:65121,o:1340,v:45497,b:48.60,cr:5.41},
-      {m:'9.9',s:69182,o:1503,v:35990,b:46.03,cr:7.03},
-      {m:'10.10',s:81080,o:1593,v:46249,b:50.90,cr:6.44},
-      {m:'11.11',s:151943,o:3176,v:81359,b:47.84,cr:4.27},
-      {m:'12.12',s:111709,o:2201,v:64439,b:50.75,cr:4.89},
-    ],
-    camps26:[
-      {m:'1.1',s:56087,o:862,v:48993,b:65.07,cr:3.55},
-      {m:'2.2',s:72039,o:1192,v:40021,b:60.44,cr:4.65},
-      {m:'3.3',s:66891,o:1157,v:32424,b:57.81,cr:4.92},
-    ],
-    ads:[
-      {m:'Oct',s:819253,gmv:810800,exp:158900,roi:5.10,v:520107,imp:18500000,cl:1200000,cpc:.13,spct:98.97},
-      {m:'Nov',s:836706,gmv:969200,exp:165700,roi:5.85,v:556846,imp:16600000,cl:426000,cpc:.39,spct:115.84},
-      {m:'Dec',s:938313,gmv:1100000,exp:178900,roi:6.15,v:654973,imp:16900000,cl:902500,cpc:.20,spct:117.23},
-      {m:'Jan',s:841242,gmv:834800,exp:158800,roi:5.26,v:485263,imp:1500000,cl:943700,cpc:.17,spct:99.23},
-      {m:'Feb',s:919249,gmv:860700,exp:175900,roi:4.89,v:484084,imp:13100000,cl:474800,cpc:.37,spct:93.63},
-      {m:'Mar',s:884739,gmv:828800,exp:173500,roi:4.78,v:444062,imp:15000000,cl:548700,cpc:.32,spct:93.68},
-    ],
-    channel:{
-      labels:['Product Card','Seller Live','Affiliate','Seller Video'],
-      feb:[504834,364733,48439,1242],
-      mar:[492085,348358,43724,570],
-      colors:['#f97316','#6366f1','#f43f5e','#3fb950']
-    },
-    buyers:[
-      {m:'Jan',nb:6122,np:47.93,eb:6651,ep:52.07,ns:346700,es:494550},
-      {m:'Feb',nb:7408,np:48.85,eb:7758,ep:51.15,ns:376480,es:542770},
-      {m:'Mar',nb:6928,np:47.68,eb:7601,ep:52.32,ns:356420,es:528320},
-    ],
-  },
-  tiktok:   { m2026:[], m2025:[], products:[], channels:null,
-    breakdown:[
-      {m:'Jan',prod:134375,vid:141081,live:116204},
-      {m:'Feb',prod:135290,vid:137419,live:114623},
-      {m:'Mar',prod:162868,vid:138595,live:119556},
-    ],
-    affiliate:[
-      {m:'Nov',gmv:260081,comm:24688,creators:782,items:5900},
-      {m:'Dec',gmv:181480,comm:14411,creators:879,items:4700},
-      {m:'Jan',gmv:159476,comm:12477,creators:824,items:4100},
-      {m:'Feb',gmv:152972,comm:11565,creators:778,items:4300},
-      {m:'Mar',gmv:168834,comm:12326,creators:922,items:4900},
-    ],
-    ads:[
-      {m:'Oct',spend:113865,o:9792,gmv:474191,roi:4.16,cpo:11.63},
-      {m:'Nov',spend:138709,o:12130,gmv:624768,roi:4.50,cpo:11.44},
-      {m:'Dec',spend:136455,o:9962,gmv:500100,roi:3.66,cpo:13.70},
-      {m:'Jan',spend:121817,o:9159,gmv:438317,roi:3.60,cpo:13.30},
-      {m:'Feb',spend:122639,o:9573,gmv:417014,roi:3.40,cpo:12.81},
-      {m:'Mar',spend:146308,o:11416,gmv:478384,roi:3.27,cpo:12.82},
-    ],
-    views:[
-      {m:'Jan',views:9755611,profile:42425,engage:96612},
-      {m:'Feb',views:8801563,profile:33840,engage:53585},
-      {m:'Mar',views:20805310,profile:181232,engage:342732},
-    ],
-  },
-  shopeeSG: { m2026:[], m2025:[], products:[], channels:null,
-    channel:{
-      labels:['Product Card','Affiliate','Seller Live','Seller Video'],
-      mar:[38200,18400,8900,1850],
-      colors:['#f97316','#f43f5e','#6366f1','#3fb950'],
-    },
-  },
-  tiktokSG: { m2026:[], m2025:[], products:[], channels:null,
-    breakdown:[
-      {m:'Jan',prod:8820,vid:5940,live:3480},
-      {m:'Feb',prod:11820,vid:7980,live:4810},
-      {m:'Mar',prod:15120,vid:10210,live:6150},
-    ],
-  },
-  promos:{
-    monthly:[
-      {m:'Jan',discount:82500,bundle:45200,gwp:38400,b1f1:12100},
-      {m:'Feb',discount:21797,bundle:162350,gwp:3605,b1f1:21797},
-      {m:'Mar',discount:68400,bundle:52100,gwp:44200,b1f1:18300},
-    ],
-    vouchers:[
-      {m:'Jan',claims:142183,orders:11180,usage:7.86,sales:623400,cost:34200},
-      {m:'Feb',claims:187226,orders:14303,usage:7.64,sales:795300,cost:45100},
-      {m:'Mar',claims:165000,orders:12800,usage:7.76,sales:712000,cost:41500},
-    ],
-    voucherDetail:[
-      {name:'VTH01 50% Cofund DDV 2 Feb',claims:7908,orders:1022,usage:12.92,sales:126940,cost:11056},
-      {name:'VTH01 50% Cofund DDV 15 Feb',claims:11438,orders:855,usage:7.48,sales:109880,cost:9114},
-      {name:'VTH01 50% Cofund DDV 2 Feb (v2)',claims:15399,orders:2056,usage:13.35,sales:91860,cost:10015},
-      {name:'VTH08 50% Cofund 15% Feb',claims:5867,orders:1074,usage:18.31,sales:71390,cost:11236},
-    ],
-    live:[
-      {m:'Jan',shopee:280000,tiktok:116204},
-      {m:'Feb',shopee:364733,tiktok:114623},
-      {m:'Mar',shopee:348358,tiktok:119556},
-    ],
-    types:[
-      {name:'GWP Min Spend RM150',type:'Gift with Purchase',platform:'Shopee',sales:162350,orders:907,units:5852,aov:188.78,cr:null,status:'top'},
-      {name:'Cofund Voucher 50% Off',type:'Voucher',platform:'Shopee',sales:795300,orders:14303,units:null,aov:55.60,cr:null,status:'top'},
-      {name:'Seller Live Flash Sale',type:'Live Promotion',platform:'Shopee Live',sales:348358,orders:null,units:null,aov:null,cr:null,status:'top'},
-      {name:'TikTok LIVE Broadcast',type:'Live Promotion',platform:'TikTok Live',sales:119556,orders:null,units:null,aov:null,cr:null,status:'ok'},
-      {name:'Bundle Deo 3x Pack',type:'Bundle Deal',platform:'Shopee+TikTok',sales:52100,orders:834,units:2502,aov:62.47,cr:null,status:'ok'},
-      {name:'B1F1 Lip Balm',type:'Buy 1 Free 1',platform:'Shopee',sales:21797,orders:928,units:952,aov:24.46,cr:null,status:'ok'},
-      {name:'Free Gift Plushie',type:'Free Gift',platform:'Shopee',sales:null,orders:null,units:null,aov:null,cr:59.21,status:'highlight'},
-      {name:'GWP Min Spend RM250',type:'Gift with Purchase',platform:'Shopee',sales:3605,orders:12,units:110,aov:300.41,cr:null,status:'warn'},
-    ],
-  },
-  products:[
-    {name:'Deodorant Roll-On',sku:'DEO-RO',em:'🎽',ch:'Shopee+TikTok',sales:146486,cr:19.05,atc:8497,views:168650,bounce:null,status:'high',note:'Strongest CR — scale ad budget'},
-    {name:'Natural Refillable Deo Stick 40g',sku:'DEO-RF',em:'🧴',ch:'Shopee+TikTok',sales:132416,cr:15.94,atc:4054,views:47290,bounce:21.65,status:'warn',note:'High bounce — reduce to 18%'},
-    {name:'Natural Tinted Lip Balm',sku:'LIP-TN',em:'💄',ch:'Shopee+TikTok',sales:29057,cr:18.19,atc:3464,views:100110,bounce:null,status:'medium',note:'High lead gen — acquisition driver'},
-    {name:'Natural Deodorant Stick 25g',sku:'DEO-25',em:'🪄',ch:'Shopee',sales:20362,cr:null,atc:4154,views:77920,bounce:20.93,status:'warn',note:'High ATC but high bounce — add Free Gift'},
-    {name:'Hybrid Sunscreen',sku:'SUN-HY',em:'☀️',ch:'Shopee',sales:70632,cr:11.90,atc:null,views:null,bounce:null,status:'medium',note:'Cross-sell to deo buyers'},
-    {name:'Sample Set',sku:'SAMP-S',em:'🎁',ch:'Shopee+TikTok',sales:4427,cr:18.19,atc:null,views:45530,bounce:null,status:'lead',note:'Low revenue / high acquisition'},
-    {name:'Body & Perfume Oil Roll-On',sku:'OIL-RO',em:'🌸',ch:'TikTok',sales:18370,cr:null,atc:null,views:35370,bounce:null,status:'medium',note:'Cross-sell opportunity'},
-    {name:'HYGR 3x Natural Deo Bundle',sku:'DEO-3X',em:'📦',ch:'Shopee+TikTok',sales:24712,cr:null,atc:null,views:49160,bounce:null,status:'high',note:'High AOV bundle — push refill'},
-  ],
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, buyers:[] },
+  tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
+  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null },
+  tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
+  promos:   { monthly:[], vouchers:[], voucherDetail:[], live:[], types:[] },
+  products: [],
 };
 
 /* ─── HELPERS ─── */
@@ -1221,16 +1103,18 @@ function renderShopee(){
 
   // Channel donut
   const ch=D.shopee.channel;
-  const total=ch.mar.reduce((a,v)=>a+v,0);
-  mkChart('channelDonut',{type:'doughnut',data:{
-    labels:ch.labels,
-    datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
-  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});
-  document.getElementById('channelLegend').innerHTML=ch.labels.map((l,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
-      <span style="font-weight:700;color:var(--t1)">${RMk(ch.mar[i])} <span style="color:var(--t3)">${(ch.mar[i]/total*100).toFixed(1)}%</span></span>
-    </div>`).join('');
+  if(ch&&ch.mar&&ch.mar.length){
+    const total=ch.mar.reduce((a,v)=>a+v,0);
+    mkChart('channelDonut',{type:'doughnut',data:{
+      labels:ch.labels,
+      datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
+    },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/total*100).toFixed(1)}%)`}}}}});
+    document.getElementById('channelLegend').innerHTML=ch.labels.map((l,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
+        <span style="font-weight:700;color:var(--t1)">${RMk(ch.mar[i])} <span style="color:var(--t3)">${(ch.mar[i]/total*100).toFixed(1)}%</span></span>
+      </div>`).join('');
+  }
 
   // ROI chart
   const adL=D.shopee.ads.map(r=>r.m);
@@ -1613,15 +1497,17 @@ function renderShopeeSG(){
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)}}}}});
 
   const ch=D.shopeeSG.channel;
-  const tot=ch.mar.reduce((a,v)=>a+v,0);
-  mkChart('shopeeSgChannelChart',{type:'doughnut',data:{
-    labels:ch.labels,datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
-  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: SGD ${c.raw.toLocaleString()} (${(c.raw/tot*100).toFixed(1)}%)`}}}}});
-  document.getElementById('shopeeSgChannelLegend').innerHTML=ch.labels.map((l,i)=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
-      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
-      <span style="font-weight:700;color:var(--t1)">SGD ${ch.mar[i].toLocaleString()} <span style="color:var(--t3)">${(ch.mar[i]/tot*100).toFixed(1)}%</span></span>
-    </div>`).join('');
+  if(ch&&ch.mar&&ch.mar.length){
+    const tot=ch.mar.reduce((a,v)=>a+v,0);
+    mkChart('shopeeSgChannelChart',{type:'doughnut',data:{
+      labels:ch.labels,datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:0,hoverOffset:4}]
+    },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: SGD ${c.raw.toLocaleString()} (${(c.raw/tot*100).toFixed(1)}%)`}}}}});
+    document.getElementById('shopeeSgChannelLegend').innerHTML=ch.labels.map((l,i)=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${l}</span></span>
+        <span style="font-weight:700;color:var(--t1)">SGD ${ch.mar[i].toLocaleString()} <span style="color:var(--t3)">${(ch.mar[i]/tot*100).toFixed(1)}%</span></span>
+      </div>`).join('');
+  }
 
   mkChart('shopeeSgCrChart',{type:'line',data:{labels:labs,
     datasets:[{label:'CR%',data:d.map(r=>r.cr),borderColor:'#f97316',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#f97316',tension:.4,fill:true,backgroundColor:'rgba(249,115,22,.08)'}]
@@ -1746,19 +1632,24 @@ function promoTypeTagStyle(type){
   return map[type]||'background:var(--border);color:var(--t3)';
 }
 function renderPromos(){
+  const lv=D.promos.live, vc=D.promos.vouchers, pm=D.promos.monthly;
+  if(!lv.length&&!vc.length&&!pm.length){
+    const el=document.getElementById('promoKpi');
+    if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect platform folders to load promotions data</div></div>';
+    return;
+  }
   // KPIs
-  const lv=D.promos.live, vc=D.promos.vouchers;
-  const marLive=lv[2].shopee+lv[2].tiktok;
-  const marVoucher=vc[2].sales;
-  const marPromoTotal=D.promos.monthly[2].discount+D.promos.monthly[2].bundle+D.promos.monthly[2].gwp+D.promos.monthly[2].b1f1;
-  const marVoucherRoi=(marVoucher/vc[2].cost).toFixed(1);
+  const marLive=(lv[2]||{shopee:0,tiktok:0}).shopee+(lv[2]||{shopee:0,tiktok:0}).tiktok;
+  const marVoucher=(vc[2]||{sales:0}).sales;
+  const marPromoTotal=(pm[2]||{discount:0,bundle:0,gwp:0,b1f1:0}).discount+(pm[2]||{}).bundle+(pm[2]||{}).gwp+(pm[2]||{}).b1f1||0;
+  const marVoucherRoi=vc[2]&&vc[2].cost?(marVoucher/vc[2].cost).toFixed(1):'N/A';
   const el=document.getElementById('promoKpi');
   if(el) el.innerHTML=[
     {l:'Promo GMV (Mar)',v:RMk(marPromoTotal),ch:'↑ 12.4% MoM',dir:'up',sub:'Discount+Bundle+GWP+B1F1',ico:'🎟️'},
     {l:'Voucher Sales (Mar)',v:RMk(marVoucher),ch:'Usage: 7.76%',dir:'up',sub:'165k claims · RM41.5k cost',ico:'🏷️'},
     {l:'Live Stream GMV (Mar)',v:RMk(marLive),ch:'Shopee+TikTok',dir:'up',sub:'Seller Live + TikTok LIVE',ico:'📺'},
     {l:'Best Promo CR',v:'59.21%',ch:'Free Gift Plushie',dir:'up',sub:'All-time record conversion',ico:'⚡'},
-    {l:'Voucher ROI (Mar)',v:marVoucherRoi+'x',ch:'↓ slight decline',dir:'warn',sub:'vs '+((marVoucher/vc[1].cost).toFixed(1))+'x in Feb',ico:'📊'},
+    {l:'Voucher ROI (Mar)',v:marVoucherRoi+(marVoucherRoi==='N/A'?'':'x'),ch:'↓ slight decline',dir:'warn',sub:vc[1]&&vc[1].cost?'vs '+((vc[1].sales||0)/vc[1].cost).toFixed(1)+'x in Feb':'',ico:'📊'},
   ].map(k=>`
     <div class="kpi">
       <div class="kpi-ico">${k.ico}</div>
@@ -1769,7 +1660,6 @@ function renderPromos(){
     </div>`).join('');
 
   // Promo revenue stacked bar
-  const pm=D.promos.monthly;
   mkChart('promoTrendChart',{type:'bar',data:{
     labels:pm.map(r=>r.m+' 2026'),
     datasets:[
@@ -1784,8 +1674,8 @@ function renderPromos(){
       y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
 
   // Promo type donut — Mar 2026
-  const mar=pm[2];
-  const ptTotal=mar.discount+mar.bundle+mar.gwp+mar.b1f1;
+  const mar=pm[2]||{discount:0,bundle:0,gwp:0,b1f1:0};
+  const ptTotal=(mar.discount||0)+(mar.bundle||0)+(mar.gwp||0)+(mar.b1f1||0)||1;
   mkChart('promoTypeChart',{type:'doughnut',data:{
     labels:['Discount','Bundle Deal','GWP','B1F1'],
     datasets:[{data:[mar.discount,mar.bundle,mar.gwp,mar.b1f1],backgroundColor:['#f43f5e','#6366f1','#f97316','#3fb950'],borderWidth:0,hoverOffset:4}]
