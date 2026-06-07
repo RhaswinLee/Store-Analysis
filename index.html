@@ -2064,9 +2064,12 @@ function isLoadable(f){
 // Supports: "Report.20260501_20260531.xlsx", "product_list_20260401.xlsx", "Sales Data April 2026.xlsx"
 function monthFromFilename(name){
   const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  // Pattern 1: numeric date like _20260401. or _20260401_
+  // Pattern 1: YYYYMMDD like _20260401. or _20260401_
   const m1=name.match(/[._\-](\d{4})(\d{2})\d{2}[._\-]/);
   if(m1){const idx=parseInt(m1[2])-1;return(idx>=0&&idx<12)?months[idx]:null;}
+  // Pattern 1b: YYYYMM like .202605. (no day component)
+  const m1b=name.match(/[._\-](\d{4})(\d{2})[._\-]/);
+  if(m1b){const idx=parseInt(m1b[2])-1;return(idx>=0&&idx<12)?months[idx]:null;}
   // Pattern 2: text month like "Sales Data April 2026.xlsx"
   const m2=name.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i);
   if(m2){
@@ -2074,6 +2077,12 @@ function monthFromFilename(name){
     return months[tm[m2[1].toLowerCase()]];
   }
   return null;
+}
+function yearFromFilename(name){
+  const m1=name.match(/[._\-](\d{4})\d{2}\d{0,2}[._\-]/);
+  if(m1){const y=parseInt(m1[1]);if(y>=2020&&y<=2099) return y;}
+  const m2=name.match(/\b(202[0-9])\b/);
+  return m2?parseInt(m2[1]):null;
 }
 
 // Find the header row index (handles multi-section TikTok files and Shopee summary-first files)
@@ -2282,7 +2291,7 @@ function rowsToMonths(rows,filename){
   const addRow=(mk,row)=>{
     initAcc(mk);
     const a=acc[mk];
-    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount','grossrevenue'));
+    const s=num(get(row,'confirmedsales','confirmedrevenue','confirmedgmv','confirmedordersales','confirmedorderrevenue','sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount','grossrevenue'));
     const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','order','nooforders','successfulorders','ordersplaced','totalorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
     const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions','productviews','views','productimpressions','impressions')));
     const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
@@ -2294,26 +2303,38 @@ function rowsToMonths(rows,filename){
   };
   const hasDate=headers.some(h=>h==='date'||h==='day'||h==='reportdate'||h==='time'||h==='period'||h==='orderdate'||h==='createdate'||h==='statisticsdate');
   const hasMonth=headers.some(h=>h==='month'||h==='m'||h==='monthname');
+  const fileYear=yearFromFilename(filename);
+  const fileMonth=monthFromFilename(filename); // e.g. 'May' for 202605 files
+  const isTotalRow=row=>/^(total|grand|sum|subtotal|合计|รวม)/i.test(String(row[0]||'').trim());
 
   if(hasDate&&!hasMonth){
-    // Daily rows — parse date → month index → aggregate
+    // Daily rows — parse date + year, filter to fileYear/fileMonth to prevent cross-contamination
     for(const row of dataRows.slice(1)){
+      if(isTotalRow(row)) continue;
       const dateStr=get(row,'date','day','reportdate','time','period','orderdate','createdate','statisticsdate');
       if(!dateStr) continue;
-      let mIdx=-1;
+      if(/^(total|grand|sum|subtotal)/i.test(dateStr)) continue;
+      let mIdx=-1,rowYear=null;
       const d=new Date(dateStr);
-      if(!isNaN(d.getTime())) mIdx=d.getMonth();
+      if(!isNaN(d.getTime())){mIdx=d.getMonth();rowYear=d.getFullYear();}
       else{
         const parts=dateStr.split(/[\/\-\.]/);
-        if(parts.length>=3){const y=parseInt(parts[0]);mIdx=y>1900?parseInt(parts[1])-1:parseInt(parts[1])-1;}
+        if(parts.length>=3){
+          const y=parseInt(parts[0]);
+          if(y>1900){mIdx=parseInt(parts[1])-1;rowYear=y;}
+          else{mIdx=parseInt(parts[1])-1;}
+        }
         if(mIdx<0){const m2=dateStr.toLowerCase().match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);if(m2) mIdx=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m2[1]);}
       }
       if(mIdx<0||mIdx>11) continue;
+      if(fileYear&&rowYear&&rowYear!==fileYear) continue; // skip rows from wrong year
+      if(fileMonth&&mNames[mIdx]!==fileMonth) continue; // skip rows outside the file's month
       addRow(mNames[mIdx],row);
     }
   } else if(hasMonth){
     // Month-based rows
     for(const row of dataRows.slice(1)){
+      if(isTotalRow(row)) continue;
       const mRaw=get(row,'month','m','monthname');
       if(!mRaw) continue;
       const mk=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
@@ -2324,7 +2345,10 @@ function rowsToMonths(rows,filename){
     // Product-level or unknown — extract month from filename, sum all rows as one month total
     const mk=monthFromFilename(filename);
     if(!mk) return [];
-    for(const row of dataRows.slice(1)) addRow(mk,row);
+    for(const row of dataRows.slice(1)){
+      if(isTotalRow(row)) continue; // skip Total/Grand Total summary rows
+      addRow(mk,row);
+    }
   }
 
   return mNames.map(mk=>{
