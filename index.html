@@ -2110,16 +2110,27 @@ async function fetchXlsxWorkbook(file){
   if(_wbCache[file.id]) return _wbCache[file.id];
   if(typeof XLSX==='undefined') throw new Error('SheetJS not loaded — refresh the page.');
   const urls=[
+    // /api/download proxies the request server-side — no CORS, no referrer issues
+    `/api/download?fileId=${encodeURIComponent(file.id)}&apiKey=${encodeURIComponent(GS.apiKey)}`,
+    // Direct googleapis.com — works locally for small files (<25 MB, no CDN redirect)
     `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}&acknowledgeAbuse=true&supportsAllDrives=true`,
-    `https://drive.google.com/uc?export=download&id=${file.id}&confirm=t`,
     ...(file.webContentLink?[file.webContentLink]:[]),
   ];
-  let ab=null,lastErr='unknown';
+  let ab=null,errors=[];
   for(const url of urls){
-    try{const r=await fetch(url);if(r.ok){ab=await r.arrayBuffer();break;}const ej=await r.json().catch(()=>({}));lastErr=ej.error?.message||'HTTP '+r.status;}
-    catch(e){lastErr=e.message;}
+    try{
+      const r=await fetch(url,{referrerPolicy:'unsafe-url'});
+      if(r.ok){ab=await r.arrayBuffer();break;}
+      // Non-OK from proxy returns JSON error; direct API also returns JSON
+      const ej=await r.json().catch(()=>({}));
+      errors.push(ej.error||ej.message||(ej+'')||('HTTP '+r.status));
+    }catch(e){errors.push(e.message);}
   }
-  if(!ab) throw new Error(`Download failed (${urls.length} attempts): ${lastErr}. Share "Anyone with link can view".`);
+  if(!ab){
+    // Show first non-CORS error for a useful message; fall back to last error
+    const meaningful=errors.find(e=>e&&e!=='Failed to fetch'&&!e.includes('NetworkError'));
+    throw new Error(`Download failed: ${meaningful||errors.at(-1)||'unknown'}. Ensure the file/folder is shared "Anyone with the link can view".`);
+  }
   const wb=XLSX.read(ab,{type:'array'});
   if(!wb.SheetNames.length) throw new Error('No sheets in xlsx file.');
   _wbCache[file.id]=wb;
