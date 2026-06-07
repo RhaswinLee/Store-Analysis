@@ -713,11 +713,11 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <div class="panel" id="panel-products">
       <div class="tbl-wrap">
         <div class="tbl-head">
-          <div><div class="cc-title">Product Strategy & Merchandising Matrix</div><div class="cc-sub">Cross-channel diagnostics · Mar 2026 · Flags auto-generated from performance thresholds</div></div>
-          <span class="tag tag-a">⚠ 3 Items Need Action</span>
+          <div><div class="cc-title">Product Strategy &amp; Merchandising Matrix</div><div class="cc-sub">Cross-channel diagnostics · loaded from connected Drive folders · Top 20 by GMV</div></div>
+          <span class="tag tag-a" id="prodTag">Loading…</span>
         </div>
         <table>
-          <thead><tr><th>Product</th><th>Channel</th><th>Sales</th><th>CR%</th><th>ATC</th><th>Views/Clicks</th><th>Bounce</th><th>Status</th><th>Diagnosis</th></tr></thead>
+          <thead><tr id="prodTblHdr"><th>Product</th><th style="text-align:right">GMV</th><th style="text-align:right">Orders</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">CVR</th></tr></thead>
           <tbody id="prodTbl"></tbody>
         </table>
       </div>
@@ -740,6 +740,10 @@ tr:hover td{background:rgba(0,0,0,.02)}
         <span class="tag tag-a">7 Active Signals</span>
       </div>
       <div class="reco-grid" id="recoGrid"></div>
+      <div style="margin-top:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Data-Driven Signals <span style="font-size:10px;font-weight:400;color:var(--t3);margin-left:6px">auto-generated from connected platform data</span></div>
+        <div id="recoContent"></div>
+      </div>
     </div>
 
     <!-- ═══ HEALTH PANEL ═══ -->
@@ -881,26 +885,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee: {
-    m2025: [
-      {m:'Jan',s:858651,o:17270,cr:3.98,v:434220,b:49.72},
-      {m:'Feb',s:720744,o:14613,cr:3.47,v:421611,b:49.32},
-      {m:'Mar',s:959081,o:21000,cr:3.65,v:575901,b:45.67},
-      {m:'Apr',s:746074,o:16220,cr:4.44,v:365225,b:46.00},
-      {m:'May',s:816307,o:16867,cr:3.70,v:455910,b:48.40},
-      {m:'Jun',s:770777,o:14707,cr:3.37,v:436093,b:52.41},
-      {m:'Jul',s:758481,o:15241,cr:3.42,v:445832,b:49.77},
-      {m:'Aug',s:735041,o:13633,cr:3.45,v:395668,b:53.92},
-      {m:'Sep',s:682498,o:13555,cr:3.55,v:382125,b:50.35},
-      {m:'Oct',s:819253,o:16665,cr:3.20,v:520107,b:49.16},
-      {m:'Nov',s:836706,o:16548,cr:2.97,v:556846,b:50.56},
-      {m:'Dec',s:938313,o:18866,cr:2.88,v:654973,b:49.74},
-    ],
-    m2026: [
-      {m:'Jan',s:841242,o:13935,cr:2.87,v:508683,b:60.37,cl:485263},
-      {m:'Feb',s:919249,o:16845,cr:3.48,v:390201,b:54.57,cl:484084},
-      {m:'Mar',s:884739,o:16112,cr:3.63,v:441066,b:54.91,cl:444062},
-    ],
+  shopee:   { m2026:[], m2025:[], products:[], channels:null,
     camps25:[
       {m:'1.1',s:55394,o:1057,v:28580,b:52.41,cr:5.11},
       {m:'2.2',s:50951,o:995,v:44421,b:51.21,cr:4.65},
@@ -940,23 +925,7 @@ const D = {
       {m:'Mar',nb:6928,np:47.68,eb:7601,ep:52.32,ns:356420,es:528320},
     ],
   },
-  tiktok: {
-    m2025:[
-      {m:'Apr',s:343999,o:6462,cr:4.88,v:124438,b:53.23},
-      {m:'May',s:385182,o:6922,cr:3.74,v:174213,b:55.65},
-      {m:'Jun',s:344748,o:5959,cr:5.48,v:102944,b:57.85},
-      {m:'Jul',s:531453,o:10071,cr:3.91,v:235820,b:52.77},
-      {m:'Aug',s:386101,o:6718,cr:4.86,v:128450,b:57.47},
-      {m:'Sep',s:338697,o:5537,cr:3.55,v:145645,b:61.17},
-      {m:'Oct',s:438228,o:7638,cr:2.95,v:235539,b:57.37},
-      {m:'Nov',s:550420,o:9166,cr:3.86,v:205496,b:60.05},
-      {m:'Dec',s:453207,o:8872,cr:3.45,v:232152,b:51.08},
-    ],
-    m2026:[
-      {m:'Jan',s:391661,o:7744,cr:3.68,v:191947,b:50.58},
-      {m:'Feb',s:387333,o:8457,cr:4.78,v:161403,b:45.80},
-      {m:'Mar',s:421020,o:9243,cr:4.94,v:168812,b:45.55},
-    ],
+  tiktok:   { m2026:[], m2025:[], products:[], channels:null,
     breakdown:[
       {m:'Jan',prod:134375,vid:141081,live:116204},
       {m:'Feb',prod:135290,vid:137419,live:114623},
@@ -983,24 +952,14 @@ const D = {
       {m:'Mar',views:20805310,profile:181232,engage:342732},
     ],
   },
-  shopeeSG:{
-    m2026:[
-      {m:'Jan',s:42180,o:648,cr:2.94,v:22050,b:65.09,exp:8200,roi:5.14},
-      {m:'Feb',s:58420,o:821,cr:3.12,v:26313,b:71.16,exp:11400,roi:5.12},
-      {m:'Mar',s:67350,o:954,cr:3.38,v:28219,b:70.60,exp:13100,roi:5.14},
-    ],
+  shopeeSG: { m2026:[], m2025:[], products:[], channels:null,
     channel:{
       labels:['Product Card','Affiliate','Seller Live','Seller Video'],
       mar:[38200,18400,8900,1850],
       colors:['#f97316','#f43f5e','#6366f1','#3fb950'],
     },
   },
-  tiktokSG:{
-    m2026:[
-      {m:'Jan',s:18240,o:312,cr:3.24,v:8800,b:58.46,spend:3800,roi:4.80,aff:4200,creators:38},
-      {m:'Feb',s:24610,o:418,cr:3.67,v:10200,b:58.88,spend:5100,roi:4.83,aff:5800,creators:54},
-      {m:'Mar',s:31480,o:523,cr:4.18,v:12500,b:60.19,spend:6400,roi:4.92,aff:7200,creators:71},
-    ],
+  tiktokSG: { m2026:[], m2025:[], products:[], channels:null,
     breakdown:[
       {m:'Jan',prod:8820,vid:5940,live:3480},
       {m:'Feb',prod:11820,vid:7980,live:4810},
@@ -1141,8 +1100,8 @@ function renderKPIs(){
 
   const all=[
     {l:'Total Revenue',v:RMk(sRev+tRev),ch:'↑ 18.4%',dir:'up',sub:'Shopee+TikTok combined',ico:'💰'},
-    {l:'Shopee GMV',v:RMk(sRev),ch:'↑ 11.2%',dir:'up',sub:`${sf.length}mo avg ${RMk(sRev/sf.length)}/mo`,ico:'🛒'},
-    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length}mo avg ${RMk(tRev/tf.length)}/mo`,ico:'🎵'},
+    {l:'Shopee GMV',v:RMk(sRev),ch:'↑ 11.2%',dir:'up',sub:`${sf.length}mo avg ${sf.length?RMk(sRev/sf.length):'RM 0'}/mo`,ico:'🛒'},
+    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length}mo avg ${tf.length?RMk(tRev/tf.length):'RM 0'}/mo`,ico:'🎵'},
     {l:'Combined Orders',v:Num(sOrd+tOrd),ch:'↑ 15.3%',dir:'up',sub:'All channels',ico:'📦'},
     {l:'Avg Conv. Rate',v:Pct((sCr+tCr)/2),ch:sCr>tCr?'Shopee leads':'TikTok leads',dir:'up',sub:'Platform average',ico:'⚡'},
   ];
@@ -1151,7 +1110,7 @@ function renderKPIs(){
     {l:'Total Orders',v:Num(sOrd),ch:'↑ 9.8%',dir:'up',sub:'Confirmed orders',ico:'📦'},
     {l:'Conv. Rate',v:Pct(sCr),ch:sCr<3?'Below target':'On track',dir:sCr>=3.5?'up':'warn',sub:'Target 3.80%',ico:'⚡'},
     {l:'Avg Order Value',v:'RM'+sAov.toFixed(2),ch:sAov>=55?'On target':'Below RM55',dir:sAov>=55?'up':'warn',sub:'Target RM55–60',ico:'🎯'},
-    {l:'Avg Visitors',v:Num(Math.round(sf.reduce((a,r)=>a+r.v,0)/sf.length)),ch:'per month',dir:'up',sub:'Unique store visits',ico:'👥'},
+    {l:'Avg Visitors',v:sf.length?Num(Math.round(sf.reduce((a,r)=>a+r.v,0)/sf.length)):'—',ch:'per month',dir:'up',sub:'Unique store visits',ico:'👥'},
   ];
   const tiktok=[
     {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length} months`,ico:'🎵'},
@@ -1416,30 +1375,80 @@ function renderCampaigns(){
 
 /* ─── PRODUCTS ─── */
 function renderProducts(){
-  // Diagnostics table
-  document.getElementById('prodTbl').innerHTML=D.products.map(p=>{
-    const hasBounce=p.bounce&&p.bounce>18;
-    const highAtc=p.atc&&p.atc>3000;
-    const lowCr=p.cr&&p.cr<13;
-    let badge='', diag='';
-    if(hasBounce && p.bounce>21){badge=`<span class="alert alert-r">⚠ High Bounce ${p.bounce}%</span>`;diag='Checkout resistance — add Free Gift incentive';}
-    else if(hasBounce){badge=`<span class="alert alert-a">⚠ Bounce ${p.bounce}%</span>`;diag='Reduce bounce rate below 18%';}
-    else if(p.status==='high'){badge=`<span class="alert alert-g">✓ Top Performer</span>`;diag=p.note;}
-    else if(p.status==='lead'){badge=`<span class="alert alert-a">📢 Lead Gen</span>`;diag=p.note;}
-    else{badge=`<span class="alert" style="background:var(--indigo-d);color:var(--indigo)">⟳ Monitor</span>`;diag=p.note;}
-    const crProg=p.cr?`<div class="miniprog"><div class="minifill" style="width:${Math.min(p.cr*4,100)}%;background:${p.cr>=18?'#3fb950':p.cr>=13?'#d29922':'#f85149'}"></div></div>`:''
-    return `<tr>
-      <td><div class="prod-cell"><span class="prod-em">${p.em}</span><div><div class="prod-name">${p.name}</div><div class="prod-sku">${p.sku}</div></div></div></td>
-      <td style="font-size:10px">${p.ch}</td>
-      <td style="font-weight:700;color:var(--t1)">${RMk(p.sales)}</td>
-      <td>${p.cr?`${p.cr}% ${crProg}`:'—'}</td>
-      <td style="color:${p.atc&&p.atc>4000?'#d29922':''};font-weight:${p.atc&&p.atc>4000?700:400}">${p.atc?Num(p.atc):'—'}</td>
-      <td style="font-size:10px">${p.views?Num(p.views):'—'}</td>
-      <td style="color:${p.bounce&&p.bounce>20?'var(--red)':p.bounce?'var(--amber)':''}">${p.bounce?p.bounce+'%':'—'}</td>
-      <td>${badge}</td>
-      <td style="font-size:10px;color:var(--t3)">${diag}</td>
-    </tr>`;
-  }).join('');
+  // Collect products from all connected platforms
+  const platProds={};
+  for(const [plat,dKey] of Object.entries(PLAT_D)){
+    const prods=D[dKey]?.products||[];
+    if(prods.length) platProds[plat]=prods;
+  }
+  const allProds=Object.values(platProds).flat().sort((a,b)=>b.gmv-a.gmv);
+  const useProds=allProds.length?allProds:D.products;
+
+  const RMf=v=>'RM '+v.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const Numf=v=>v?v.toLocaleString():'—';
+  const Pctf=v=>v?v.toFixed(2)+'%':'—';
+
+  const tblEl=document.getElementById('prodTbl');
+  if(!tblEl) return;
+
+  if(!useProds.length){
+    tblEl.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--t3)">Connect your platform folders in Data Sync to load product data.</td></tr>';
+    // Update header
+    const hdrEl=document.getElementById('prodTblHdr');
+    if(hdrEl) hdrEl.innerHTML=`<th>Product</th><th style="text-align:right">GMV</th><th style="text-align:right">Orders</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">CVR</th>`;
+    // Still render the charts below using D.products fallback
+    renderProductCharts();
+    return;
+  }
+
+  // Determine if using live data or demo data
+  const isLive=allProds.length>0;
+
+  // Update header
+  const hdrEl=document.getElementById('prodTblHdr');
+  if(hdrEl) hdrEl.innerHTML=`<th>Product</th><th style="text-align:right">GMV</th><th style="text-align:right">Orders</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">CVR</th>`;
+
+  if(isLive){
+    // Live data from Drive: show clean GMV table
+    tblEl.innerHTML=useProds.map((p,i)=>`
+      <tr>
+        <td><span style="color:var(--t3);font-size:11px;margin-right:6px">#${i+1}</span>${p.name||p.sku||'Unknown'}</td>
+        <td style="text-align:right;font-weight:600">${RMf(p.gmv||p.sales||0)}</td>
+        <td style="text-align:right">${Numf(p.orders)}</td>
+        <td style="text-align:right">${Numf(p.clicks)}</td>
+        <td style="text-align:right">${Numf(p.impressions)}</td>
+        <td style="text-align:right">${Pctf(p.ctr)}</td>
+        <td style="text-align:right">${Pctf(p.cr)}</td>
+      </tr>`).join('');
+  } else {
+    // Demo data: show diagnostics table (legacy format)
+    tblEl.innerHTML=useProds.map(p=>{
+      const hasBounce=p.bounce&&p.bounce>18;
+      let badge='', diag='';
+      if(hasBounce && p.bounce>21){badge=`<span class="alert alert-r">⚠ High Bounce ${p.bounce}%</span>`;diag='Checkout resistance — add Free Gift incentive';}
+      else if(hasBounce){badge=`<span class="alert alert-a">⚠ Bounce ${p.bounce}%</span>`;diag='Reduce bounce rate below 18%';}
+      else if(p.status==='high'){badge=`<span class="alert alert-g">✓ Top Performer</span>`;diag=p.note||'';}
+      else if(p.status==='lead'){badge=`<span class="alert alert-a">📢 Lead Gen</span>`;diag=p.note||'';}
+      else{badge=`<span class="alert" style="background:var(--indigo-d);color:var(--indigo)">⟳ Monitor</span>`;diag=p.note||'';}
+      const crProg=p.cr?`<div class="miniprog"><div class="minifill" style="width:${Math.min(p.cr*4,100)}%;background:${p.cr>=18?'#3fb950':p.cr>=13?'#d29922':'#f85149'}"></div></div>`:''
+      return `<tr>
+        <td><div class="prod-cell"><span class="prod-em">${p.em||'📦'}</span><div><div class="prod-name">${p.name}</div><div class="prod-sku">${p.sku||''}</div></div></div></td>
+        <td style="font-size:10px">${p.ch||''}</td>
+        <td style="font-weight:700;color:var(--t1)">${RMk(p.sales||p.gmv||0)}</td>
+        <td>${p.cr?`${p.cr}% ${crProg}`:'—'}</td>
+        <td style="color:${p.atc&&p.atc>4000?'#d29922':''};font-weight:${p.atc&&p.atc>4000?700:400}">${p.atc?Num(p.atc):'—'}</td>
+        <td style="font-size:10px">${p.views?Num(p.views):'—'}</td>
+        <td style="color:${p.bounce&&p.bounce>20?'var(--red)':p.bounce?'var(--amber)':''}">${p.bounce?p.bounce+'%':'—'}</td>
+        <td>${badge}</td>
+        <td style="font-size:10px;color:var(--t3)">${diag}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  renderProductCharts();
+}
+
+function renderProductCharts(){
 
   // ATC chart
   const atcProds=D.products.filter(p=>p.atc).sort((a,b)=>b.atc-a.atc);
@@ -1502,6 +1511,55 @@ function renderRecos(){
     </div>`).join('');
 }
 
+/* ─── DATA-DRIVEN RECOMMENDATIONS ─── */
+function renderRecommendations(){
+  const el=document.getElementById('recoContent');
+  if(!el) return;
+  const recos=[];
+
+  // Shopee MY analysis
+  const sm=D.shopee.m2026;
+  if(sm.length>=2){
+    const latest=sm[sm.length-1];
+    const prev=sm[sm.length-2];
+    const growthPct=prev.s?((latest.s-prev.s)/prev.s*100):0;
+    if(growthPct<-5) recos.push({icon:'⚠️',title:`Shopee MY Revenue Declined ${Math.abs(growthPct).toFixed(1)}%`,body:`${latest.m} GMV dropped from RM${(prev.s/1000).toFixed(0)}K to RM${(latest.s/1000).toFixed(0)}K. Review campaign spend and traffic sources.`,type:'warn'});
+    else if(growthPct>10) recos.push({icon:'✅',title:`Shopee MY Growing ${growthPct.toFixed(1)}% MoM`,body:`Strong momentum in ${latest.m}. Consider scaling ad budget to capture demand.`,type:'good'});
+    if(latest.cr>0&&latest.cr<3) recos.push({icon:'🎯',title:'Low Shopee Conversion Rate',body:`${latest.m} CVR is ${latest.cr.toFixed(2)}% — below 3% threshold. Improve product images and pricing.`,type:'warn'});
+    if(latest.b>0) recos.push({icon:'📦',title:`Shopee AOV: RM${latest.b.toFixed(2)}`,body:`Bundle deals and GWP campaigns can push AOV above RM65. Current: RM${latest.b.toFixed(2)}.`,type:'info'});
+  }
+
+  // TikTok MY analysis
+  const tt=D.tiktok.m2026;
+  if(tt.length>=2){
+    const latest=tt[tt.length-1];
+    const prev=tt[tt.length-2];
+    const growthPct=prev.s?((latest.s-prev.s)/prev.s*100):0;
+    if(growthPct<-5) recos.push({icon:'⚠️',title:`TikTok MY Revenue Declined ${Math.abs(growthPct).toFixed(1)}%`,body:`${latest.m} GMV dropped. Review LIVE schedule and affiliate creator performance.`,type:'warn'});
+    else if(growthPct>10) recos.push({icon:'✅',title:`TikTok MY Growing ${growthPct.toFixed(1)}% MoM`,body:`Scale LIVE broadcast frequency and affiliate outreach.`,type:'good'});
+  }
+
+  // Product recommendations
+  const allProds=[...(D.shopee.products||[]),...(D.tiktok.products||[])].sort((a,b)=>b.gmv-a.gmv);
+  if(allProds.length>0){
+    const top=allProds[0];
+    recos.push({icon:'🏆',title:`Top Product: ${top.name.slice(0,40)}`,body:`GMV RM${(top.gmv/1000).toFixed(1)}K with ${top.orders||0} orders. Scale inventory and ad spend for this SKU.`,type:'good'});
+    const lowCr=allProds.filter(p=>p.cr>0&&p.cr<5);
+    if(lowCr.length) recos.push({icon:'📉',title:`${lowCr.length} Products with CVR < 5%`,body:`${lowCr.slice(0,3).map(p=>p.name.slice(0,25)).join(', ')} have low conversion. Review listing quality and pricing.`,type:'warn'});
+  }
+
+  if(!recos.length){
+    el.innerHTML='<p style="color:var(--t3);padding:24px">Connect your platform folders to generate data-driven recommendations.</p>';
+    return;
+  }
+
+  el.innerHTML=recos.map(r=>`
+    <div style="padding:14px 16px;border-radius:8px;margin-bottom:10px;background:${r.type==='warn'?'rgba(220,38,38,.06)':r.type==='good'?'rgba(22,163,74,.06)':'rgba(79,70,229,.06)'};border-left:3px solid ${r.type==='warn'?'var(--red)':r.type==='good'?'var(--green)':'var(--indigo)'}">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">${r.icon} ${r.title}</div>
+      <div style="font-size:12px;color:var(--t2)">${r.body}</div>
+    </div>`).join('');
+}
+
 /* ─── HEALTH ─── */
 function renderHealth(){
   const metrics=[
@@ -1523,6 +1581,11 @@ function renderHealth(){
 /* ─── SHOPEE SG ─── */
 function renderShopeeSG(){
   const d=D.shopeeSG.m2026;
+  if(!d||d.length<2){
+    const el=document.getElementById('shopeeSgKpi');
+    if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect Shopee SG folder to load data</div></div>';
+    return;
+  }
   const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
   const last=d[d.length-1], prev=d[d.length-2];
   const mom=((last.s-prev.s)/prev.s*100).toFixed(1);
@@ -1596,6 +1659,11 @@ function renderShopeeSG(){
 /* ─── TIKTOK SG ─── */
 function renderTikTokSG(){
   const d=D.tiktokSG.m2026;
+  if(!d||d.length<2){
+    const el=document.getElementById('tiktokSgKpi');
+    if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect TikTok SG folder to load data</div></div>';
+    return;
+  }
   const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
   const last=d[d.length-1], prev=d[d.length-2];
   const el=document.getElementById('tiktokSgKpi');
@@ -1807,7 +1875,7 @@ function showPanel(name){
     else if(name==='campaigns') renderCampaigns();
     else if(name==='promo') renderPromos();
     else if(name==='products') renderProducts();
-    else if(name==='reco') renderRecos();
+    else if(name==='reco'){renderRecos();renderRecommendations();}
     else if(name==='health') renderHealth();
   },0);
 }
@@ -2063,14 +2131,22 @@ async function loadPlatformFolder(platform,folderId,folderName){
       toLoad=rev.length?rev:loadables;
       syncLog(`[${platform}] Found ${toLoad.length} revenue file(s) in "${folderName}"`);
     } else if(subfolders.length>0){
-      // Prefer "Sales Data" sub-folder — skip Product Performance entirely
+      // Prefer "Sales Data" sub-folder for revenue data
       const salesFolder=subfolders.find(f=>f.name.toLowerCase()==='sales data');
       if(salesFolder){
-        syncLog(`[${platform}] Loading from "Sales Data" sub-folder only…`);
+        syncLog(`[${platform}] Loading from "Sales Data" sub-folder…`);
         const sfl=(await fetchFolder(salesFolder.id)).filter(isLoadable);
         const rev=filterRevFiles(sfl,platform);
         toLoad=rev.length?rev:sfl;
         syncLog(`  → ${toLoad.length} file(s) to load`);
+        // Also load product performance data from separate sub-folder
+        const prodFolder=subfolders.find(f=>f.name.toLowerCase().includes('product performance')||f.name.toLowerCase().includes('product'));
+        if(prodFolder&&prodFolder.id!==salesFolder.id){
+          try{
+            const pfl=(await fetchFolder(prodFolder.id)).filter(isLoadable);
+            if(pfl.length) await loadProductFiles(pfl,platform);
+          }catch(e){syncLog(`[${platform}] Product data: ${e.message}`,true);}
+        }
       } else {
         // No "Sales Data" sub-folder — scan all, filter by filename pattern
         syncLog(`[${platform}] Scanning ${subfolders.length} sub-folder(s)…`);
@@ -2138,6 +2214,25 @@ function monthFromFilename(name){
   return null;
 }
 
+// Find the header row index (handles multi-section TikTok files and Shopee summary-first files)
+function findHeaderRow(rows){
+  const keywords=['date','gmv','sales','orders','revenue','visitors','product','sku','item','click'];
+  let bestScore=-1,bestIdx=0;
+  for(let i=0;i<Math.min(15,rows.length);i++){
+    const row=rows[i];
+    if(!row||!row.length) continue;
+    const cells=row.map(c=>String(c||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+    const nonEmpty=cells.filter(c=>c.length>0).length;
+    if(nonEmpty<2) continue;
+    const score=cells.filter(c=>keywords.some(k=>c===k||c.startsWith(k)&&c.length<k.length+8)).length;
+    const first=cells[0]||'';
+    const bonus=(first==='date'||first==='day'||first==='productname'||first==='itemid'||first==='productid')?10:0;
+    const total=score+bonus;
+    if(total>bestScore&&score>=2){bestScore=total;bestIdx=i;}
+  }
+  return bestScore>=0?bestIdx:0;
+}
+
 // Fetch raw 2D row array from a Drive file (no side effects)
 async function fetchRawRows(file){
   if(file.mimeType===SHEET_MIME){
@@ -2174,7 +2269,19 @@ async function fetchRawRows(file){
   if(!ab) throw new Error(`Download failed after ${downloadAttempts.length} attempts: ${lastErr}. Ensure file is shared "Anyone with the link can view".`);
   const wb=XLSX.read(ab,{type:'array'});
   if(!wb.SheetNames.length) throw new Error('No sheets found in xlsx file.');
-  // Use first sheet that has actual data rows (some exports put data on sheet 2+)
+  // Sheet preference by filename
+  const fname=file.name||'';
+  if(/shopee-shop-stats/i.test(fname)){
+    // Shopee shop stats: use "Confirmed Order" sheet
+    const sn=wb.SheetNames.find(s=>/confirmed.*order/i.test(s));
+    if(sn) return XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+  }
+  if(/Product Performance/i.test(fname)){
+    // Shopee product performance: use "Top Performing Products" sheet
+    const sn=wb.SheetNames.find(s=>/top performing/i.test(s))||wb.SheetNames[0];
+    return XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+  }
+  // Default: use first sheet with actual data rows
   for(const sn of wb.SheetNames){
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
     if(rows.length>=2) return rows;
@@ -2188,7 +2295,11 @@ function rowsToMonths(rows,filename){
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const mFull={january:'Jan',february:'Feb',march:'Mar',april:'Apr',may:'May',june:'Jun',
     july:'Jul',august:'Aug',september:'Sep',october:'Oct',november:'Nov',december:'Dec'};
-  const headers=rows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+  // Find actual header row (handles TikTok multi-section and Shopee summary-first files)
+  const hIdx=findHeaderRow(rows);
+  const dataRows=hIdx>0?rows.slice(hIdx):rows;
+  if(dataRows.length<2) return [];
+  const headers=dataRows[0].map(h=>String(h).trim().toLowerCase().replace(/[^a-z0-9]/g,''));
   const get=(row,...keys)=>{
     for(const k of keys){
       const i=headers.findIndex(h=>h===k||h.startsWith(k));
@@ -2202,12 +2313,12 @@ function rowsToMonths(rows,filename){
   const addRow=(mk,row)=>{
     initAcc(mk);
     const a=acc[mk];
-    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount'));
-    const o=Math.round(num(get(row,'orders','order','nooforders','successfulorders','ordersplaced','totalorders','confirmedorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
+    const s=num(get(row,'sales','gmv','revenue','salesmyr','gmvmyr','totalsales','netsales','totalrevenue','totalgmv','salessalesvalue','totalrevenuesales','paidgmv','paymentcompletegmv','settlementamount','grossrevenue'));
+    const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','order','nooforders','successfulorders','ordersplaced','totalorders','noofsuccessfulorders','paidorders','placedorders','numberofpaidorders','paymentcompleteorders')));
     const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','uniquebuyers','sessioncount','sessions','productviews','views','productimpressions','impressions')));
     const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
-    const cr=num(get(row,'cr','convrate','conversion','conversionrate','buyerconversionrate','conversionratebasedonsession','convrate'));
-    const b=num(get(row,'basketsize','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue'));
+    const cr=num(get(row,'orderconversionrate','convrate','conversion','conversionrate','buyerconversionrate','conversionratebasedonsession','cr'));
+    const b=num(get(row,'salesperorder','aov','avgorder','averageorder','averagebasketsize','averagebasketsizemyr','avgbasketsize','avgordervalue','basketsize'));
     a.s+=s; a.o+=o; a.v+=v; a.cl+=cl;
     if(cr>0){a.crSum+=cr;a.crN++;}
     if(b>0){a.bSum+=b;a.bN++;}
@@ -2217,7 +2328,7 @@ function rowsToMonths(rows,filename){
 
   if(hasDate&&!hasMonth){
     // Daily rows — parse date → month index → aggregate
-    for(const row of rows.slice(1)){
+    for(const row of dataRows.slice(1)){
       const dateStr=get(row,'date','day','reportdate','time','period','orderdate','createdate','statisticsdate');
       if(!dateStr) continue;
       let mIdx=-1;
@@ -2233,7 +2344,7 @@ function rowsToMonths(rows,filename){
     }
   } else if(hasMonth){
     // Month-based rows
-    for(const row of rows.slice(1)){
+    for(const row of dataRows.slice(1)){
       const mRaw=get(row,'month','m','monthname');
       if(!mRaw) continue;
       const mk=mFull[mRaw.toLowerCase()]||mRaw.substring(0,3);
@@ -2244,7 +2355,7 @@ function rowsToMonths(rows,filename){
     // Product-level or unknown — extract month from filename, sum all rows as one month total
     const mk=monthFromFilename(filename);
     if(!mk) return [];
-    for(const row of rows.slice(1)) addRow(mk,row);
+    for(const row of dataRows.slice(1)) addRow(mk,row);
   }
 
   return mNames.map(mk=>{
@@ -2254,6 +2365,66 @@ function rowsToMonths(rows,filename){
       cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
       b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
   }).filter(Boolean);
+}
+
+// Parse 2D rows into product array. Returns [] on failure.
+function rowsToProducts(rows,filename){
+  if(!rows||rows.length<3) return [];
+  const hIdx=findHeaderRow(rows);
+  const dataRows=hIdx>0?rows.slice(hIdx):rows;
+  if(dataRows.length<2) return [];
+  const headers=dataRows[0].map(h=>String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+  const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
+  const getI=(...keys)=>{
+    for(const k of keys){
+      const i=headers.findIndex(h=>h===k||h.startsWith(k));
+      if(i>=0) return i;
+    }
+    return -1;
+  };
+  const iName=getI('productname','product','productid','itemid','name');
+  const iGmv=getI('salesconfirmedorder','salesmyr','confirmedordermyr','gmv','sales','revenue');
+  const iOrders=getI('confirmedorder','orders','order','paidorders');
+  const iClicks=getI('productclicks','clicks','click');
+  const iImp=getI('productimpression','impression','productviews','views');
+  const iCtr=getI('ctr','clickthroughrate');
+  const iCr=getI('orderconversionrateconfirmed','orderconversionrate','conversionrate','cr','convrate');
+  const iUnits=getI('unitsconfirmed','unitssold','unitspaid','units','itemssold');
+  const iSku=getI('sku','parentsku','skucode');
+  const products=[];
+  for(const row of dataRows.slice(1)){
+    if(!row||!row[0]) continue;
+    const name=iName>=0?String(row[iName]||'').trim():'';
+    if(!name||name.length>120) continue; // skip empty or merged header rows
+    const gmv=iGmv>=0?num(row[iGmv]):0;
+    if(gmv<=0) continue; // skip zero-revenue rows
+    products.push({
+      name,
+      sku:iSku>=0?String(row[iSku]||'').trim():'',
+      gmv,
+      orders:iOrders>=0?Math.round(num(row[iOrders])):0,
+      clicks:iClicks>=0?Math.round(num(row[iClicks])):0,
+      impressions:iImp>=0?Math.round(num(row[iImp])):0,
+      ctr:iCtr>=0?num(row[iCtr]):0,
+      cr:iCr>=0?num(row[iCr]):0,
+      units:iUnits>=0?Math.round(num(row[iUnits])):0,
+    });
+  }
+  // Aggregate by product name (same product appears per-variation)
+  const agg={};
+  for(const p of products){
+    if(!agg[p.name]) agg[p.name]={...p};
+    else{
+      agg[p.name].gmv+=p.gmv;
+      agg[p.name].orders+=p.orders;
+      agg[p.name].clicks+=p.clicks;
+      agg[p.name].impressions+=p.impressions;
+      agg[p.name].units+=p.units;
+    }
+  }
+  return Object.values(agg)
+    .sort((a,b)=>b.gmv-a.gmv)
+    .slice(0,20); // top 20 products
 }
 
 // Save parsed month array to state and re-render
@@ -2309,6 +2480,32 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   syncLog(`[${platform}] ✓ Merged ${ok} file(s) → ${final.length} month(s) of data`);
   applyMonths(final,folderName+' (all files)',lastId,platform);
   startAutoRefresh();
+}
+
+async function loadProductFiles(files,platform){
+  const sorted=[...files].sort((a,b)=>a.name.localeCompare(b.name));
+  const allProds=[];
+  for(const f of sorted){
+    try{
+      const rows=await fetchRawRows(f);
+      const prods=rowsToProducts(rows,f.name);
+      if(prods.length){
+        syncLog(`  → Products: ${prods.length} from "${f.name}"`);
+        allProds.push(...prods);
+      }
+    }catch(e){syncLog(`  ⚠ Product file skipped "${f.name}": ${e.message}`);}
+  }
+  if(!allProds.length) return;
+  // Aggregate across months — keep top 20 by total GMV
+  const agg={};
+  for(const p of allProds){
+    if(!agg[p.name]) agg[p.name]={...p};
+    else{agg[p.name].gmv+=p.gmv;agg[p.name].orders+=p.orders;agg[p.name].clicks+=p.clicks;agg[p.name].units+=p.units;}
+  }
+  const dKey=PLAT_D[platform];
+  if(D[dKey]) D[dKey].products=Object.values(agg).sort((a,b)=>b.gmv-a.gmv).slice(0,20);
+  syncLog(`[${platform}] ✓ ${D[dKey]?.products?.length||0} products loaded`);
+  if(S.nav==='products') renderProducts();
 }
 
 async function loadSheetById(sheetId,gid='0',name='Sheet',platform='shopee'){
