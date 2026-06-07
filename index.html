@@ -1193,29 +1193,40 @@ function renderTikTok(){
 
 /* ─── CAMPAIGNS ─── */
 function renderCampaigns(){
-  mkChart('campShopee25',{type:'bar',data:{
-    labels:D.shopee.camps25.map(r=>r.m),
-    datasets:[
-      {label:'Sales (RM)',data:D.shopee.camps25.map(r=>r.s),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:22,yAxisID:'y'},
-      {label:'CR%',data:D.shopee.camps25.map(r=>r.cr),borderColor:'#d29922',borderWidth:2,type:'line',pointRadius:3,yAxisID:'y2',tension:.3},
-    ]
-  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+  // Use dedicated camp data if available; fall back to monthly revenue data
+  const c25=D.shopee.camps25.length?D.shopee.camps25:[];
+  const c26=D.shopee.camps26.length?D.shopee.camps26:D.shopee.m2026.map(r=>({m:r.m,s:r.s,o:r.o,cr:r.cr}));
+
+  if(!c26.length){
+    // No data yet — show connect prompt in both chart canvases
+    ['campShopee25','campShopee26'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){const p=el.parentElement;const ph=document.createElement('div');ph.style='padding:32px 0;text-align:center;color:var(--t3);font-size:13px';ph.textContent='Connect Shopee MY folder to load campaign data';el.replaceWith(ph);}
+    });
+    return;
+  }
+
+  const campOpts=(yr)=>({responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='CR%'?` CR: ${c.raw}%`:` Sales: ${RMk(c.raw)}`}}},
-    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'}}}}});
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:yr===25?10:11}}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:yr===25?9:10},callback:v=>RMk(v)}},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:yr===25?9:10},callback:v=>v+'%'}}}});
+
+  if(c25.length) mkChart('campShopee25',{type:'bar',data:{
+    labels:c25.map(r=>r.m),
+    datasets:[
+      {label:'Sales (RM)',data:c25.map(r=>r.s),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:22,yAxisID:'y'},
+      {label:'CR%',data:c25.map(r=>r.cr),borderColor:'#d29922',borderWidth:2,type:'line',pointRadius:3,yAxisID:'y2',tension:.3},
+    ]
+  },options:campOpts(25)});
 
   mkChart('campShopee26',{type:'bar',data:{
-    labels:D.shopee.camps26.map(r=>r.m+' 2026'),
+    labels:c26.map(r=>r.m+' 2026'),
     datasets:[
-      {label:'Sales (RM)',data:D.shopee.camps26.map(r=>r.s),backgroundColor:'rgba(99,102,241,.7)',borderRadius:4,maxBarThickness:36,yAxisID:'y'},
-      {label:'CR%',data:D.shopee.camps26.map(r=>r.cr),borderColor:'#3fb950',borderWidth:2,type:'line',pointRadius:4,pointBackgroundColor:'#3fb950',yAxisID:'y2',tension:.3},
+      {label:'Sales (RM)',data:c26.map(r=>r.s),backgroundColor:'rgba(99,102,241,.7)',borderRadius:4,maxBarThickness:36,yAxisID:'y'},
+      {label:'CR%',data:c26.map(r=>r.cr),borderColor:'#3fb950',borderWidth:2,type:'line',pointRadius:4,pointBackgroundColor:'#3fb950',yAxisID:'y2',tension:.3},
     ]
-  },options:{responsive:true,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='CR%'?` CR: ${c.raw}%`:` Sales: ${RMk(c.raw)}`}}},
-    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>v+'%'}}}}});
+  },options:campOpts(26)});
 }
 
 /* ─── PRODUCTS ─── */
@@ -2084,6 +2095,134 @@ function findHeaderRow(rows){
   return bestScore>=0?bestIdx:0;
 }
 
+// Download and cache xlsx workbooks (avoids re-downloading the same file)
+const _wbCache={};
+async function fetchXlsxWorkbook(file){
+  if(_wbCache[file.id]) return _wbCache[file.id];
+  if(typeof XLSX==='undefined') throw new Error('SheetJS not loaded — refresh the page.');
+  const urls=[
+    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}&acknowledgeAbuse=true&supportsAllDrives=true`,
+    `https://drive.google.com/uc?export=download&id=${file.id}&confirm=t`,
+    ...(file.webContentLink?[file.webContentLink]:[]),
+  ];
+  let ab=null,lastErr='unknown';
+  for(const url of urls){
+    try{const r=await fetch(url);if(r.ok){ab=await r.arrayBuffer();break;}const ej=await r.json().catch(()=>({}));lastErr=ej.error?.message||'HTTP '+r.status;}
+    catch(e){lastErr=e.message;}
+  }
+  if(!ab) throw new Error(`Download failed (${urls.length} attempts): ${lastErr}. Share "Anyone with link can view".`);
+  const wb=XLSX.read(ab,{type:'array'});
+  if(!wb.SheetNames.length) throw new Error('No sheets in xlsx file.');
+  _wbCache[file.id]=wb;
+  return wb;
+}
+
+// Scan all non-primary sheets in a workbook and populate D fields (campaign, promo, breakdown, affiliate)
+function extractExtraSheets(wb,platform,fname){
+  const dKey=PLAT_D[platform];
+  if(!D[dKey]) return;
+  const num=v=>parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const MF={january:0,february:1,march:2,april:3,may:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11};
+  const mAbbr={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  function parseMonth(str){
+    if(!str) return null;
+    const m1=String(str).match(/(\d{4})[\/\-]?(\d{2})/);
+    if(m1){const idx=parseInt(m1[2])-1;return(idx>=0&&idx<12)?MN[idx]:null;}
+    const lo=String(str).toLowerCase();
+    const m2=lo.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/);
+    if(m2) return MN[MF[m2[1]]];
+    const m3=lo.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/);
+    if(m3) return MN[mAbbr[m3[1]]];
+    return null;
+  }
+  function getRows(sn){
+    const r=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    return r.length>=2?r:null;
+  }
+  function makeGetter(headers){
+    return (row,...keys)=>{
+      for(const k of keys){const i=headers.findIndex(h=>h===k||h.startsWith(k));if(i>=0&&row[i]!==undefined&&String(row[i]).trim()!=='')return String(row[i]).trim();}
+      return '';
+    };
+  }
+
+  for(const sn of wb.SheetNames){
+    const sl=sn.toLowerCase().replace(/\s+/g,'');
+    // Skip primary revenue/product sheets already handled
+    if(/confirmedorder|placedorder|topperforming/i.test(sn)) continue;
+
+    const rows=getRows(sn); if(!rows) continue;
+    const hIdx=findHeaderRow(rows);
+    const dataRows=hIdx>0?rows.slice(hIdx):rows;
+    if(dataRows.length<2) continue;
+    const headers=dataRows[0].map(h=>String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+    const get=makeGetter(headers);
+
+    // ── Campaign / Promotion sheets → camps26 ──
+    if(/promo|campaign|voucher/i.test(sn)){
+      const byMonth={};
+      for(const row of dataRows.slice(1)){
+        const mk=parseMonth(get(row,'date','period','month','startdate','campaigndate','promotiondate','ordertime','createtime'));
+        if(!mk) continue;
+        const s=num(get(row,'sales','gmv','revenue','salesmyr','totalsales','promotionsales'));
+        const o=Math.round(num(get(row,'orders','confirmedorders','promotionorders','nooforders')));
+        const cr=num(get(row,'cr','conversionrate','orderconversionrate','convrate'));
+        if(!s&&!o) continue;
+        if(!byMonth[mk]) byMonth[mk]={m:mk,s:0,o:0,crSum:0,crN:0};
+        byMonth[mk].s+=s; byMonth[mk].o+=o;
+        if(cr){byMonth[mk].crSum+=cr; byMonth[mk].crN++;}
+      }
+      const arr=MN.filter(m=>byMonth[m]).map(m=>{const a=byMonth[m];return{m:a.m,s:+a.s.toFixed(2),o:a.o,cr:a.crN?+(a.crSum/a.crN).toFixed(2):0};});
+      if(arr.length&&D[dKey].camps26!==undefined){
+        D[dKey].camps26=arr;
+        syncLog(`  [extra] "${sn}": ${arr.length} campaign month(s) → camps26`);
+      }
+    }
+
+    // ── TikTok breakdown (Product/Video/Live GMV columns in daily sheet) ──
+    if((platform==='tiktok'||platform==='tiktok-sg')&&/daily|overview|summary/i.test(sn)){
+      const prodCol=headers.findIndex(h=>h.includes('productgmv')||h.includes('gmvproduct'));
+      const vidCol=headers.findIndex(h=>h.includes('videogmv')||h.includes('gmvvideo')||h.includes('shortvideo'));
+      const liveCol=headers.findIndex(h=>h.includes('livegmv')||h.includes('gmvlive')||h.includes('livestream'));
+      if(prodCol>=0||vidCol>=0||liveCol>=0){
+        const byMonth={};
+        for(const row of dataRows.slice(1)){
+          const mk=parseMonth(get(row,'date','day','period'));
+          if(!mk) continue;
+          if(!byMonth[mk]) byMonth[mk]={m:mk,prod:0,vid:0,live:0};
+          if(prodCol>=0) byMonth[mk].prod+=num(row[prodCol]);
+          if(vidCol>=0) byMonth[mk].vid+=num(row[vidCol]);
+          if(liveCol>=0) byMonth[mk].live+=num(row[liveCol]);
+        }
+        const arr=MN.filter(m=>byMonth[m]).map(m=>byMonth[m]);
+        if(arr.length&&D[dKey].breakdown!==undefined){
+          D[dKey].breakdown=arr;
+          syncLog(`  [extra] "${sn}": TikTok GMV breakdown for ${arr.length} month(s)`);
+        }
+      }
+    }
+
+    // ── Affiliate sheet ──
+    if(/affiliate|creator/i.test(sn)){
+      const byMonth={};
+      for(const row of dataRows.slice(1)){
+        const mk=parseMonth(get(row,'date','month','period'));
+        if(!mk) continue;
+        const gmv=num(get(row,'gmv','affiliategmv','sales','revenue'));
+        const creators=Math.round(num(get(row,'creators','creatorwithsales','activecreatorscount')));
+        if(!gmv&&!creators) continue;
+        byMonth[mk]={m:mk,gmv,creators};
+      }
+      const arr=MN.filter(m=>byMonth[m]).map(m=>byMonth[m]);
+      if(arr.length&&D[dKey].affiliate!==undefined){
+        D[dKey].affiliate=arr;
+        syncLog(`  [extra] "${sn}": Affiliate data for ${arr.length} month(s)`);
+      }
+    }
+  }
+}
+
 // Fetch raw 2D row array from a Drive file (no side effects)
 async function fetchRawRows(file){
   if(file.mimeType===SHEET_MIME){
@@ -2098,29 +2237,8 @@ async function fetchRawRows(file){
     const text=await res.text();
     return text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
   }
-  // xlsx: try multiple download methods in order
-  if(typeof XLSX==='undefined') throw new Error('SheetJS library not loaded — refresh the page.');
-  const downloadAttempts=[
-    // 1. Drive API with acknowledgeAbuse (bypasses virus-scan 307 redirect)
-    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}&acknowledgeAbuse=true&supportsAllDrives=true`,
-    // 2. Public Drive download URL (works for "Anyone with link" without API key)
-    `https://drive.google.com/uc?export=download&id=${file.id}&confirm=t`,
-    // 3. webContentLink from Drive listing (if available)
-    ...(file.webContentLink?[file.webContentLink]:[]),
-  ];
-  let ab=null, lastErr='unknown error';
-  for(const url of downloadAttempts){
-    try{
-      const r=await fetch(url);
-      if(r.ok){ab=await r.arrayBuffer();break;}
-      const errJson=await r.json().catch(()=>({}));
-      lastErr=errJson.error?.message||'HTTP '+r.status;
-    }catch(e){lastErr=e.message;}
-  }
-  if(!ab) throw new Error(`Download failed after ${downloadAttempts.length} attempts: ${lastErr}. Ensure file is shared "Anyone with the link can view".`);
-  const wb=XLSX.read(ab,{type:'array'});
-  if(!wb.SheetNames.length) throw new Error('No sheets found in xlsx file.');
-  // Sheet preference by filename
+  // xlsx: download workbook (cached per fileId) then pick appropriate sheet
+  const wb=await fetchXlsxWorkbook(file);
   const fname=file.name||'';
   if(/shopee-shop-stats/i.test(fname)){
     // Shopee shop stats: use "Confirmed Order" sheet
@@ -2285,7 +2403,12 @@ function applyMonths(months,name,fileId,platform='shopee'){
   localStorage.setItem(`hygr_fid_${k}`,fileId);
   localStorage.setItem(`hygr_fnm_${k}`,name);
   const dKey=PLAT_D[platform];
-  if(D[dKey]) D[dKey].m2026=months;
+  if(D[dKey]){
+    D[dKey].m2026=months;
+    // Derive campaign data from monthly revenue as fallback (if no dedicated campaign sheet found)
+    if(D[dKey].camps26!==undefined&&!D[dKey].camps26.length)
+      D[dKey].camps26=months.map(r=>({m:r.m,s:r.s,o:r.o,cr:r.cr}));
+  }
   setPlatformStatus(platform,'connected',`${months.length} months · ${name.slice(0,30)}`);
   syncLog(`[${platform}] ✓ ${months.length} month(s) loaded from "${name}"`);
   renderKPIs(); showPanel(S.nav);
@@ -2307,14 +2430,19 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       if(!months.length){
         const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
         syncLog(`  ⚠ No data in "${f.name}" — columns: ${hdrs}`);
-        continue;
+      } else {
+        for(const mo of months){
+          if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
+          else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
+        }
+        ok++; lastId=f.id;
+        syncLog(`  ✓ ${f.name} → ${months.map(m=>m.m).join(', ')}`);
       }
-      for(const mo of months){
-        if(!merged[mo.m]) merged[mo.m]={...mo,crSum:mo.cr,crN:mo.cr?1:0,bSum:mo.b,bN:mo.b?1:0};
-        else{const a=merged[mo.m];a.s+=mo.s;a.o+=mo.o;a.v+=mo.v;a.cl+=mo.cl;if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
+      // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
+      const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+      if(isXlsx){
+        try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}catch(_){}
       }
-      ok++; lastId=f.id;
-      syncLog(`  ✓ ${f.name} → ${months.map(m=>m.m).join(', ')}`);
     }catch(e){syncLog(`  ⚠ Skipped "${f.name}": ${e.message}`);}
   }
   const final=mNames.map(mk=>{
