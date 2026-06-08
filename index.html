@@ -2666,7 +2666,9 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     const a=merged[mk]; if(!a||(!a.s&&!a.o)) return null;
     return{m:mk,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,
       cr:a.crN?+(a.crSum/a.crN).toFixed(2):(a.o&&a.v?+(a.o/a.v*100).toFixed(2):0),
-      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0)};
+      b:a.bN?+(a.bSum/a.bN).toFixed(2):(a.o&&a.s?+(a.s/a.o).toFixed(2):0),
+      co:a.co||0,cs:+((a.cs||0).toFixed(2)),ro:a.ro||0,rs:+((a.rs||0).toFixed(2)),
+      bu:a.bu||0,nbu:a.nbu||0,ebu:a.ebu||0};
   }).filter(Boolean);
   const final26=buildFinal(merged26);
   const final25=buildFinal(merged25);
