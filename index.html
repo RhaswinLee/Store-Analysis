@@ -409,10 +409,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
               <div id="channelPieLegend" style="flex:1;display:flex;flex-direction:column;gap:5px"></div>
             </div>
           </div>
-          <div id="trafficSourceWrap" style="margin-top:10px;display:none">
-            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">Product Card Traffic Sources</div>
-            <div id="trafficSourceList" style="display:flex;flex-direction:column;gap:4px"></div>
-          </div>
+          <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
         </div>
       </div>
       <div class="cg cg-3">
@@ -861,9 +858,9 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, trafficSources:null, buyers:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
-  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, trafficSources:null },
+  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
   promos:   { monthly:[], vouchers:[], voucherDetail:[], live:[], types:[] },
   products: [],
@@ -1115,22 +1112,16 @@ function renderShopee(){
     {l:'Unique Buyers',v:totBU?Num(totBU):'—',ch:'Paying customers',dir:'up',sub:'Monthly buyers',ico:'👥'},
   ].map(k=>`<div class="kpi"><div class="kpi-ico">${k.ico}</div><div class="kpi-label">${k.l}</div><div class="kpi-val" style="font-size:18px">${k.v}</div><span class="chip ${k.dir}">${k.ch}</span><div class="kpi-sub">${k.sub}</div></div>`).join('');
 
-  // Store performance chart — Sales/Visitors/Orders bars + Basket Size & CR lines
-  const all25=D.shopee.m2025, all26=D.shopee.m2026;
-  const chartLabs=[...all25.map(r=>r.m+"'25"),...all26.map(r=>r.m+"'26")];
-  const salesD=[...all25.map(r=>r.s),...all26.map(r=>r.s)];
-  const visD=[...all25.map(r=>r.v),...all26.map(r=>r.v)];
-  const ordD=[...all25.map(r=>r.o),...all26.map(r=>r.o)];
-  const crD=[...all25.map(r=>r.cr),...all26.map(r=>r.cr)];
-  const aovD=[...all25.map(r=>r.b),...all26.map(r=>r.b)];
+  // Store performance chart — uses filteredShopee() so it respects the period picker
+  const chartLabs=sf.map(r=>D.shopee.m2025.includes(r)?r.m+"'25":r.m+"'26");
   mkChart('shopeeRevChart',{type:'bar',data:{
     labels:chartLabs,
     datasets:[
-      {label:'Sales',data:salesD,backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,maxBarThickness:14,yAxisID:'y',order:2},
-      {label:'Visitors',data:visD,backgroundColor:'rgba(234,179,8,.65)',borderRadius:3,maxBarThickness:14,yAxisID:'y',order:2},
-      {label:'Orders',data:ordD,backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:14,yAxisID:'y',order:2},
-      {label:'Basket Size',data:aovD,type:'line',borderColor:'#22d3ee',borderWidth:2,pointRadius:3,pointBackgroundColor:'#22d3ee',tension:.4,yAxisID:'y3',fill:false,order:1},
-      {label:'Order CR',data:crD,type:'line',borderColor:'#6b7280',borderWidth:2,borderDash:[4,3],pointStyle:'triangle',pointRadius:4,pointBackgroundColor:'#6b7280',tension:.4,yAxisID:'y2',fill:false,order:1},
+      {label:'Sales',data:sf.map(r=>r.s),backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
+      {label:'Visitors',data:sf.map(r=>r.v),backgroundColor:'rgba(234,179,8,.65)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
+      {label:'Orders',data:sf.map(r=>r.o),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
+      {label:'Basket Size',data:sf.map(r=>r.b),type:'line',borderColor:'#22d3ee',borderWidth:2,pointRadius:3,pointBackgroundColor:'#22d3ee',tension:.4,yAxisID:'y3',fill:false,order:1},
+      {label:'Order CR',data:sf.map(r=>r.cr),type:'line',borderColor:'#6b7280',borderWidth:2,borderDash:[4,3],pointStyle:'triangle',pointRadius:4,pointBackgroundColor:'#6b7280',tension:.4,yAxisID:'y2',fill:false,order:1},
     ]
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
@@ -1146,14 +1137,30 @@ function renderShopee(){
       y3:{display:false}
     }}});
 
-  // Sales Channel Mix — horizontal bar + pie breakdown
-  const ch=D.shopee.channel;
-  const ts=D.shopee.trafficSources;
+  // Pick channel/traffic data for selected period
+  const _getChannelData=()=>{
+    const cbm=D.shopee.channelByMonth||{}, tbm=D.shopee.trafficSourcesByMonth||{};
+    if(S.grain==='monthly'&&S.selectedMonth){
+      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const key=mNames[S.selectedMonth.month]+S.selectedMonth.year;
+      if(cbm[key]) return{ch:cbm[key],ts:tbm[key]||null,label:key.slice(0,3)+' '+S.selectedMonth.year};
+    }
+    // For any multi-month view: use latest month that has channel data
+    for(let i=sf.length-1;i>=0;i--){
+      const r=sf[i];
+      const yr=D.shopee.m2025.includes(r)?2025:2026;
+      const key=r.m+yr;
+      if(cbm[key]) return{ch:cbm[key],ts:tbm[key]||null,label:r.m+' '+yr};
+    }
+    return{ch:D.shopee.channel,ts:D.shopee.trafficSources,label:''};
+  };
+  const{ch,ts,label:chLabel}=_getChannelData();
+
+  // Sales Channel Mix
   if(ch&&ch.mar&&ch.mar.some(v=>v>0)){
     const tot=ch.mar.reduce((a,v)=>a+v,0);
-    const latestM=D.shopee.m2026.length?D.shopee.m2026[D.shopee.m2026.length-1].m:'';
     const subEl=document.getElementById('channelMixSub');
-    if(subEl&&latestM) subEl.textContent=latestM+' 2026 · Confirmed orders by channel';
+    if(subEl) subEl.textContent=(chLabel?chLabel+' · ':'')+'Confirmed orders by channel';
     mkChart('channelBarChart',{type:'bar',data:{
       labels:ch.labels,
       datasets:[{label:'Sales (MYR)',data:ch.mar,backgroundColor:ch.colors,borderRadius:4,maxBarThickness:22}]
@@ -1161,9 +1168,9 @@ function renderShopee(){
       tooltip:{...cTooltip,callbacks:{label:c=>` ${RMfull(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}},
       scales:{x:{grid:{color:'#f1f5f9'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
         y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
-    // Pie chart — sales contribution %
+    // Pie chart
     const pieWrap=document.getElementById('channelPieWrap');
-    if(pieWrap){pieWrap.style.display='block';}
+    if(pieWrap) pieWrap.style.display='block';
     mkChart('channelPieChart',{type:'doughnut',data:{
       labels:ch.labels,
       datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]
@@ -1178,22 +1185,33 @@ function renderShopee(){
         </span>
         <span style="font-weight:600;color:var(--t1);white-space:nowrap">${RMfull(ch.mar[i])} <span style="color:var(--t3);font-weight:400">${tot?+(ch.mar[i]/tot*100).toFixed(1):0}%</span></span>
       </div>`).join('');
-    // Traffic source breakdown for Product Card
-    const tsWrap=document.getElementById('trafficSourceWrap');
-    const tsList=document.getElementById('trafficSourceList');
-    if(tsWrap&&tsList&&ts&&ts.productCard&&ts.productCard.length){
-      tsWrap.style.display='block';
-      const topSrc=ts.productCard.slice(0,6);
-      tsList.innerHTML=topSrc.map(s=>`
-        <div style="display:flex;align-items:center;gap:6px;font-size:10px">
-          <span style="color:var(--t2);width:88px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
-          <div style="flex:1;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden">
-            <div style="width:${s.pct}%;height:100%;background:#f97316;border-radius:3px"></div>
-          </div>
-          <span style="color:var(--t1);font-weight:600;width:50px;text-align:right">${RMk(s.s)}</span>
-          <span style="color:var(--t3);width:32px">${s.pct.toFixed(1)}%</span>
-        </div>`).join('');
-    } else if(tsWrap){tsWrap.style.display='none';}
+  }
+  // Traffic source breakdown — all 4 sections
+  const tsWrap=document.getElementById('trafficSourceWrap');
+  if(tsWrap){
+    const secDefs=[
+      {key:'productCard',title:'Product Card',color:'#f97316'},
+      {key:'sellerLive',title:'Seller Live',color:'#6366f1'},
+      {key:'sellerVideo',title:'Seller Video',color:'#f43f5e'},
+      {key:'shopeeAffiliate',title:'Shopee Affiliate',color:'#3fb950'},
+    ];
+    const rendered=secDefs.filter(d=>ts&&ts[d.key]&&ts[d.key].length).map(d=>{
+      const maxPct=Math.max(...ts[d.key].map(s=>s.pct),1);
+      return`<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${d.color};margin-bottom:5px">${d.title} Traffic Sources</div>
+        ${ts[d.key].slice(0,7).map(s=>`
+          <div style="display:flex;align-items:center;gap:6px;font-size:10px;margin-bottom:3px">
+            <span style="color:var(--t2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
+            <div style="flex:1;background:#f1f5f9;border-radius:3px;height:5px;overflow:hidden">
+              <div style="width:${(s.pct/maxPct*100).toFixed(1)}%;height:100%;background:${d.color};border-radius:3px"></div>
+            </div>
+            <span style="color:var(--t1);font-weight:600;width:52px;text-align:right;white-space:nowrap">${RMk(s.s)}</span>
+            <span style="color:var(--t3);width:34px;text-align:right">${s.pct.toFixed(1)}%</span>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+    if(rendered){tsWrap.style.display='block';tsWrap.innerHTML=rendered;}
+    else tsWrap.style.display='none';
   }
 
   // ROI chart
@@ -2333,29 +2351,49 @@ function extractExtraSheets(wb,platform,fname){
       const af=numC(gC(sumRow,'salesfromaffiliate','fromaffiliate','affiliate'));
       const sa=numC(gC(sumRow,'salesfromshopeads','fromshopeads','shopeads'));
       if(pc||sl2||af||sa){
-        D[dKey].channel={
+        const chObj={
           labels:['Product Card','Seller Live','Seller Video','Affiliate','Shopee Ads'],
           colors:['#f97316','#6366f1','#f43f5e','#3fb950','#64748b'],
           mar:[pc,sl2,sv2,af,sa]
         };
+        D[dKey].channel=chObj;
+        const fMonth=monthFromFilename(fname), fYear=yearFromFilename(fname);
+        if(fMonth&&fYear){
+          if(!D[dKey].channelByMonth) D[dKey].channelByMonth={};
+          D[dKey].channelByMonth[fMonth+fYear]=chObj;
+        }
       }
-      // Parse Product Card and Seller Live sub-breakdowns
-      const sections={productCard:[],sellerLive:[]};
+      // Parse all 4 section breakdowns
+      const sections={productCard:[],sellerLive:[],sellerVideo:[],shopeeAffiliate:[]};
       let curSec=null;
       for(let i=2;i<dr.length;i++){
         const row=dr[i];
         const fc=String(row[0]||'').trim();
         if(!fc) continue;
+        // Section header detection
         if(/^product card$/i.test(fc)){curSec='productCard';continue;}
         if(/^seller live$/i.test(fc)){curSec='sellerLive';continue;}
-        if(/^traffic source|^seller video|^affiliate|^shopee ads/i.test(fc)){curSec=null;continue;}
-        if(!curSec||/^traffic source$/i.test(fc)) continue;
+        if(/^seller video$/i.test(fc)){curSec='sellerVideo';continue;}
+        if(/^shopee affiliate$/i.test(fc)){curSec='shopeeAffiliate';continue;}
+        // Skip sub-header rows ("Traffic Source", "Live Views", etc.)
+        if(/^(traffic source|live views|video views|content views)$/i.test(fc)) continue;
+        if(!curSec) continue;
         const pct=numC(String(row[1]||'').replace('%',''));
         const sales=numC(String(row[2]||''));
-        if(fc&&(pct>0||sales>0)&&!/^100\.00/i.test(String(row[1]||'')))
-          sections[curSec].push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2)});
+        // Skip 100% total rows and zero rows
+        if(!fc||(pct===0&&sales===0)) continue;
+        if(/^100(\.0+)?%?$/.test(String(row[1]||'').trim())) continue;
+        sections[curSec].push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2)});
       }
-      if(sections.productCard.length||sections.sellerLive.length) D[dKey].trafficSources=sections;
+      const hasSecData=Object.values(sections).some(a=>a.length>0);
+      if(hasSecData){
+        D[dKey].trafficSources=sections;
+        const fMonth=monthFromFilename(fname), fYear=yearFromFilename(fname);
+        if(fMonth&&fYear){
+          if(!D[dKey].trafficSourcesByMonth) D[dKey].trafficSourcesByMonth={};
+          D[dKey].trafficSourcesByMonth[fMonth+fYear]=sections;
+        }
+      }
       continue;
     }
 
