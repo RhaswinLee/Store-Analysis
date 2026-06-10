@@ -868,7 +868,7 @@ const D = {
 
 /* ─── HELPERS ─── */
 const RM = v => 'RM'+Math.round(v).toLocaleString();
-const RMk = v => v>=1000000?'RM'+(v/1000000).toFixed(2)+'M':v>=1000?'RM'+(v/1000).toFixed(1)+'k':'RM'+v;
+const RMk = v => v>=1000000?'RM'+(v/1000000).toFixed(2)+'M':v>=1000?'RM'+(v/1000).toFixed(1)+'k':'RM'+v.toFixed(2).replace(/\.00$/,'');
 const RMfull = v => 'RM'+Math.round(v).toLocaleString();
 const Pct = v => v==null?'—':v.toFixed(2)+'%';
 const Num = v => v==null?'—':v.toLocaleString();
