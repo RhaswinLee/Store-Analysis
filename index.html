@@ -1215,24 +1215,28 @@ function renderShopee(){
   if(tblEl){
     const tblRows=isDailyChart?chartRows:sf;
     const labelFn=r=>isDailyChart?r.date.slice(5).replace('-','/')+(r.date===S.selectedDate?' ★':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
+    const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
+    const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
     tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
       <thead><tr style="background:var(--bg2);color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
         <th style="padding:5px 7px;text-align:left;white-space:nowrap">Period</th>
-        <th style="padding:5px 7px;text-align:right">Buyers</th>
-        <th style="padding:5px 7px;text-align:right">Clicks</th>
-        <th style="padding:5px 7px;text-align:right">Cancelled Ord</th>
-        <th style="padding:5px 7px;text-align:right">Cancelled Sales</th>
-        <th style="padding:5px 7px;text-align:right">Return Ord</th>
-        <th style="padding:5px 7px;text-align:right">Return Sales</th>
+        ${th('Sales')}${th('Visitors')}${th('Orders')}${th('Basket Size')}${th('Order CR')}
+        ${th('Buyers')}${th('Clicks')}
+        ${th('Cancelled Ord')}${th('Cancelled Sales')}${th('Return Ord')}${th('Return Sales')}
       </tr></thead>
       <tbody>${tblRows.map((r,i)=>`<tr style="border-top:1px solid var(--border);${i===selDayIdx?'background:rgba(59,130,246,.06);font-weight:600':''}">
         <td style="padding:5px 7px;color:var(--t1);font-weight:600;white-space:nowrap">${labelFn(r)}</td>
-        <td style="padding:5px 7px;text-align:right">${r.bu?Num(r.bu):'—'}</td>
-        <td style="padding:5px 7px;text-align:right">${r.cl?Num(r.cl):'—'}</td>
-        <td style="padding:5px 7px;text-align:right;color:${r.co?'var(--red)':'var(--t3)'}">${r.co?Num(r.co):'—'}</td>
-        <td style="padding:5px 7px;text-align:right;color:${r.cs?'var(--red)':'var(--t3)'}">${r.cs?RMk(r.cs):'—'}</td>
-        <td style="padding:5px 7px;text-align:right;color:${r.ro?'var(--amber)':'var(--t3)'}">${r.ro?Num(r.ro):'—'}</td>
-        <td style="padding:5px 7px;text-align:right;color:${r.rs?'var(--amber)':'var(--t3)'}">${r.rs?RMk(r.rs):'—'}</td>
+        ${td(r.s?RMk(r.s):'—')}
+        ${td(r.v?Num(r.v):'—')}
+        ${td(r.o?Num(r.o):'—')}
+        ${td(r.b?'RM'+r.b.toFixed(2):'—')}
+        ${td(r.cr?r.cr+'%':'—')}
+        ${td(r.bu?Num(r.bu):'—')}
+        ${td(r.cl?Num(r.cl):'—')}
+        ${td(r.co?Num(r.co):'—',r.co?'color:var(--red)':'color:var(--t3)')}
+        ${td(r.cs?RMk(r.cs):'—',r.cs?'color:var(--red)':'color:var(--t3)')}
+        ${td(r.ro?Num(r.ro):'—',r.ro?'color:var(--amber)':'color:var(--t3)')}
+        ${td(r.rs?RMk(r.rs):'—',r.rs?'color:var(--amber)':'color:var(--t3)')}
       </tr>`).join('')}</tbody>
     </table>`;
   }
