@@ -336,6 +336,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
           <div class="pd-opt" data-opt="7d">Last 7 Days</div>
           <div class="pd-opt" data-opt="30d">Last 30 Days</div>
           <div class="pd-opt" data-opt="monthly">Monthly <span class="pd-arrow">▶</span></div>
+          <div class="pd-opt" data-opt="daily">Daily <span class="pd-arrow">▶</span></div>
           <div class="pd-opt" data-opt="custom">Custom Range <span class="pd-arrow">▶</span></div>
         </div>
         <div class="pd-right" id="pdRight"></div>
@@ -398,6 +399,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#22d3ee;flex-shrink:0"></div>Basket Size</div>
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;flex-shrink:0"></div>Order CR</div>
           </div>
+          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
@@ -858,7 +860,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
@@ -893,6 +895,7 @@ const S = {
   driveUrl: localStorage.getItem('hygr_drive')||'',
   syncStatus:'idle',
   lastSync:null,
+  selectedDate:null, // 'YYYY-MM-DD' for daily grain
 };
 
 /* ─── FILTERED DATA ─── */
@@ -900,6 +903,16 @@ function filteredShopee(){
   const all=[...D.shopee.m2025,...D.shopee.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
   if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopee.m2026.slice(-1);
+  if(S.grain==='daily'&&S.selectedDate){
+    // Return the aggregated monthly record for the selected date's month (for KPI context)
+    const [y,,mo]=S.selectedDate.split('-').map(Number);
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const src=y===2025?D.shopee.m2025:D.shopee.m2026;
+    const r=src.find(x=>x.m===mNames[mo-1]);
+    // Return the specific daily record, fall back to monthly if not available
+    const dr=D.shopee.daily.find(x=>x.date===S.selectedDate);
+    return dr?[dr]:r?[r]:D.shopee.m2026.slice(-1);
+  }
   if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const mn=mNames[S.selectedMonth.month];
@@ -1161,16 +1174,27 @@ function renderShopee(){
     {l:'Unique Buyers',v:totBU?Num(totBU):'—',...momChip(totBU,pBU,false),sub:`Monthly buyers${prevLabel}`,ico:'👥'},
   ].map(k=>`<div class="kpi"><div class="kpi-ico">${k.ico}</div><div class="kpi-label">${k.l}</div><div class="kpi-val" style="font-size:18px">${k.v}</div><span class="chip ${k.dir}">${k.ch}</span><div class="kpi-sub">${k.sub}</div></div>`).join('');
 
-  // Store performance chart — uses filteredShopee() so it respects the period picker
-  const chartLabs=sf.map(r=>D.shopee.m2025.includes(r)?r.m+"'25":r.m+"'26");
+  // Store performance chart — daily mode shows full month daily bars; otherwise monthly
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let chartRows, isDailyChart=false;
+  if(S.grain==='daily'&&S.selectedDate&&D.shopee.daily.length){
+    const[cy,cmo]=S.selectedDate.split('-').map(Number);
+    chartRows=D.shopee.daily.filter(r=>r.y===cy&&r.m===mNames[cmo-1]);
+    isDailyChart=chartRows.length>0;
+  }
+  if(!isDailyChart) chartRows=sf;
+  const chartLabs=isDailyChart
+    ? chartRows.map(r=>r.date.slice(8)+' '+r.m)
+    : chartRows.map(r=>D.shopee.m2025.includes(r)?r.m+"'25":r.m+"'26");
+  const selDayIdx=isDailyChart&&S.selectedDate?chartRows.findIndex(r=>r.date===S.selectedDate):-1;
   mkChart('shopeeRevChart',{type:'bar',data:{
     labels:chartLabs,
     datasets:[
-      {label:'Sales',data:sf.map(r=>r.s),backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
-      {label:'Visitors',data:sf.map(r=>r.v),backgroundColor:'rgba(234,179,8,.65)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
-      {label:'Orders',data:sf.map(r=>r.o),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
-      {label:'Basket Size',data:sf.map(r=>r.b),type:'line',borderColor:'#22d3ee',borderWidth:2,pointRadius:3,pointBackgroundColor:'#22d3ee',tension:.4,yAxisID:'y3',fill:false,order:1},
-      {label:'Order CR',data:sf.map(r=>r.cr),type:'line',borderColor:'#6b7280',borderWidth:2,borderDash:[4,3],pointStyle:'triangle',pointRadius:4,pointBackgroundColor:'#6b7280',tension:.4,yAxisID:'y2',fill:false,order:1},
+      {label:'Sales',data:chartRows.map(r=>r.s),backgroundColor:chartRows.map((_,i)=>i===selDayIdx?'rgba(59,130,246,1)':'rgba(59,130,246,.55)'),borderRadius:3,maxBarThickness:isDailyChart?8:12,yAxisID:'y',order:2},
+      {label:'Visitors',data:chartRows.map(r=>r.v),backgroundColor:chartRows.map((_,i)=>i===selDayIdx?'rgba(234,179,8,1)':'rgba(234,179,8,.5)'),borderRadius:3,maxBarThickness:isDailyChart?8:12,yAxisID:'y',order:2},
+      {label:'Orders',data:chartRows.map(r=>r.o),backgroundColor:chartRows.map((_,i)=>i===selDayIdx?'rgba(249,115,22,1)':'rgba(249,115,22,.55)'),borderRadius:3,maxBarThickness:isDailyChart?8:12,yAxisID:'y',order:2},
+      {label:'Basket Size',data:chartRows.map(r=>r.b),type:'line',borderColor:'#22d3ee',borderWidth:2,pointRadius:isDailyChart?2:3,pointBackgroundColor:'#22d3ee',tension:.4,yAxisID:'y3',fill:false,order:1},
+      {label:'Order CR',data:chartRows.map(r=>r.cr),type:'line',borderColor:'#6b7280',borderWidth:2,borderDash:[4,3],pointStyle:'triangle',pointRadius:isDailyChart?2:4,pointBackgroundColor:'#6b7280',tension:.4,yAxisID:'y2',fill:false,order:1},
     ]
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
@@ -1180,11 +1204,38 @@ function renderShopee(){
       return ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString()}`;
     }}}},
     scales:{
-      x:{grid:{display:false},border:{display:false},ticks:{font:{size:9}}},
+      x:{grid:{display:false},border:{display:false},ticks:{font:{size:isDailyChart?8:9},maxRotation:isDailyChart?45:0}},
       y:{position:'left',grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
       y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'},min:0},
       y3:{display:false}
     }}});
+
+  // Detail metrics table (buyers, clicks, cancelled, returns) per row
+  const tblEl=document.getElementById('shopeeDetailTbl');
+  if(tblEl){
+    const tblRows=isDailyChart?chartRows:sf;
+    const labelFn=r=>isDailyChart?r.date.slice(5).replace('-','/')+(r.date===S.selectedDate?' ★':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
+    tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
+      <thead><tr style="background:var(--bg2);color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+        <th style="padding:5px 7px;text-align:left;white-space:nowrap">Period</th>
+        <th style="padding:5px 7px;text-align:right">Buyers</th>
+        <th style="padding:5px 7px;text-align:right">Clicks</th>
+        <th style="padding:5px 7px;text-align:right">Cancelled Ord</th>
+        <th style="padding:5px 7px;text-align:right">Cancelled Sales</th>
+        <th style="padding:5px 7px;text-align:right">Return Ord</th>
+        <th style="padding:5px 7px;text-align:right">Return Sales</th>
+      </tr></thead>
+      <tbody>${tblRows.map((r,i)=>`<tr style="border-top:1px solid var(--border);${i===selDayIdx?'background:rgba(59,130,246,.06);font-weight:600':''}">
+        <td style="padding:5px 7px;color:var(--t1);font-weight:600;white-space:nowrap">${labelFn(r)}</td>
+        <td style="padding:5px 7px;text-align:right">${r.bu?Num(r.bu):'—'}</td>
+        <td style="padding:5px 7px;text-align:right">${r.cl?Num(r.cl):'—'}</td>
+        <td style="padding:5px 7px;text-align:right;color:${r.co?'var(--red)':'var(--t3)'}">${r.co?Num(r.co):'—'}</td>
+        <td style="padding:5px 7px;text-align:right;color:${r.cs?'var(--red)':'var(--t3)'}">${r.cs?RMk(r.cs):'—'}</td>
+        <td style="padding:5px 7px;text-align:right;color:${r.ro?'var(--amber)':'var(--t3)'}">${r.ro?Num(r.ro):'—'}</td>
+        <td style="padding:5px 7px;text-align:right;color:${r.rs?'var(--amber)':'var(--t3)'}">${r.rs?RMk(r.rs):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
 
   // Pick channel/traffic data for selected period
   const _getChannelData=()=>{
@@ -2039,6 +2090,13 @@ function showPdSub(type){
   const right=document.getElementById('pdRight');
   if(type==='monthly'){
     renderMonthPicker();
+  } else if(type==='daily'){
+    const today=new Date().toISOString().slice(0,10);
+    const def=S.selectedDate||today;
+    right.innerHTML=`
+      <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px">Daily View</div>
+      <div class="cp-field"><label>Select Date</label><input type="date" id="dpDate" value="${def}" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box"></div>
+      <button class="cp-apply" onclick="applyDailyPeriod()" style="margin-top:10px">View Day</button>`;
   } else if(type==='custom'){
     right.innerHTML=`
       <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px">Custom Range</div>
@@ -2048,6 +2106,15 @@ function showPdSub(type){
   } else {
     right.innerHTML='';
   }
+}
+function applyDailyPeriod(){
+  const d=document.getElementById('dpDate')?.value;
+  if(!d) return;
+  S.grain='daily'; S.selectedDate=d;
+  const[y,mo,da]=d.split('-');
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('periodLabel').textContent=`${da} ${mNames[parseInt(mo)-1]} ${y}`;
+  renderKPIs(); showPanel(S.nav); closePeriod();
 }
 
 function renderMonthPicker(){
@@ -2101,13 +2168,13 @@ function applyCustomPeriod(){
 document.querySelectorAll('.pd-opt').forEach(opt=>{
   opt.addEventListener('mouseenter',()=>{
     const o=opt.dataset.opt;
-    if(o==='monthly'||o==='custom') showPdSub(o);
+    if(o==='monthly'||o==='custom'||o==='daily') showPdSub(o);
     else showPdSub(null);
   });
   opt.addEventListener('click',e=>{
     e.stopPropagation();
     const o=opt.dataset.opt;
-    if(o==='monthly'||o==='custom'){showPdSub(o);setPdActive(o);return;}
+    if(o==='monthly'||o==='custom'||o==='daily'){showPdSub(o);setPdActive(o);return;}
     setPdActive(o);
     S.grain=o;
     const labels={all:'All Time',today:'Today',yesterday:'Yesterday','7d':'Last 7 Days','30d':'Last 30 Days'};
@@ -2135,7 +2202,7 @@ const PLAT_S = {
 };
 
 // ── Cache helpers — persist parsed data across sessions ──
-const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','buyers','products','camps26','camps25','breakdown','affiliate','ads'];
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -2780,6 +2847,53 @@ function rowsToMonths(rows,filename){
   return {m2025:buildFinal(acc25), m2026:buildFinal(acc26)};
 }
 
+// Parse a date string → 'YYYY-MM-DD' or null
+function parseDate(v){
+  const s=String(v||'').trim();
+  let m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+  if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+
+// Parse 2D rows → daily records [{date,m,y,s,o,v,cl,cr,b,co,cs,ro,rs,bu}]
+function rowsToDaily(rows){
+  if(!rows||rows.length<2) return [];
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const hIdx=findHeaderRow(rows);
+  const dataRows=hIdx>0?rows.slice(hIdx):rows;
+  if(dataRows.length<2) return [];
+  const headers=dataRows[0].map(h=>String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+  const get=(row,...keys)=>{
+    for(const k of keys){const i=headers.findIndex(h=>h===k||h.startsWith(k));if(i>=0&&row[i]!==undefined&&String(row[i]).trim()!=='') return String(row[i]).trim();}
+    return '';
+  };
+  const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
+  const result=[];
+  for(const row of dataRows.slice(1)){
+    const d=parseDate(get(row,'date','day','orderdate','reportdate','statisticsdate','createtime'));
+    if(!d) continue;
+    const[y,,mo]=d.split('-').map(Number);
+    const s=num(get(row,'confirmedsales','confirmedrevenue','confirmedgmv','confirmedordersales','sales','gmv','revenue'));
+    const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','successfulorders')));
+    const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','sessions')));
+    const cl=Math.round(num(get(row,'clicks','click','productclicks','totalclicks')));
+    const cr=num(get(row,'orderconversionrate','convrate','conversionrate','cr'));
+    const b=num(get(row,'salesperorder','aov','avgorder','basketsize','averagebasketsize'));
+    const co=Math.round(num(get(row,'cancelledorders','cancelledorder','noofcancelledorders')));
+    const cs=num(get(row,'cancelledsales','cancelledsalesmyr','cancelledsalesamount'));
+    const ro=Math.round(num(get(row,'returnedrefundedorders','returnedorders','refundedorders')));
+    const rs=num(get(row,'returnedrefundedsales','returnedsales','refundedsales'));
+    const bu=Math.round(num(get(row,'ofbuyers','buyers','numberofbuyers','uniquebuyers')));
+    if(!s&&!o) continue;
+    result.push({date:d,m:mNames[mo-1],y,s:+s.toFixed(2),o,v,cl,cr:+cr.toFixed(2),b:+b.toFixed(2),co,cs:+cs.toFixed(2),ro,rs:+rs.toFixed(2),bu});
+  }
+  return result.sort((a,b)=>a.date.localeCompare(b.date));
+}
+
 // Parse 2D rows into product array. Returns [] on failure.
 function rowsToProducts(rows,filename){
   if(!rows||rows.length<3) return [];
@@ -2876,6 +2990,7 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       if(mo.cr){a.crSum+=mo.cr;a.crN++;}if(mo.b){a.bSum+=mo.b;a.bN++;}}
   };
   let ok=0,lastId='';
+  const allDailyRows=[];
   for(const f of sorted){
     try{
       const rows=await fetchRawRows(f);
@@ -2886,11 +3001,13 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       } else {
         for(const mo of m2025) mergeInto(merged25,mo);
         for(const mo of m2026) mergeInto(merged26,mo);
+        // Also parse daily records from the same rows
+        const daily=rowsToDaily(rows);
+        if(daily.length) allDailyRows.push(...daily);
         ok++; lastId=f.id;
         const y25=m2025.map(m=>m.m).join(',');
         const y26=m2026.map(m=>m.m).join(',');
-        syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]`);
-      }
+        syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]${daily.length?` · ${daily.length}d`:''}`);}
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
       const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
       if(isXlsx){
@@ -2914,8 +3031,14 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     return;
   }
   syncLog(`[${platform}] ✓ Merged ${ok} file(s) → 2026:${final26.length}mo, 2025:${final25.length}mo`);
-  // Build sorted ads array from per-month data collected in extractExtraSheets
+  // Store deduplicated daily records
   const _dKey=PLAT_D[platform];
+  if(D[_dKey]&&D[_dKey].daily!==undefined&&allDailyRows.length){
+    const seen=new Set();
+    D[_dKey].daily=allDailyRows.filter(r=>{if(seen.has(r.date)) return false;seen.add(r.date);return true;}).sort((a,b)=>a.date.localeCompare(b.date));
+    syncLog(`[${platform}] Daily records: ${D[_dKey].daily.length} day(s)`);
+  }
+  // Build sorted ads array from per-month data collected in extractExtraSheets
   if(D[_dKey]&&D[_dKey].adsByMonth){
     const _mOrd=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     D[_dKey].ads=Object.values(D[_dKey].adsByMonth)
