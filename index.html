@@ -390,7 +390,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
             <div><div class="cc-title">Shopee Store Performance</div><div class="cc-sub" id="shopeeRevSub">Sales · Orders · Visitors · AOV · CR</div></div>
             <span class="tag tag-s">Shopee</span>
           </div>
-          <canvas id="shopeeRevChart" height="210"></canvas>
+          <canvas id="shopeeRevChart" height="150"></canvas>
           <div class="legend" style="flex-wrap:wrap;gap:10px;margin-top:8px">
             <div class="lg-item"><div style="width:12px;height:12px;background:rgba(59,130,246,.8);border-radius:2px;flex-shrink:0"></div>Sales</div>
             <div class="lg-item"><div style="width:12px;height:12px;background:rgba(234,179,8,.8);border-radius:2px;flex-shrink:0"></div>Visitors</div>
@@ -414,7 +414,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
       </div>
       <div class="cg cg-3">
         <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Shopee Ads ROI</div><div class="cc-sub">Oct 2025 – Mar 2026</div></div></div>
+          <div class="cc-head"><div><div class="cc-title">Shopee Ads ROI</div><div class="cc-sub" id="shopeeRoiSub">—</div></div></div>
           <canvas id="shopeeRoiChart" height="180"></canvas>
         </div>
         <div class="cc">
@@ -440,7 +440,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
           <span class="tag tag-s">Shopee Ads</span>
         </div>
         <table class="ads-table">
-          <thead><tr><th>Month</th><th>Sales</th><th>GMV</th><th>Expense</th><th>ROI</th><th>Visitors</th><th>Impressions</th><th>CPC</th><th>Sales % from Ads</th></tr></thead>
+          <thead><tr><th>Month</th><th>Sales</th><th>Impressions</th><th>Orders</th><th>Expense</th><th>ROAS</th></tr></thead>
           <tbody id="shopeeAdsTbl"></tbody>
         </table>
       </div>
@@ -858,7 +858,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
@@ -1166,9 +1166,9 @@ function renderShopee(){
   mkChart('shopeeRevChart',{type:'bar',data:{
     labels:chartLabs,
     datasets:[
-      {label:'Sales',data:sf.map(r=>r.s),backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
-      {label:'Visitors',data:sf.map(r=>r.v),backgroundColor:'rgba(234,179,8,.65)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
-      {label:'Orders',data:sf.map(r=>r.o),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:18,yAxisID:'y',order:2},
+      {label:'Sales',data:sf.map(r=>r.s),backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
+      {label:'Visitors',data:sf.map(r=>r.v),backgroundColor:'rgba(234,179,8,.65)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
+      {label:'Orders',data:sf.map(r=>r.o),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:12,yAxisID:'y',order:2},
       {label:'Basket Size',data:sf.map(r=>r.b),type:'line',borderColor:'#22d3ee',borderWidth:2,pointRadius:3,pointBackgroundColor:'#22d3ee',tension:.4,yAxisID:'y3',fill:false,order:1},
       {label:'Order CR',data:sf.map(r=>r.cr),type:'line',borderColor:'#6b7280',borderWidth:2,borderDash:[4,3],pointStyle:'triangle',pointRadius:4,pointBackgroundColor:'#6b7280',tension:.4,yAxisID:'y2',fill:false,order:1},
     ]
@@ -1189,17 +1189,48 @@ function renderShopee(){
   // Pick channel/traffic data for selected period
   const _getChannelData=()=>{
     const cbm=D.shopee.channelByMonth||{}, tbm=D.shopee.trafficSourcesByMonth||{};
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     if(S.grain==='monthly'&&S.selectedMonth){
-      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const key=mNames[S.selectedMonth.month]+S.selectedMonth.year;
       if(cbm[key]) return{ch:cbm[key],ts:tbm[key]||null,label:key.slice(0,3)+' '+S.selectedMonth.year};
     }
-    // For any multi-month view: use latest month that has channel data
-    for(let i=sf.length-1;i>=0;i--){
-      const r=sf[i];
-      const yr=D.shopee.m2025.includes(r)?2025:2026;
-      const key=r.m+yr;
-      if(cbm[key]) return{ch:cbm[key],ts:tbm[key]||null,label:r.m+' '+yr};
+    // For multi-month views: collect all months in the filtered set and aggregate
+    const months=sf.map(r=>({m:r.m,yr:D.shopee.m2025.includes(r)?2025:2026}));
+    // Aggregate channel bar data (sum sales per channel across months)
+    let aggMar=null, chTemplate=null;
+    for(const{m,yr}of months){
+      const cd=cbm[m+yr];
+      if(!cd) continue;
+      if(!aggMar){aggMar=[...cd.mar];chTemplate=cd;}
+      else cd.mar.forEach((v,i)=>{aggMar[i]=(aggMar[i]||0)+v;});
+    }
+    // Aggregate traffic sources (sum sales per source, recalculate pct)
+    let aggTs=null;
+    for(const{m,yr}of months){
+      const td=tbm[m+yr];
+      if(!td) continue;
+      if(!aggTs){aggTs={};for(const sk of Object.keys(td)) aggTs[sk]=td[sk].map(r=>({...r}));}
+      else{
+        for(const sk of Object.keys(td)){
+          if(!aggTs[sk]){aggTs[sk]=td[sk].map(r=>({...r}));continue;}
+          for(const row of td[sk]){
+            const ex=aggTs[sk].find(r=>r.src===row.src);
+            if(ex) ex.s+=row.s; else aggTs[sk].push({...row});
+          }
+        }
+      }
+    }
+    // Recalculate pct based on aggregated sales
+    if(aggTs){
+      for(const sk of Object.keys(aggTs)){
+        const tot=aggTs[sk].reduce((a,r)=>a+r.s,0);
+        if(tot>0) aggTs[sk].forEach(r=>{r.pct=+(r.s/tot*100).toFixed(2);});
+        aggTs[sk].sort((a,b)=>b.s-a.s);
+      }
+    }
+    if(aggMar&&chTemplate){
+      const rangeLabel=months.length===1?`${months[0].m} ${months[0].yr}`:`${months[0].m}–${months[months.length-1].m} ${months[0].yr===months[months.length-1].yr?months[0].yr:months[0].yr+'–'+months[months.length-1].yr}`;
+      return{ch:{...chTemplate,mar:aggMar},ts:aggTs,label:rangeLabel};
     }
     return{ch:D.shopee.channel,ts:D.shopee.trafficSources,label:''};
   };
@@ -1263,18 +1294,25 @@ function renderShopee(){
     else tsWrap.style.display='none';
   }
 
-  // ROI chart
-  const adL=D.shopee.ads.map(r=>r.m);
+  // ROI chart — data from Traffic Sources (confirmed order) "Shopee Ads" section
+  const adArr=D.shopee.ads;
+  {const sub=document.getElementById('shopeeRoiSub');if(sub&&adArr.length){const f=adArr[0],l=adArr[adArr.length-1];sub.textContent=`${f.m} ${f.year} – ${l.m} ${l.year}`;}}
+
+  const adL=adArr.map(r=>r.m+(r.year===2025?" '25":" '26"));
   mkChart('shopeeRoiChart',{type:'line',data:{
     labels:adL,
     datasets:[
-      {label:'ROI',data:D.shopee.ads.map(r=>r.roi),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#3fb950',tension:.4,yAxisID:'y'},
-      {label:'Expense (RM)',data:D.shopee.ads.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
+      {label:'ROAS',data:adArr.map(r=>r.roas),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:adArr.map(r=>r.roas>=5?'#3fb950':r.roas>=3.5?'#f59e0b':'#f85149'),tension:.4,yAxisID:'y'},
+      {label:'Expense (RM)',data:adArr.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
     ]
-  },options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:cTooltip},
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
+      if(c.dataset.label==='ROAS') return ` ROAS: ${c.raw}x`;
+      return ` Expense: RM${Math.round(c.raw).toLocaleString()}`;
+    }}}},
     scales:{
       x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10}}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'x'},title:{display:true,text:'ROAS',font:{size:9}}},
       y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
     }}});
 
@@ -1297,16 +1335,16 @@ function renderShopee(){
     </div>`).join('');
 
   // Ads table
-  document.getElementById('shopeeAdsTbl').innerHTML=D.shopee.ads.map(r=>{
-    const rc=r.roi>=5.5?'roi-good':r.roi>=4.5?'roi-good':r.roi>=4?'roi-warn':'roi-bad';
+  document.getElementById('shopeeAdsTbl').innerHTML=adArr.map(r=>{
+    const rc=r.roas>=5?'roi-good':r.roas>=3.5?'roi-warn':'roi-bad';
+    const impStr=r.imp>=1000000?(r.imp/1000000).toFixed(1)+'M':r.imp>=1000?(r.imp/1000).toFixed(1)+'k':Num(r.imp);
     return `<tr>
-      <td>${r.m} ${r.m==='Oct'||r.m==='Nov'||r.m==='Dec'?'2025':'2026'}</td>
-      <td>${RM(r.s)}</td><td>${RM(r.gmv)}</td><td>${RM(r.exp)}</td>
-      <td class="${rc}">${r.roi}x</td>
-      <td>${Num(r.v)}</td>
-      <td>${(r.imp/1000000).toFixed(1)}M</td>
-      <td>RM${r.cpc}</td>
-      <td>${r.spct.toFixed(2)}%</td>
+      <td>${r.m} ${r.year}</td>
+      <td>RM${Math.round(r.s).toLocaleString()}</td>
+      <td>${impStr}</td>
+      <td>${Num(r.o)}</td>
+      <td>RM${Math.round(r.exp).toLocaleString()}</td>
+      <td class="${rc}">${r.roas}x</td>
     </tr>`;
   }).join('');
 }
@@ -2013,13 +2051,14 @@ function showPdSub(type){
 }
 
 function renderMonthPicker(){
-  // Always sync picker display state from the actual current selection
-  if(S.grain==='monthly'&&S.selectedMonth){
-    PS.selMonth=S.selectedMonth.month;
-    PS.selYear=S.selectedMonth.year;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  // Determine which month/year to highlight — always read from S, not PS
+  const hiMon=(S.grain==='monthly'&&S.selectedMonth!=null)?S.selectedMonth.month:PS.selMonth;
+  const hiYear=(S.grain==='monthly'&&S.selectedMonth!=null)?S.selectedMonth.year:(PS.selYear||PS.year);
+  // If current selection year differs from viewed year, set PS.year to selection year
+  if(S.grain==='monthly'&&S.selectedMonth!=null&&PS.year!==S.selectedMonth.year){
     PS.year=S.selectedMonth.year;
   }
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const right=document.getElementById('pdRight');
   right.innerHTML=`
     <div class="mp-year">
@@ -2028,7 +2067,7 @@ function renderMonthPicker(){
       <button class="mp-ybtn" onclick="pdYear(1)">›</button>
     </div>
     <div class="mp-grid">
-      ${months.map((m,i)=>`<div class="mp-m${PS.selMonth===i&&PS.selYear===PS.year?' sel':''}" onclick="selectMonth(${i})">${m}</div>`).join('')}
+      ${months.map((m,i)=>`<div class="mp-m${hiMon===i&&hiYear===PS.year?' sel':''}" onclick="selectMonth(${i})">${m}</div>`).join('')}
     </div>`;
 }
 function pdYear(d){
@@ -2419,7 +2458,7 @@ function extractExtraSheets(wb,platform,fname){
         }
       }
       // Parse all 4 section breakdowns
-      const sections={productCard:[],sellerLive:[],sellerVideo:[],shopeeAffiliate:[]};
+      const sections={productCard:[],sellerLive:[],sellerVideo:[],shopeeAffiliate:[],shopeeAds:[]};
       let curSec=null;
       for(let i=2;i<dr.length;i++){
         const row=dr[i];
@@ -2430,9 +2469,21 @@ function extractExtraSheets(wb,platform,fname){
         if(/^seller live$/i.test(fc)){curSec='sellerLive';continue;}
         if(/^seller video$/i.test(fc)){curSec='sellerVideo';continue;}
         if(/^shopee affiliate$/i.test(fc)){curSec='shopeeAffiliate';continue;}
+        if(/^shopee ads$/i.test(fc)){curSec='shopeeAds';continue;}
         // Skip sub-header rows ("Traffic Source", "Live Views", etc.)
-        if(/^(traffic source|live views|video views|content views)$/i.test(fc)) continue;
+        if(/^(traffic source|live views|video views|content views|ads impressions)$/i.test(fc)) continue;
         if(!curSec) continue;
+        if(curSec==='shopeeAds'){
+          // Cols: 0=source,1=salesRatio,2=sales(MY),3=adsImpressions,4=orders,5=conversion,6=adsExpense,7=adsROAS
+          const s=numC(String(row[2]||''));
+          const imp=numC(String(row[3]||''));
+          const o=Math.round(numC(String(row[4]||'')));
+          const exp=numC(String(row[6]||''));
+          const roas=numC(String(row[7]||''));
+          if(s===0&&exp===0) continue;
+          sections.shopeeAds.push({src:fc,s:+s.toFixed(2),imp:Math.round(imp),o,exp:+exp.toFixed(2),roas:+roas.toFixed(2)});
+          continue;
+        }
         const pct=numC(String(row[1]||'').replace('%',''));
         const sales=numC(String(row[2]||''));
         // Skip 100% total rows and zero rows
@@ -2447,6 +2498,21 @@ function extractExtraSheets(wb,platform,fname){
         if(fMonth&&fYear){
           if(!D[dKey].trafficSourcesByMonth) D[dKey].trafficSourcesByMonth={};
           D[dKey].trafficSourcesByMonth[fMonth+fYear]=sections;
+        }
+      }
+      // Build monthly Shopee Ads summary from this file
+      if(sections.shopeeAds.length>0){
+        const rs=sections.shopeeAds;
+        const totS=rs.reduce((a,r)=>a+r.s,0);
+        const totImp=rs.reduce((a,r)=>a+r.imp,0);
+        const totO=rs.reduce((a,r)=>a+r.o,0);
+        const totExp=rs.reduce((a,r)=>a+r.exp,0);
+        const roas=totExp>0?+(totS/totExp).toFixed(2):0;
+        const fMonth=monthFromFilename(fname), fYear=yearFromFilename(fname);
+        if(fMonth&&fYear){
+          if(!D[dKey].adsByMonth) D[dKey].adsByMonth={};
+          D[dKey].adsByMonth[fMonth+fYear]={m:fMonth,year:+fYear,s:+totS.toFixed(2),imp:totImp,o:totO,exp:+totExp.toFixed(2),roas};
+          syncLog(`  [ads] ${fMonth}${fYear}: Sales=${Math.round(totS).toLocaleString()}, Exp=${Math.round(totExp).toLocaleString()}, ROAS=${roas}x`);
         }
       }
       continue;
@@ -2818,6 +2884,14 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     return;
   }
   syncLog(`[${platform}] ✓ Merged ${ok} file(s) → 2026:${final26.length}mo, 2025:${final25.length}mo`);
+  // Build sorted ads array from per-month data collected in extractExtraSheets
+  const _dKey=PLAT_D[platform];
+  if(D[_dKey]&&D[_dKey].adsByMonth){
+    const _mOrd=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    D[_dKey].ads=Object.values(D[_dKey].adsByMonth)
+      .sort((a,b)=>a.year!==b.year?a.year-b.year:_mOrd.indexOf(a.m)-_mOrd.indexOf(b.m));
+    syncLog(`[${platform}] Ads data: ${D[_dKey].ads.length} month(s)`);
+  }
   applyMonths(final26,final25,folderName+' (all files)',lastId,platform);
   startAutoRefresh();
 }
