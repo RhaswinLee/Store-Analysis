@@ -1174,12 +1174,19 @@ function renderShopee(){
     {l:'Unique Buyers',v:totBU?Num(totBU):'—',...momChip(totBU,pBU,false),sub:`Monthly buyers${prevLabel}`,ico:'👥'},
   ].map(k=>`<div class="kpi"><div class="kpi-ico">${k.ico}</div><div class="kpi-label">${k.l}</div><div class="kpi-val" style="font-size:18px">${k.v}</div><span class="chip ${k.dir}">${k.ch}</span><div class="kpi-sub">${k.sub}</div></div>`).join('');
 
-  // Store performance chart — daily mode shows full month daily bars; otherwise monthly
+  // Store performance chart:
+  //   Monthly grain → daily bars for selected month
+  //   Daily grain   → daily bars for selected date's month (selected day highlighted)
+  //   Custom / All  → monthly bars
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let chartRows, isDailyChart=false;
   if(S.grain==='daily'&&S.selectedDate&&D.shopee.daily.length){
     const[cy,cmo]=S.selectedDate.split('-').map(Number);
     chartRows=D.shopee.daily.filter(r=>r.y===cy&&r.m===mNames[cmo-1]);
+    isDailyChart=chartRows.length>0;
+  } else if(S.grain==='monthly'&&S.selectedMonth&&D.shopee.daily.length){
+    const{month,year}=S.selectedMonth;
+    chartRows=D.shopee.daily.filter(r=>r.y===year&&r.m===mNames[month]);
     isDailyChart=chartRows.length>0;
   }
   if(!isDailyChart) chartRows=sf;
