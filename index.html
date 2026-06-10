@@ -399,7 +399,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#22d3ee;flex-shrink:0"></div>Basket Size</div>
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;flex-shrink:0"></div>Order CR</div>
           </div>
-          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto"></div>
+          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto;max-height:300px;overflow-y:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
@@ -411,7 +411,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
               <div id="channelPieLegend" style="flex:1;display:flex;flex-direction:column;gap:5px"></div>
             </div>
           </div>
-          <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
+          <div id="trafficSourceWrap" style="margin-top:10px;display:none;max-height:360px;overflow-y:auto"></div>
         </div>
       </div>
       <div class="cg cg-3">
@@ -1225,7 +1225,7 @@ function renderShopee(){
     const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
     const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
     tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
-      <thead><tr style="background:var(--bg2);color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+      <thead style="position:sticky;top:0;z-index:1"><tr style="background:var(--bg2);color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
         <th style="padding:5px 7px;text-align:left;white-space:nowrap">Period</th>
         ${th('Sales')}${th('Visitors')}${th('Orders')}${th('Basket Size')}${th('Order CR')}
         ${th('Buyers')}${th('Clicks')}
@@ -1341,7 +1341,7 @@ function renderShopee(){
       const maxPct=Math.max(...ts[d.key].map(s=>s.pct),1);
       return`<div style="margin-bottom:10px">
         <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${d.color};margin-bottom:5px">${d.title} Traffic Sources</div>
-        ${ts[d.key].slice(0,7).map(s=>`
+        ${ts[d.key].map(s=>`
           <div style="display:flex;align-items:center;gap:6px;font-size:10px;margin-bottom:3px">
             <span style="color:var(--t2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
             <div style="flex:1;background:#f1f5f9;border-radius:3px;height:5px;overflow:hidden">
@@ -2899,7 +2899,6 @@ function rowsToDaily(rows){
     const ro=Math.round(num(get(row,'returnedrefundedorders','returnedorders','refundedorders')));
     const rs=num(get(row,'returnedrefundedsales','returnedsales','refundedsales'));
     const bu=Math.round(num(get(row,'ofbuyers','buyers','numberofbuyers','uniquebuyers')));
-    if(!s&&!o) continue;
     result.push({date:d,m:mNames[mo-1],y,s:+s.toFixed(2),o,v,cl,cr:+cr.toFixed(2),b:+b.toFixed(2),co,cs:+cs.toFixed(2),ro,rs:+rs.toFixed(2),bu});
   }
   return result.sort((a,b)=>a.date.localeCompare(b.date));
