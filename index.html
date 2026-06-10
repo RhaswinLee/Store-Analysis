@@ -2134,6 +2134,35 @@ const PLAT_S = {
   'tiktok-sg':{ url:_ls('hygr_url_tiktoksg'),  fileId:_ls('hygr_fid_tiktoksg'),  name:_ls('hygr_fnm_tiktoksg'),  nav:[] },
 };
 
+// ── Cache helpers — persist parsed data across sessions ──
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','buyers','products','camps26','camps25','breakdown','affiliate','ads'];
+function saveCache(platform){
+  try{
+    const dKey=PLAT_D[platform];
+    if(!D[dKey]) return;
+    const snap={ts:Date.now()};
+    _CACHE_FIELDS.forEach(f=>{if(D[dKey][f]!==undefined) snap[f]=D[dKey][f];});
+    localStorage.setItem(`hygr_cache_${platform.replace(/-/g,'')}`,JSON.stringify(snap));
+  }catch(e){}
+}
+function restoreCache(platform){
+  try{
+    const raw=localStorage.getItem(`hygr_cache_${platform.replace(/-/g,'')}`);
+    if(!raw) return false;
+    const snap=JSON.parse(raw);
+    const dKey=PLAT_D[platform];
+    if(!D[dKey]) return false;
+    _CACHE_FIELDS.forEach(f=>{
+      if(snap[f]!==undefined&&(Array.isArray(snap[f])?snap[f].length:Object.keys(snap[f]).length))
+        D[dKey][f]=snap[f];
+    });
+    const age=snap.ts?Math.round((Date.now()-snap.ts)/60000):0;
+    const ageStr=age<1?'just now':age<60?`${age}m ago`:`${Math.round(age/60)}h ago`;
+    if(PLAT_S[platform].name) setPlatformStatus(platform,'connected',`${PLAT_S[platform].name} · cached ${ageStr}`);
+    return true;
+  }catch(e){return false;}
+}
+
 function setSyncStatus(status,msg){
   const dot=document.getElementById('syncDot');
   const txt=document.getElementById('syncText');
@@ -2826,6 +2855,7 @@ function applyMonths(months,months25,name,fileId,platform='shopee'){
   }
   setPlatformStatus(platform,'connected',`${months.length} mo 2026 · ${months25?.length||0} mo 2025 · ${name.slice(0,25)}`);
   syncLog(`[${platform}] ✓ 2026: ${months.length} month(s), 2025: ${months25?.length||0} month(s)`);
+  saveCache(platform);
   renderKPIs(); showPanel(S.nav);
 }
 
@@ -3003,26 +3033,33 @@ window.addEventListener('DOMContentLoaded',()=>{
     const tag=document.getElementById('apiKeyTag');
     if(tag){tag.textContent='✓ Saved';tag.style.cssText='background:var(--green-d);color:var(--green)';}
   }
-  // Restore platform inputs and status
+  // Restore platform folder URL inputs
   Object.keys(PLAT_S).forEach(p=>{
     const k=p.replace(/-/g,'');
     const inp=document.getElementById(`pLink_${k}`);
     if(inp&&PLAT_S[p].url) inp.value=PLAT_S[p].url;
-    if(PLAT_S[p].name) setPlatformStatus(p,'connected',`${PLAT_S[p].name} · last session`);
+  });
+  // Step 1: Restore cached data immediately — dashboard is usable right away
+  let anyCache=false;
+  Object.keys(PLAT_S).forEach(p=>{
+    if(PLAT_S[p].url&&restoreCache(p)) anyCache=true;
   });
   setSyncStatus();
   renderKPIs();
   showPanel('overview');
-  // Auto-reconnect all platforms that have a saved URL and API key
+  // Step 2: Background re-sync to get fresh data (runs after render so UI is already visible)
   if(GS.apiKey){
-    Object.keys(PLAT_S).forEach(async p=>{
-      if(PLAT_S[p].url){
-        const parsed=parseDriveLink(PLAT_S[p].url);
-        if(parsed&&parsed.type==='folder'){
-          await loadPlatformFolder(p,parsed.id,'My Drive');
+    setTimeout(()=>{
+      Object.keys(PLAT_S).forEach(async p=>{
+        if(PLAT_S[p].url){
+          const parsed=parseDriveLink(PLAT_S[p].url);
+          if(parsed&&parsed.type==='folder'){
+            if(anyCache) setPlatformStatus(p,'fetching','Refreshing…');
+            await loadPlatformFolder(p,parsed.id,'My Drive');
+          }
         }
-      }
-    });
+      });
+    },anyCache?2000:0); // If cache was restored, wait 2s so UI renders first; otherwise sync immediately
   }
 });
 </script>
