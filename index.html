@@ -1339,16 +1339,16 @@ function renderShopee(){
     ];
     const rendered=secDefs.filter(d=>ts&&ts[d.key]&&ts[d.key].length).map(d=>{
       const maxPct=Math.max(...ts[d.key].map(s=>s.pct),1);
-      return`<div style="margin-bottom:10px">
-        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${d.color};margin-bottom:5px">${d.title} Traffic Sources</div>
+      return`<div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${d.color};margin-bottom:6px">${d.title} Traffic Sources</div>
         ${ts[d.key].map(s=>`
-          <div style="display:flex;align-items:center;gap:6px;font-size:10px;margin-bottom:3px">
-            <span style="color:var(--t2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
-            <div style="flex:1;background:#f1f5f9;border-radius:3px;height:5px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px">
+            <span style="color:var(--t2);width:105px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
+            <div style="width:80px;flex-shrink:0;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden">
               <div style="width:${(s.pct/maxPct*100).toFixed(1)}%;height:100%;background:${d.color};border-radius:3px"></div>
             </div>
-            <span style="color:var(--t1);font-weight:600;width:52px;text-align:right;white-space:nowrap">${RMk(s.s)}</span>
-            <span style="color:var(--t3);width:34px;text-align:right">${s.pct.toFixed(1)}%</span>
+            <span style="color:var(--t1);font-weight:600;width:58px;text-align:right;white-space:nowrap">${RMk(s.s)}</span>
+            <span style="color:var(--t3);width:38px;text-align:right">${s.pct.toFixed(1)}%</span>
           </div>`).join('')}
       </div>`;
     }).join('');
