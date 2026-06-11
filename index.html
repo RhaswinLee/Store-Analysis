@@ -1221,7 +1221,7 @@ function renderShopee(){
   const tblEl=document.getElementById('shopeeDetailTbl');
   if(tblEl){
     const tblRows=isDailyChart?chartRows:sf;
-    const labelFn=r=>isDailyChart?r.date.slice(5).replace('-','/')+(r.date===S.selectedDate?' ★':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
+    const labelFn=r=>isDailyChart?(r.date.slice(8)+'/'+r.date.slice(5,7))+(r.date===S.selectedDate?' ★':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
     const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
     const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
     tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
@@ -2883,11 +2883,13 @@ function rowsToDaily(rows){
     return '';
   };
   const num=v=>parseFloat(String(v).replace(/[,$%\s]/g,''))||0;
+  const looksLikeHdr=row=>row&&row.some(c=>/^date$/i.test(String(c||'').trim()));
+  const hasDupHdr=dataRows.length>3&&looksLikeHdr(dataRows[3]);
   const result=[];
-  for(const row of dataRows.slice(1)){
+  for(const row of dataRows.slice(hasDupHdr?4:1)){
     const d=parseDate(get(row,'date','day','orderdate','reportdate','statisticsdate','createtime'));
     if(!d) continue;
-    const[y,,mo]=d.split('-').map(Number);
+    const[y,mo]=d.split('-').map(Number);
     const s=num(get(row,'confirmedsales','confirmedrevenue','confirmedgmv','confirmedordersales','sales','gmv','revenue'));
     const o=Math.round(num(get(row,'confirmedorder','confirmedorders','orders','successfulorders')));
     const v=Math.round(num(get(row,'visitors','visits','uniquevisitors','pageviews','productpageviews','traffic','sessions')));
