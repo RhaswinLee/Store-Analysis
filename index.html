@@ -411,7 +411,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
               <div id="channelPieLegend" style="flex:1;display:flex;flex-direction:column;gap:5px"></div>
             </div>
           </div>
-          <div id="trafficSourceWrap" style="margin-top:10px;display:none;max-height:360px;overflow-y:auto"></div>
+          <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
         </div>
       </div>
       <div class="cg cg-3">
@@ -1320,9 +1320,9 @@ function renderShopee(){
       callbacks:{label:c=>` ${c.label}: ${RMfull(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}}}});
     const pieLeg=document.getElementById('channelPieLegend');
     if(pieLeg) pieLeg.innerHTML=ch.labels.map((l,i)=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px">
-        <span style="display:flex;align-items:center;gap:5px">
-          <span style="width:8px;height:8px;background:${ch.colors[i]};border-radius:50%;display:inline-block;flex-shrink:0"></span>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px">
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:10px;height:10px;background:${ch.colors[i]};border-radius:50%;display:inline-block;flex-shrink:0"></span>
           <span style="color:var(--t2)">${l}</span>
         </span>
         <span style="font-weight:600;color:var(--t1);white-space:nowrap">${RMfull(ch.mar[i])} <span style="color:var(--t3);font-weight:400">${tot?+(ch.mar[i]/tot*100).toFixed(1):0}%</span></span>
@@ -1343,16 +1343,16 @@ function renderShopee(){
         <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:${d.color};margin-bottom:6px">${d.title} Traffic Sources</div>
         ${ts[d.key].map(s=>`
           <div style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:5px">
-            <span style="color:var(--t2);width:105px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
-            <div style="width:80px;flex-shrink:0;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden">
+            <span style="color:var(--t2);width:100px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.src}</span>
+            <div style="flex:1;background:#f1f5f9;border-radius:3px;height:6px;overflow:hidden">
               <div style="width:${(s.pct/maxPct*100).toFixed(1)}%;height:100%;background:${d.color};border-radius:3px"></div>
             </div>
-            <span style="color:var(--t1);font-weight:600;width:58px;text-align:right;white-space:nowrap">${RMk(s.s)}</span>
-            <span style="color:var(--t3);width:38px;text-align:right">${s.pct.toFixed(1)}%</span>
+            <span style="color:var(--t1);font-weight:600;width:56px;text-align:right;white-space:nowrap">${RMk(s.s)}</span>
+            <span style="color:var(--t3);width:36px;text-align:right">${s.pct.toFixed(1)}%</span>
           </div>`).join('')}
       </div>`;
     }).join('');
-    if(rendered){tsWrap.style.display='block';tsWrap.innerHTML=rendered;}
+    if(rendered){tsWrap.style.display='block';tsWrap.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px">${rendered}</div>`;}
     else tsWrap.style.display='none';
   }
 
