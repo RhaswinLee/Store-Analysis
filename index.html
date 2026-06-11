@@ -214,6 +214,8 @@ tr:hover td{background:rgba(0,0,0,.02)}
 .roi-good{color:var(--green);font-weight:700}
 .roi-warn{color:var(--amber);font-weight:700}
 .roi-bad{color:var(--red);font-weight:700}
+.ads-tab{padding:3px 10px;background:transparent;border:1px solid var(--border-sub);border-radius:6px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .15s}
+.ads-tab.active,.ads-tab:hover{background:var(--indigo-d);border-color:var(--indigo);color:var(--indigo)}
 
 /* STATS ROW */
 .stats-row{display:flex;gap:10px;margin-bottom:14px}
@@ -414,11 +416,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
           <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
         </div>
       </div>
-      <div class="cg cg-3">
-        <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Shopee Ads ROI</div><div class="cc-sub" id="shopeeRoiSub">—</div></div></div>
-          <canvas id="shopeeRoiChart" height="180"></canvas>
-        </div>
+      <div class="cg cg-2">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Buyers Composition</div><div class="cc-sub">New vs Existing 2026</div></div></div>
           <div class="buyer-list" id="buyerList"></div>
@@ -435,16 +433,22 @@ tr:hover td{background:rgba(0,0,0,.02)}
           </div>
         </div>
       </div>
-      <!-- Ads table -->
-      <div class="tbl-wrap">
-        <div class="tbl-head">
-          <div><div class="cc-title">Shopee Ads Performance</div><div class="cc-sub">Oct 2025 – Mar 2026</div></div>
-          <span class="tag tag-s">Shopee Ads</span>
+      <!-- Shopee Ads Performance — tabbed card -->
+      <div class="cc" style="margin-bottom:14px">
+        <div class="cc-head">
+          <div><div class="cc-title">Shopee Ads Performance</div><div class="cc-sub" id="shopeeAdsSub">—</div></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:flex;gap:4px" id="shopeeAdsTabRow">
+              <button class="ads-tab active" onclick="switchAdsTab(0)">Summary</button>
+              <button class="ads-tab" onclick="switchAdsTab(1)">By Source</button>
+              <button class="ads-tab" onclick="switchAdsTab(2)">ROAS Trend</button>
+            </div>
+            <span class="tag tag-s">Shopee Ads</span>
+          </div>
         </div>
-        <table class="ads-table">
-          <thead><tr><th>Month</th><th>Sales</th><th>Impressions</th><th>Orders</th><th>Expense</th><th>ROAS</th></tr></thead>
-          <tbody id="shopeeAdsTbl"></tbody>
-        </table>
+        <div id="shopeeAdsTab0" style="overflow-y:auto;max-height:300px"></div>
+        <div id="shopeeAdsTab1" style="display:none;overflow-y:auto;max-height:300px"></div>
+        <div id="shopeeAdsTab2" style="display:none"><canvas id="shopeeRoiChart" height="180"></canvas></div>
       </div>
     </div>
 
@@ -860,7 +864,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, adsDailyByDate:{}, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
@@ -1002,6 +1006,11 @@ function momChip(curr,prev,lowerBetter){
 
 /* ─── CHARTS MAP ─── */
 const charts={};
+function switchAdsTab(idx){
+  document.querySelectorAll('#shopeeAdsTabRow .ads-tab').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  for(let i=0;i<3;i++) document.getElementById(`shopeeAdsTab${i}`).style.display=i===idx?'':'none';
+  if(idx===2) requestAnimationFrame(()=>{if(charts['shopeeRoiChart']) charts['shopeeRoiChart'].resize();});
+}
 function mkChart(id,cfg){
   if(charts[id]) charts[id].destroy();
   const el=document.getElementById(id);
@@ -1356,27 +1365,127 @@ function renderShopee(){
     else tsWrap.style.display='none';
   }
 
-  // ROI chart — data from Traffic Sources (confirmed order) "Shopee Ads" section
-  const adArr=D.shopee.ads;
-  {const sub=document.getElementById('shopeeRoiSub');if(sub&&adArr.length){const f=adArr[0],l=adArr[adArr.length-1];sub.textContent=`${f.m} ${f.year} – ${l.m} ${l.year}`;}}
+  // Shopee Ads Performance — tabbed (Summary / By Source / ROAS Trend)
+  {
+    const adArr=D.shopee.ads;
+    const MNA=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const fmtI=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Num(v);
+    const rc=v=>v>=5?'roi-good':v>=3.5?'roi-warn':'roi-bad';
 
-  const adL=adArr.map(r=>r.m+(r.year===2025?" '25":" '26"));
-  mkChart('shopeeRoiChart',{type:'line',data:{
-    labels:adL,
-    datasets:[
-      {label:'ROAS',data:adArr.map(r=>r.roas),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:adArr.map(r=>r.roas>=5?'#3fb950':r.roas>=3.5?'#f59e0b':'#f85149'),tension:.4,yAxisID:'y'},
-      {label:'Expense (RM)',data:adArr.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
-    ]
-  },options:{responsive:true,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
-      if(c.dataset.label==='ROAS') return ` ROAS: ${c.raw}x`;
-      return ` Expense: RM${Math.round(c.raw).toLocaleString()}`;
-    }}}},
-    scales:{
-      x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'x'},title:{display:true,text:'ROAS',font:{size:9}}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
-    }}});
+    // Subtitle
+    const sub=document.getElementById('shopeeAdsSub');
+    if(sub){
+      if(S.grain==='monthly'&&S.selectedMonth) sub.textContent=`${MNA[S.selectedMonth.month]} ${S.selectedMonth.year} — Daily`;
+      else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year}`;
+    }
+
+    // TAB 0 — Summary table (daily when monthly period, monthly otherwise)
+    {
+      let rows=[], isDly=false;
+      if(S.grain==='monthly'&&S.selectedMonth){
+        const{month,year}=S.selectedMonth;
+        const pfx=`${year}-${String(month+1).padStart(2,'0')}-`;
+        rows=Object.values(D.shopee.adsDailyByDate||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
+        isDly=true;
+      } else if(S.grain==='custom'&&S.customStart&&S.customEnd){
+        const[sy,sm]=S.customStart.split('-').map(Number),[ey,em]=S.customEnd.split('-').map(Number);
+        rows=adArr.filter(r=>{const mi=MNA.indexOf(r.m);return(r.year>sy||(r.year===sy&&mi+1>=sm))&&(r.year<ey||(r.year===ey&&mi+1<=em));});
+      } else rows=adArr;
+      const tS=rows.reduce((a,r)=>a+r.s,0),tImp=rows.reduce((a,r)=>a+r.imp,0),tO=rows.reduce((a,r)=>a+r.o,0),tExp=rows.reduce((a,r)=>a+r.exp,0);
+      const tRoas=tExp>0?+(tS/tExp).toFixed(2):0;
+      const lbl=r=>isDly?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+' '+(r.year||''));
+      document.getElementById('shopeeAdsTab0').innerHTML=rows.length?
+        `<table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+            <th style="padding:4px 8px;text-align:left">${isDly?'Date':'Month'}</th>
+            <th style="padding:4px 8px;text-align:right">GMV</th>
+            <th style="padding:4px 8px;text-align:right">Expense</th>
+            <th style="padding:4px 8px;text-align:right">Impressions</th>
+            <th style="padding:4px 8px;text-align:right">Orders</th>
+            <th style="padding:4px 8px;text-align:right">Conv%</th>
+            <th style="padding:4px 8px;text-align:right">ROAS</th>
+          </tr></thead>
+          <tbody>
+          ${rows.map(r=>{
+            const conv=r.imp>0?+(r.o/r.imp*100).toFixed(2):0;
+            return`<tr style="border-top:1px solid var(--border-sub)">
+              <td style="padding:4px 8px;font-weight:600;color:var(--t1)">${lbl(r)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(r.s)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(r.exp)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(r.imp)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(r.o)}</td>
+              <td style="padding:4px 8px;text-align:right;color:var(--t3)">${conv?conv+'%':'—'}</td>
+              <td style="padding:4px 8px;text-align:right" class="${rc(r.roas)}">${r.roas}x</td>
+            </tr>`;}).join('')}
+          <tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
+            <td style="padding:4px 8px;color:var(--t1)">Total</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(tS)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(tExp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(tImp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(tO)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t3)">—</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(tRoas)}">${tRoas}x</td>
+          </tr></tbody></table>`
+        :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`;
+    }
+
+    // TAB 1 — By Source
+    {
+      let srcs=[];
+      if(S.grain==='monthly'&&S.selectedMonth){
+        const key=MNA[S.selectedMonth.month]+S.selectedMonth.year;
+        const ts=(D.shopee.trafficSourcesByMonth||{})[key];
+        if(ts&&ts.shopeeAds) srcs=ts.shopeeAds;
+      } else {
+        const seen={};
+        Object.values(D.shopee.trafficSourcesByMonth||{}).forEach(ts=>{
+          if(!ts||!ts.shopeeAds) return;
+          ts.shopeeAds.forEach(r=>{
+            if(!seen[r.src]) seen[r.src]={src:r.src,s:0,imp:0,o:0,exp:0};
+            seen[r.src].s+=r.s; seen[r.src].imp+=r.imp; seen[r.src].o+=r.o; seen[r.src].exp+=r.exp;
+          });
+        });
+        srcs=Object.values(seen).map(r=>({...r,roas:r.exp>0?+(r.s/r.exp).toFixed(2):0,s:+r.s.toFixed(2),exp:+r.exp.toFixed(2)})).sort((a,b)=>b.s-a.s);
+      }
+      document.getElementById('shopeeAdsTab1').innerHTML=srcs.length?
+        `<table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+            <th style="padding:4px 8px;text-align:left">Source</th>
+            <th style="padding:4px 8px;text-align:right">GMV</th>
+            <th style="padding:4px 8px;text-align:right">Expense</th>
+            <th style="padding:4px 8px;text-align:right">Impressions</th>
+            <th style="padding:4px 8px;text-align:right">Orders</th>
+            <th style="padding:4px 8px;text-align:right">ROAS</th>
+          </tr></thead>
+          <tbody>${srcs.map(r=>`<tr style="border-top:1px solid var(--border-sub)">
+            <td style="padding:4px 8px;font-weight:600;color:var(--t1)">${r.src}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(r.s)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(r.exp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(r.imp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(r.o)}</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(r.roas)}">${r.roas}x</td>
+          </tr>`).join('')}</tbody></table>`
+        :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No source data for this period</div>`;
+    }
+
+    // TAB 2 — ROAS/Expense line chart
+    mkChart('shopeeRoiChart',{type:'line',data:{
+      labels:adArr.map(r=>r.m+(r.year===2025?" '25":" '26")),
+      datasets:[
+        {label:'ROAS',data:adArr.map(r=>r.roas),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:adArr.map(r=>r.roas>=5?'#3fb950':r.roas>=3.5?'#f59e0b':'#f85149'),tension:.4,yAxisID:'y'},
+        {label:'Expense (RM)',data:adArr.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
+      ]
+    },options:{responsive:true,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
+        if(c.dataset.label==='ROAS') return ` ROAS: ${c.raw}x`;
+        return ` Expense: RM${Math.round(c.raw).toLocaleString()}`;
+      }}}},
+      scales:{
+        x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
+        y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'x'},title:{display:true,text:'ROAS',font:{size:9}}},
+        y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+      }}});
+  }
 
   // Buyers composition
   const bl=document.getElementById('buyerList');
@@ -2213,7 +2322,7 @@ const PLAT_S = {
 };
 
 // ── Cache helpers — persist parsed data across sessions ──
-const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -2621,6 +2730,32 @@ function extractExtraSheets(wb,platform,fname){
           D[dKey].adsByMonth[fMonth+fYear]={m:fMonth,year:+fYear,s:+totS.toFixed(2),imp:totImp,o:totO,exp:+totExp.toFixed(2),roas};
           syncLog(`  [ads] ${fMonth}${fYear}: Sales=${Math.round(totS).toLocaleString()}, Exp=${Math.round(totExp).toLocaleString()}, ROAS=${roas}x`);
         }
+      }
+      continue;
+    }
+
+    // ── Source Contribution (Confirmed Order) → daily Shopee Ads data ──
+    if(/source.*contribution/i.test(sn)&&/confirm/i.test(sn)){
+      const rows=getRows(sn); if(!rows) continue;
+      const numC=v=>parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
+      let inShopeeAds=false;
+      for(const row of rows){
+        const fc=String(row[0]||'').trim();
+        if(/^shopee ads$/i.test(fc)){inShopeeAds=true;continue;}
+        if(!inShopeeAds) continue;
+        // Date rows: DD-MM-YYYY or DD/MM/YYYY — skip aggregate/header rows
+        const dm=fc.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if(!dm) continue;
+        const isoDate=`${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
+        const s=numC(String(row[2]||''));
+        const imp=numC(String(row[3]||''));
+        const o=Math.round(numC(String(row[4]||'')));
+        const exp=numC(String(row[6]||''));
+        if(!s&&!exp) continue;
+        if(!D[dKey].adsDailyByDate) D[dKey].adsDailyByDate={};
+        const ex=D[dKey].adsDailyByDate[isoDate];
+        if(ex){ex.s=+(ex.s+s).toFixed(2);ex.imp+=Math.round(imp);ex.o+=o;ex.exp=+(ex.exp+exp).toFixed(2);ex.roas=ex.exp>0?+(ex.s/ex.exp).toFixed(2):0;}
+        else D[dKey].adsDailyByDate[isoDate]={date:isoDate,s:+s.toFixed(2),imp:Math.round(imp),o,exp:+exp.toFixed(2),roas:exp>0?+(s/exp).toFixed(2):0};
       }
       continue;
     }
