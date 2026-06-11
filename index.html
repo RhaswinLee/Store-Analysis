@@ -1372,11 +1372,14 @@ function renderShopee(){
     const fmtI=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Num(v);
     const rc=v=>v>=5?'roi-good':v>=3.5?'roi-warn':'roi-bad';
 
-    // Subtitle
+    // Subtitle — match selected period
     const sub=document.getElementById('shopeeAdsSub');
     if(sub){
       if(S.grain==='monthly'&&S.selectedMonth) sub.textContent=`${MNA[S.selectedMonth.month]} ${S.selectedMonth.year} — Daily`;
-      else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year}`;
+      else if(S.grain==='custom'&&S.customStart&&S.customEnd){
+        const[sy,sm]=S.customStart.split('-').map(Number),[ey,em]=S.customEnd.split('-').map(Number);
+        sub.textContent=`${MNA[sm-1]} ${sy} – ${MNA[em-1]} ${ey}`;
+      } else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year}`;
     }
 
     // TAB 0 — Summary table (daily when monthly period, monthly otherwise)
@@ -1429,7 +1432,7 @@ function renderShopee(){
         :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`;
     }
 
-    // TAB 1 — By Source
+    // TAB 1 — By Source (filtered to same period as Summary)
     {
       let srcs=[];
       if(S.grain==='monthly'&&S.selectedMonth){
@@ -1438,8 +1441,19 @@ function renderShopee(){
         if(ts&&ts.shopeeAds) srcs=ts.shopeeAds;
       } else {
         const seen={};
-        Object.values(D.shopee.trafficSourcesByMonth||{}).forEach(ts=>{
-          if(!ts||!ts.shopeeAds) return;
+        const tbm=D.shopee.trafficSourcesByMonth||{};
+        const inRange=key=>{
+          const mi=MNA.findIndex(m=>key.startsWith(m));
+          const yr=parseInt(key.slice(3));
+          if(mi<0||!yr) return false;
+          if(S.grain==='custom'&&S.customStart&&S.customEnd){
+            const[sy,sm]=S.customStart.split('-').map(Number),[ey,em]=S.customEnd.split('-').map(Number);
+            return(yr>sy||(yr===sy&&mi+1>=sm))&&(yr<ey||(yr===ey&&mi+1<=em));
+          }
+          return true;
+        };
+        Object.entries(tbm).forEach(([key,ts])=>{
+          if(!inRange(key)||!ts||!ts.shopeeAds) return;
           ts.shopeeAds.forEach(r=>{
             if(!seen[r.src]) seen[r.src]={src:r.src,s:0,imp:0,o:0,exp:0};
             seen[r.src].s+=r.s; seen[r.src].imp+=r.imp; seen[r.src].o+=r.o; seen[r.src].exp+=r.exp;
