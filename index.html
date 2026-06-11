@@ -386,7 +386,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
       <div class="kpi-grid" id="shopeeKpi"></div>
       <div class="kpi-grid" id="shopeeMetrics2" style="grid-template-columns:repeat(6,1fr);margin-top:-8px"></div>
       <div class="cg cg-21">
-        <div class="cc">
+        <div class="cc" style="display:flex;flex-direction:column">
           <div class="cc-head">
             <div><div class="cc-title">Shopee Store Performance</div><div class="cc-sub" id="shopeeRevSub">Sales · Orders · Visitors · AOV · CR</div></div>
             <span class="tag tag-s">Shopee</span>
@@ -399,7 +399,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#22d3ee;flex-shrink:0"></div>Basket Size</div>
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;flex-shrink:0"></div>Order CR</div>
           </div>
-          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto"></div>
+          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto;flex:1;min-height:0;overflow-y:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
@@ -1225,7 +1225,7 @@ function renderShopee(){
     const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
     const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
     tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
-      <thead style="position:sticky;top:0;z-index:1"><tr style="background:var(--bg2);color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+      <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
         <th style="padding:5px 7px;text-align:left;white-space:nowrap">Period</th>
         ${th('Sales')}${th('Visitors')}${th('Orders')}${th('Basket Size')}${th('Order CR')}
         ${th('Buyers')}${th('Clicks')}
