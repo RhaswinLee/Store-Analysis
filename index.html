@@ -2785,12 +2785,14 @@ function extractExtraSheets(wb,platform,fname){
         const fc=String(row[0]||'').trim();
         if(/^shopee ads$/i.test(fc)){inShopeeAds=true;curSrc=null;continue;}
         if(!inShopeeAds) continue;
-        // Identify source aggregate rows by % in col1 (e.g. "67.37%")
-        const col1=String(row[1]||'').trim();
-        if(/^\d+(\.\d+)?%$/.test(col1)&&fc){curSrc=fc;continue;}
-        // Date rows: DD-MM-YYYY or DD/MM/YYYY
+        // Check date rows FIRST (DD-MM-YYYY or DD/MM/YYYY)
         const dm=fc.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if(!dm) continue;
+        if(!dm){
+          // Not a date — identify source aggregate rows by % in col1 (e.g. "67.37%")
+          const col1=String(row[1]||'').trim();
+          if(/^\d+(\.\d+)?%$/.test(col1)&&fc&&fc.length>4) curSrc=fc;
+          continue;
+        }
         const isoDate=`${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
         const s=numC(String(row[2]||''));
         const imp=numC(String(row[3]||''));
