@@ -216,6 +216,9 @@ tr:hover td{background:rgba(0,0,0,.02)}
 .roi-bad{color:var(--red);font-weight:700}
 .ads-tab{padding:3px 10px;background:transparent;border:1px solid var(--border-sub);border-radius:6px;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .15s}
 .ads-tab.active,.ads-tab:hover{background:var(--indigo-d);border-color:var(--indigo);color:var(--indigo)}
+.ads-grain{padding:2px 7px;background:transparent;border:1px solid var(--border-sub);border-radius:5px;font-size:10px;font-weight:600;color:var(--t2);cursor:pointer;transition:all .15s}
+.ads-grain.active,.ads-grain:hover{background:var(--indigo-d);border-color:var(--indigo);color:var(--indigo)}
+.ads-sub-input{font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--t1);outline:none}
 
 /* STATS ROW */
 .stats-row{display:flex;gap:10px;margin-bottom:14px}
@@ -438,11 +441,14 @@ tr:hover td{background:rgba(0,0,0,.02)}
         <div class="cc-head">
           <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
             <div><div class="cc-title">Shopee Ads Performance</div><div class="cc-sub" id="shopeeAdsSub">—</div></div>
-            <select id="shopeeAdsPeriodSel" onchange="selectAdsPeriod(this.value)" style="font-size:10px;padding:2px 6px;border:1px solid var(--border);border-radius:5px;background:var(--card);color:var(--t1);cursor:pointer;outline:none;flex-shrink:0">
-              <option value="all">All Periods</option>
-            </select>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <div style="display:flex;gap:2px">
+              <button class="ads-grain active" data-ag="all" onclick="setAdsGrain('all')">All</button>
+              <button class="ads-grain" data-ag="monthly" onclick="setAdsGrain('monthly')">By Month</button>
+              <button class="ads-grain" data-ag="custom" onclick="setAdsGrain('custom')">Custom</button>
+              <button class="ads-grain" data-ag="daily" onclick="setAdsGrain('daily')">Daily</button>
+            </div>
             <div style="display:flex;gap:4px" id="shopeeAdsTabRow">
               <button class="ads-tab active" onclick="switchAdsTab(0)">Summary</button>
               <button class="ads-tab" onclick="switchAdsTab(1)">By Source</button>
@@ -451,6 +457,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
             <span class="tag tag-s">Shopee Ads</span>
           </div>
         </div>
+        <div id="adsPeriodSub" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border-sub);background:var(--bg2);font-size:10px;flex-wrap:wrap"></div>
         <div id="shopeeAdsTab0" style="overflow-y:auto;max-height:300px"></div>
         <div id="shopeeAdsTab1" style="display:none;overflow-y:auto;max-height:300px"></div>
         <div id="shopeeAdsTab2" style="display:none"><canvas id="shopeeRoiChart" height="180"></canvas></div>
@@ -905,9 +912,12 @@ const S = {
   syncStatus:'idle',
   lastSync:null,
   selectedDate:null, // 'YYYY-MM-DD' for daily grain
-  adsGrain:'all',    // independent period for Shopee Ads section
-  adsMonth:null,     // {month:0-11, year:2026}
-  adsSrc:'all',      // selected source filter in Summary tab
+  adsGrain:'all',       // independent period for Shopee Ads section: 'all'|'monthly'|'custom'|'daily'
+  adsMonth:null,        // {month:0-11, year:2026} for 'monthly' grain
+  adsDateStart:null,    // 'YYYY-MM' for 'custom' grain
+  adsDateEnd:null,      // 'YYYY-MM' for 'custom' grain
+  adsDate:null,         // 'YYYY-MM-DD' for 'daily' grain
+  adsSrc:'all',         // selected source filter in Summary tab
 };
 
 /* ─── FILTERED DATA ─── */
@@ -1014,50 +1024,114 @@ function momChip(curr,prev,lowerBetter){
 
 /* ─── CHARTS MAP ─── */
 const charts={};
-function populateAdsPeriodSel(){
-  const sel=document.getElementById('shopeeAdsPeriodSel');
-  if(!sel) return;
-  const MNA=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const keys=new Set(Object.keys(D.shopee.adsByMonth||{}));
-  Object.keys(D.shopee.adsDailyByDate||{}).forEach(d=>{const[y,m]=d.split('-').map(Number);keys.add(MNA[m-1]+y);});
-  const sorted=[...keys].sort((a,b)=>{
-    const ai=MNA.findIndex(m=>a.startsWith(m)),ay=parseInt(a.slice(3));
-    const bi=MNA.findIndex(m=>b.startsWith(m)),by=parseInt(b.slice(3));
-    return ay!==by?ay-by:ai-bi;
-  });
-  const cur=sel.value;
-  sel.innerHTML='<option value="all">All Periods</option>'+sorted.map(k=>`<option value="${k}">${k.slice(0,3)} ${k.slice(3)}</option>`).join('');
-  if(cur&&cur!=='all') sel.value=cur;
+function setAdsGrain(grain){
+  S.adsGrain=grain;
+  S.adsSrc='all';
+  document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===grain));
+  renderAdsSub();
+  // Only render content immediately if the grain doesn't need a sub-selection first
+  if(grain==='all'||(grain==='monthly'&&S.adsMonth)||(grain==='custom'&&S.adsDateStart&&S.adsDateEnd)||(grain==='daily'&&S.adsDate)){
+    renderShopeeAds();
+  } else {
+    renderShopeeAds(); // still render to show the empty state / prompt
+  }
 }
-function selectAdsPeriod(val){
+function renderAdsSub(){
+  const sub=document.getElementById('adsPeriodSub');
+  if(!sub) return;
   const MNA=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  if(val==='all'){S.adsGrain='all';S.adsMonth=null;}
-  else{const mi=MNA.findIndex(m=>val.startsWith(m));const yr=parseInt(val.slice(3));if(mi>=0&&yr){S.adsGrain='monthly';S.adsMonth={month:mi,year:yr};}}
+  if(S.adsGrain==='all'){
+    sub.style.display='none'; sub.innerHTML=''; return;
+  }
+  sub.style.display='flex';
+  if(S.adsGrain==='monthly'){
+    const mv=S.adsMonth?`${S.adsMonth.year}-${String(S.adsMonth.month+1).padStart(2,'0')}`:'';
+    sub.innerHTML=`<span style="color:var(--t3)">Month:</span><input class="ads-sub-input" type="month" value="${mv}" onchange="applyAdsMonth(this.value)">`;
+  } else if(S.adsGrain==='custom'){
+    const sv=S.adsDateStart||'',ev=S.adsDateEnd||'';
+    sub.innerHTML=`<span style="color:var(--t3)">From:</span><input class="ads-sub-input" type="month" id="adsCpS" value="${sv}"><span style="color:var(--t3)">To:</span><input class="ads-sub-input" type="month" id="adsCpE" value="${ev}"><button class="ads-grain active" onclick="applyAdsCustom()">Apply</button>`;
+  } else if(S.adsGrain==='daily'){
+    const today=new Date().toISOString().slice(0,10);
+    const dv=S.adsDate||today;
+    sub.innerHTML=`<span style="color:var(--t3)">Date:</span><input class="ads-sub-input" type="date" value="${dv}" onchange="applyAdsDate(this.value)">`;
+  }
+}
+function applyAdsMonth(val){
+  if(!val) return;
+  const[y,m]=val.split('-').map(Number);
+  S.adsMonth={month:m-1,year:y};
+  S.adsSrc='all';
+  renderShopeeAds();
+}
+function applyAdsCustom(){
+  const s=document.getElementById('adsCpS')?.value;
+  const e=document.getElementById('adsCpE')?.value;
+  if(!s||!e) return;
+  S.adsDateStart=s; S.adsDateEnd=e;
+  S.adsSrc='all';
+  renderShopeeAds();
+}
+function applyAdsDate(val){
+  if(!val) return;
+  S.adsDate=val;
   S.adsSrc='all';
   renderShopeeAds();
 }
 function selectAdsSrc(src){S.adsSrc=src;renderShopeeAds();}
 function renderShopeeAds(){
+  // Sync grain button active states and sub-picker visibility
+  document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===S.adsGrain));
+  renderAdsSub();
   const adArr=D.shopee.ads;
   const MNA=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmtI=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Num(v);
   const rc=v=>v>=5?'roi-good':v>=3.5?'roi-warn':'roi-bad';
-  const isDly=S.adsGrain==='monthly'&&S.adsMonth;
-
-  populateAdsPeriodSel();
+  const g=S.adsGrain;
+  // Helper: is a monthly adArr entry within the custom range?
+  const inCustom=r=>{
+    if(!S.adsDateStart||!S.adsDateEnd) return true;
+    const[sy,sm]=S.adsDateStart.split('-').map(Number);
+    const[ey,em]=S.adsDateEnd.split('-').map(Number);
+    const ri=MNA.indexOf(r.m),ry=r.year||2026;
+    const rn=ry*12+ri,sn=sy*12+(sm-1),en=ey*12+(em-1);
+    return rn>=sn&&rn<=en;
+  };
+  // Helper: aggregate trafficSourcesByMonth for a set of keys
+  const aggSrcs=keys=>{
+    const seen={};
+    const tbm=D.shopee.trafficSourcesByMonth||{};
+    keys.forEach(k=>{
+      const ts=tbm[k]; if(!ts||!ts.shopeeAds) return;
+      ts.shopeeAds.forEach(r=>{
+        if(!seen[r.src]) seen[r.src]={src:r.src,s:0,imp:0,o:0,exp:0};
+        seen[r.src].s+=r.s; seen[r.src].imp+=r.imp; seen[r.src].o+=r.o; seen[r.src].exp+=r.exp;
+      });
+    });
+    return Object.values(seen).map(r=>({...r,roas:r.exp>0?+(r.s/r.exp).toFixed(2):0,s:+r.s.toFixed(2),exp:+r.exp.toFixed(2)})).sort((a,b)=>b.s-a.s);
+  };
 
   // Subtitle
   const sub=document.getElementById('shopeeAdsSub');
   if(sub){
-    if(isDly) sub.textContent=`${MNA[S.adsMonth.month]} ${S.adsMonth.year} — Daily`;
-    else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year}`;
+    if(g==='monthly'&&S.adsMonth) sub.textContent=`${MNA[S.adsMonth.month]} ${S.adsMonth.year} — Daily`;
+    else if(g==='custom'&&S.adsDateStart&&S.adsDateEnd){
+      const fmt=v=>{const[y,m]=v.split('-');return MNA[parseInt(m)-1]+' '+y;};
+      sub.textContent=`${fmt(S.adsDateStart)} → ${fmt(S.adsDateEnd)}`;
+    }
+    else if(g==='daily'&&S.adsDate){
+      const[dy,dmo,dd]=S.adsDate.split('-');
+      sub.textContent=`${dd} ${MNA[parseInt(dmo)-1]} ${dy}`;
+    }
+    else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year||''} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year||''}`;
     else sub.textContent='—';
   }
 
-  // TAB 0 — Summary (daily by selected source when monthly, monthly rows otherwise)
+  // TAB 0 — Summary
   {
     let rows=[];
-    if(isDly){
+    let isDateRows=false; // true when rows have a .date field (daily/single-day)
+    if(g==='monthly'&&S.adsMonth){
+      isDateRows=true;
       const{month,year}=S.adsMonth;
       const pfx=`${year}-${String(month+1).padStart(2,'0')}-`;
       if(S.adsSrc==='all'){
@@ -1066,21 +1140,32 @@ function renderShopeeAds(){
         const srcMap=(D.shopee.adsDailySrc||{})[S.adsSrc]||{};
         rows=Object.values(srcMap).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
       }
-    } else rows=adArr;
+    } else if(g==='daily'&&S.adsDate){
+      isDateRows=true;
+      const r=S.adsSrc==='all'?(D.shopee.adsDailyByDate||{})[S.adsDate]:((D.shopee.adsDailySrc||{})[S.adsSrc]||{})[S.adsDate];
+      if(r) rows=[r];
+    } else if(g==='custom'){
+      rows=adArr.filter(inCustom);
+    } else {
+      rows=adArr;
+    }
     const tS=rows.reduce((a,r)=>a+r.s,0),tImp=rows.reduce((a,r)=>a+r.imp,0),tO=rows.reduce((a,r)=>a+r.o,0),tExp=rows.reduce((a,r)=>a+r.exp,0);
     const tRoas=tExp>0?+(tS/tExp).toFixed(2):0;
-    const lbl=r=>isDly?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+' '+(r.year||''));
-    // Source filter pills (only in daily mode and when src data exists)
+    const lbl=r=>isDateRows?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+' '+(r.year||''));
     const srcNames=D.shopee.adsSrcOrder||[];
-    const pillsHTML=isDly&&srcNames.length?
-      `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:6px 0 6px">
+    const showPills=isDateRows&&srcNames.length;
+    const pillsHTML=showPills?
+      `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:6px 0 4px">
         <button class="ads-tab ${S.adsSrc==='all'?'active':''}" data-src="all" onclick="selectAdsSrc(this.dataset.src)">All</button>
         ${srcNames.map(sn=>`<button class="ads-tab ${S.adsSrc===sn?'active':''}" data-src="${sn.replace(/"/g,'&quot;')}" onclick="selectAdsSrc(this.dataset.src)">${sn}</button>`).join('')}
       </div>`:'';
+    const noDataMsg=isDateRows
+      ?`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data — re-sync Google Drive to load Source Contribution sheet · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Configure ↗</button></div>`
+      :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`;
     document.getElementById('shopeeAdsTab0').innerHTML=pillsHTML+(rows.length?
       `<table style="width:100%;border-collapse:collapse;font-size:10px">
         <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
-          <th style="padding:4px 8px;text-align:left">${isDly?'Date':'Month'}</th>
+          <th style="padding:4px 8px;text-align:left">${isDateRows?'Date':'Month'}</th>
           <th style="padding:4px 8px;text-align:right">GMV</th>
           <th style="padding:4px 8px;text-align:right">Expense</th>
           <th style="padding:4px 8px;text-align:right">Impressions</th>
@@ -1098,7 +1183,7 @@ function renderShopeeAds(){
           <td style="padding:4px 8px;text-align:right;color:var(--t3)">${conv?conv+'%':'—'}</td>
           <td style="padding:4px 8px;text-align:right" class="${rc(r.roas)}">${r.roas}x</td>
         </tr>`;}).join('')}
-        <tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
+        ${rows.length>1?`<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
           <td style="padding:4px 8px;color:var(--t1)">Total</td>
           <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(tS)}</td>
           <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(tExp)}</td>
@@ -1106,28 +1191,31 @@ function renderShopeeAds(){
           <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(tO)}</td>
           <td style="padding:4px 8px;text-align:right;color:var(--t3)">—</td>
           <td style="padding:4px 8px;text-align:right" class="${rc(tRoas)}">${tRoas}x</td>
-        </tr></tbody></table>`
-      :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`);
+        </tr>`:''}
+        </tbody></table>`:noDataMsg);
   }
 
-  // TAB 1 — By Source (same period as ads period selector)
+  // TAB 1 — By Source
   {
     let srcs=[];
-    if(isDly){
+    if(g==='monthly'&&S.adsMonth){
       const key=MNA[S.adsMonth.month]+S.adsMonth.year;
-      const ts=(D.shopee.trafficSourcesByMonth||{})[key];
-      if(ts&&ts.shopeeAds) srcs=ts.shopeeAds;
-    } else {
-      const seen={};
-      const tbm=D.shopee.trafficSourcesByMonth||{};
-      Object.entries(tbm).forEach(([key,ts])=>{
-        if(!ts||!ts.shopeeAds) return;
-        ts.shopeeAds.forEach(r=>{
-          if(!seen[r.src]) seen[r.src]={src:r.src,s:0,imp:0,o:0,exp:0};
-          seen[r.src].s+=r.s; seen[r.src].imp+=r.imp; seen[r.src].o+=r.o; seen[r.src].exp+=r.exp;
-        });
+      srcs=aggSrcs([key]);
+    } else if(g==='daily'&&S.adsDate){
+      // Build per-source snapshot for this specific date
+      const srcData=D.shopee.adsDailySrc||{};
+      const seenD={};
+      Object.entries(srcData).forEach(([src,days])=>{
+        const r=days[S.adsDate]; if(!r) return;
+        seenD[src]={src,s:r.s,imp:r.imp,o:r.o,exp:r.exp,roas:r.roas};
       });
-      srcs=Object.values(seen).map(r=>({...r,roas:r.exp>0?+(r.s/r.exp).toFixed(2):0,s:+r.s.toFixed(2),exp:+r.exp.toFixed(2)})).sort((a,b)=>b.s-a.s);
+      srcs=Object.values(seenD).sort((a,b)=>b.s-a.s);
+    } else if(g==='custom'){
+      const filteredAdArr=adArr.filter(inCustom);
+      const keys=filteredAdArr.map(r=>r.m+r.year);
+      srcs=aggSrcs(keys);
+    } else {
+      srcs=aggSrcs(Object.keys(D.shopee.trafficSourcesByMonth||{}));
     }
     document.getElementById('shopeeAdsTab1').innerHTML=srcs.length?
       `<table style="width:100%;border-collapse:collapse;font-size:10px">
@@ -2365,11 +2453,12 @@ const PLAT_S = {
 
 // ── Cache helpers — persist parsed data across sessions ──
 const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
+const CACHE_VER=2; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
     if(!D[dKey]) return;
-    const snap={ts:Date.now()};
+    const snap={ts:Date.now(),_v:CACHE_VER};
     _CACHE_FIELDS.forEach(f=>{if(D[dKey][f]!==undefined) snap[f]=D[dKey][f];});
     localStorage.setItem(`hygr_cache_${platform.replace(/-/g,'')}`,JSON.stringify(snap));
   }catch(e){}
@@ -2379,6 +2468,8 @@ function restoreCache(platform){
     const raw=localStorage.getItem(`hygr_cache_${platform.replace(/-/g,'')}`);
     if(!raw) return false;
     const snap=JSON.parse(raw);
+    // Discard caches written before CACHE_VER was introduced — they lack adsDailyByDate
+    if((snap._v||0)<CACHE_VER) return false;
     const dKey=PLAT_D[platform];
     if(!D[dKey]) return false;
     _CACHE_FIELDS.forEach(f=>{
