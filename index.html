@@ -2878,10 +2878,11 @@ function extractExtraSheets(wb,platform,fname){
   }
 
   syncLog(`  [${platform}] Scanning "${fname}": sheets=[${wb.SheetNames.join(', ')}]`);
+  console.log(`[AdsDebug] extractExtraSheets: file="${fname}" sheets=`, wb.SheetNames);
   for(const sn of wb.SheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
     // Skip primary revenue/product sheets already handled
-    if(/confirmedorder|placedorder|topperforming/i.test(sn)) continue;
+    if(/confirmedorder|placedorder|topperforming/i.test(sn)){console.log(`[AdsDebug] SKIP "${sn}"`);continue;}
 
     // ── Traffic Sources (Confirmed Order) → Sales Channel Mix ──
     if(/traffic.*source/i.test(sn)&&/confirm/i.test(sn)){
@@ -2973,10 +2974,12 @@ function extractExtraSheets(wb,platform,fname){
     }
 
     // ── Source Contribution (Confirmed Order) → daily Shopee Ads data (total + per-source) ──
-    if(/source.*contribution/i.test(sn)&&/confirm/i.test(sn)){
+    // Match against both raw name and normalized (handles invisible chars / encoding variations)
+    if((/source.*contribution/i.test(sn)||/source.*contribution/i.test(sl))&&(/confirm/i.test(sn)||/confirm/i.test(sl))){
       // Use raw:true so date serials come through as numbers, not locale-formatted strings
       const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
-      if(!rawRows||rawRows.length<2) continue;
+      console.log(`[AdsDebug] Source Contribution sheet found: "${sn}" → ${rawRows.length} rows`);
+      if(!rawRows||rawRows.length<2){console.log('[AdsDebug] Sheet has <2 rows, skipping');continue;}
       const numC=v=>{
         if(typeof v==='number') return v;
         return parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
@@ -3003,8 +3006,11 @@ function extractExtraSheets(wb,platform,fname){
       for(const row of rawRows){
         if(!inShopeeAds){
           for(let ci=0;ci<Math.min(3,row.length);ci++){
-            if(/^shopee ads$/i.test(String(row[ci]||'').trim())){
-              inShopeeAds=true;dataCol=ci;curSrc=null;break;
+            const cell=String(row[ci]||'').trim();
+            if(/^shopee ads$/i.test(cell)){
+              inShopeeAds=true;dataCol=ci;curSrc=null;
+              console.log(`[AdsDebug] Found "Shopee Ads" section at dataCol=${ci}`);
+              break;
             }
           }
           continue;
@@ -3018,7 +3024,7 @@ function extractExtraSheets(wb,platform,fname){
           // Not a date — identify source aggregate rows by % ratio in adjacent col
           const pctRaw=row[dataCol+1];
           const isPct=(typeof pctRaw==='number'&&pctRaw>0&&pctRaw<=1)||(typeof pctRaw==='string'&&/^\d+(\.\d+)?%$/.test(String(pctRaw).trim()));
-          if(isPct&&fc.length>4) curSrc=fc;
+          if(isPct&&fc.length>4){curSrc=fc;console.log(`[AdsDebug] Source: "${fc}" (pctRaw=${pctRaw})`);}
           continue;
         }
         // Date row — extract metrics
@@ -3026,6 +3032,7 @@ function extractExtraSheets(wb,platform,fname){
         const imp=numC(row[dataCol+3]); // Ads Impressions
         const o=Math.round(numC(row[dataCol+4])); // Orders
         const exp=numC(row[dataCol+6]); // Ads Expense
+        if(parsedDays===0) console.log(`[AdsDebug] First date row: date=${isoDate} cv=${cv}(type=${typeof cv}) s=${s} exp=${exp} curSrc="${curSrc}"`);
         if(!s&&!exp) continue;
         parsedDays++;
         if(!D[dKey].adsDailyByDate) D[dKey].adsDailyByDate={};
@@ -3042,6 +3049,7 @@ function extractExtraSheets(wb,platform,fname){
           if(!D[dKey].adsSrcOrder.includes(curSrc)) D[dKey].adsSrcOrder.push(curSrc);
         }
       }
+      console.log(`[AdsDebug] Done: ${parsedDays} date rows parsed, inShopeeAds was ${inShopeeAds}`);
       syncLog(`  [${platform}] Source Contribution "${sn}": ${parsedDays} daily rows, ${Object.keys(D[dKey].adsDailyByDate||{}).length} total dates, ${(D[dKey].adsSrcOrder||[]).length} sources`);
       continue;
     }
