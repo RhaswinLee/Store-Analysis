@@ -1171,7 +1171,12 @@ function renderShopeeAds(){
       const allDays=Object.values(D.shopee.adsDailyByDate||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
       const el0=document.getElementById('shopeeAdsTab0');
       if(!allDays.length){
-        el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data — re-sync Google Drive to load Source Contribution sheet · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Configure ↗</button></div>`;
+        const _totDates=Object.keys(D.shopee.adsDailyByDate||{}).length;
+        const _totSrcs=(D.shopee.adsSrcOrder||[]).length;
+        const _dbg=_totDates>0
+          ? `${_totDates} dates found (${_totSrcs} sources) — select a different month or re-sync`
+          : `0 dates parsed — re-sync Google Drive then check the sync log`;
+        el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data for this period<br><span style="font-size:9px;opacity:0.7">${_dbg}</span><br><button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px;margin-top:6px">Sync Log ↗</button></div>`;
       } else {
         const srcData=srcNames.map((src,i)=>{
           const days=Object.values((D.shopee.adsDailySrc||{})[src]||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -2700,7 +2705,12 @@ async function loadPlatformFolder(platform,folderId,folderName){
         const sfl=(await fetchFolder(salesFolder.id)).filter(isLoadable);
         const rev=filterRevFiles(sfl,platform);
         toLoad=rev.length?rev:sfl;
-        syncLog(`  → ${toLoad.length} file(s) to load`);
+        // Non-revenue xlsx files also get scanned for extra sheets (Source Contribution, etc.)
+        PLAT_S[platform]._extraXlsx=sfl.filter(f=>{
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          return isXlsx&&!toLoad.find(t=>t.id===f.id);
+        });
+        syncLog(`  → ${toLoad.length} revenue file(s) to load${PLAT_S[platform]._extraXlsx.length?`, ${PLAT_S[platform]._extraXlsx.length} extra xlsx to scan`:''}`)
         // Also load product performance data from separate sub-folder
         const prodFolder=subfolders.find(f=>f.name.toLowerCase().includes('product performance')||f.name.toLowerCase().includes('product'));
         if(prodFolder&&prodFolder.id!==salesFolder.id){
@@ -3461,6 +3471,15 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     const seen=new Set();
     D[_dKey].daily=allDailyRows.filter(r=>{if(seen.has(r.date)) return false;seen.add(r.date);return true;}).sort((a,b)=>a.date.localeCompare(b.date));
     syncLog(`[${platform}] Daily records: ${D[_dKey].daily.length} day(s)`);
+  }
+  // Scan any extra xlsx files (non-revenue) for extra sheets (Source Contribution etc.)
+  const _extraXlsx=PLAT_S[platform]?._extraXlsx||[];
+  if(_extraXlsx.length){
+    syncLog(`[${platform}] Scanning ${_extraXlsx.length} extra xlsx file(s) for Source Contribution…`);
+    for(const f of _extraXlsx){
+      try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
+      catch(e){syncLog(`  ⚠ Extra-file parse error "${f.name}": ${e.message}`);}
+    }
   }
   // Build sorted ads array from per-month data collected in extractExtraSheets
   if(D[_dKey]&&D[_dKey].adsByMonth){
