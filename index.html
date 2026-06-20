@@ -1034,6 +1034,14 @@ function toggleAdsExpand(idx){
 function setAdsGrain(grain){
   S.adsGrain=grain;
   S.adsSrc='all'; S.adsExpanded=new Set();
+  // Default sub-selections from the main period when first switching grain
+  if(grain==='monthly'&&!S.adsMonth)
+    S.adsMonth=S.selectedMonth||{month:new Date().getMonth(),year:new Date().getFullYear()};
+  if(grain==='daily'&&!S.adsDate)
+    S.adsDate=S.selectedDate||new Date().toISOString().slice(0,10);
+  if(grain==='custom'&&(!S.adsDateStart||!S.adsDateEnd)){
+    if(S.customStart&&S.customEnd){S.adsDateStart=S.customStart;S.adsDateEnd=S.customEnd;}
+  }
   document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===grain));
   renderAdsSub();
   // Only render content immediately if the grain doesn't need a sub-selection first
