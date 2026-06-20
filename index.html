@@ -2867,6 +2867,7 @@ function extractExtraSheets(wb,platform,fname){
     };
   }
 
+  syncLog(`  [${platform}] Scanning "${fname}": sheets=[${wb.SheetNames.join(', ')}]`);
   for(const sn of wb.SheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
     // Skip primary revenue/product sheets already handled
@@ -2965,25 +2966,36 @@ function extractExtraSheets(wb,platform,fname){
     if(/source.*contribution/i.test(sn)&&/confirm/i.test(sn)){
       const rows=getRows(sn); if(!rows) continue;
       const numC=v=>parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
-      let inShopeeAds=false,curSrc=null;
+      let inShopeeAds=false,curSrc=null,dataCol=0,parsedDays=0;
       for(const row of rows){
-        const fc=String(row[0]||'').trim();
-        if(/^shopee ads$/i.test(fc)){inShopeeAds=true;curSrc=null;continue;}
-        if(!inShopeeAds) continue;
+        // Find which column offset the data is in (some sheets have a blank col A)
+        // We detect the data column once when we see a "Shopee Ads" header anywhere in first 3 cols
+        if(!inShopeeAds){
+          for(let ci=0;ci<Math.min(3,row.length);ci++){
+            if(/^shopee ads$/i.test(String(row[ci]||'').trim())){
+              inShopeeAds=true; dataCol=ci; curSrc=null; break;
+            }
+          }
+          continue;
+        }
+        const fc=String(row[dataCol]||'').trim();
+        if(!fc) continue;
         // Check date rows FIRST (DD-MM-YYYY or DD/MM/YYYY)
         const dm=fc.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
         if(!dm){
-          // Not a date — identify source aggregate rows by % in col1 (e.g. "67.37%")
-          const col1=String(row[1]||'').trim();
-          if(/^\d+(\.\d+)?%$/.test(col1)&&fc&&fc.length>4) curSrc=fc;
+          // Not a date — identify source aggregate rows by % in the next column
+          const pctCol=String(row[dataCol+1]||'').trim();
+          if(/^\d+(\.\d+)?%$/.test(pctCol)&&fc.length>4) curSrc=fc;
+          // Also stop Shopee Ads section if we hit a new top-level section header (no %)
           continue;
         }
         const isoDate=`${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
-        const s=numC(String(row[2]||''));
-        const imp=numC(String(row[3]||''));
-        const o=Math.round(numC(String(row[4]||'')));
-        const exp=numC(String(row[6]||''));
+        const s=numC(String(row[dataCol+2]||''));
+        const imp=numC(String(row[dataCol+3]||''));
+        const o=Math.round(numC(String(row[dataCol+4]||'')));
+        const exp=numC(String(row[dataCol+6]||''));
         if(!s&&!exp) continue;
+        parsedDays++;
         // Accumulate total across all sources
         if(!D[dKey].adsDailyByDate) D[dKey].adsDailyByDate={};
         const ex=D[dKey].adsDailyByDate[isoDate];
@@ -3000,6 +3012,7 @@ function extractExtraSheets(wb,platform,fname){
           if(!D[dKey].adsSrcOrder.includes(curSrc)) D[dKey].adsSrcOrder.push(curSrc);
         }
       }
+      syncLog(`  [${platform}] Source Contribution "${sn}": ${parsedDays} daily rows, ${Object.keys(D[dKey].adsDailyByDate||{}).length} dates, ${(D[dKey].adsSrcOrder||[]).length} sources`);
       continue;
     }
 
@@ -3401,7 +3414,8 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
       const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
       if(isXlsx){
-        try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}catch(_){}
+        try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
+        catch(e){syncLog(`  ⚠ Extra-sheets parse error in "${f.name}": ${e.message}`);}
       }
     }catch(e){syncLog(`  ⚠ Skipped "${f.name}": ${e.message}`);}
   }
