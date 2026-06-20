@@ -2547,7 +2547,7 @@ const PLAT_S = {
 
 // ── Cache helpers — persist parsed data across sessions ──
 const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
-const CACHE_VER=2; // Bump when adding new parsed fields to force re-sync of old caches
+const CACHE_VER=3; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -2964,44 +2964,64 @@ function extractExtraSheets(wb,platform,fname){
 
     // ── Source Contribution (Confirmed Order) → daily Shopee Ads data (total + per-source) ──
     if(/source.*contribution/i.test(sn)&&/confirm/i.test(sn)){
-      const rows=getRows(sn); if(!rows) continue;
-      const numC=v=>parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
+      // Use raw:true so date serials come through as numbers, not locale-formatted strings
+      const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+      if(!rawRows||rawRows.length<2) continue;
+      const numC=v=>{
+        if(typeof v==='number') return v;
+        return parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
+      };
+      // Convert a cell value (Excel date serial or date string) to YYYY-MM-DD
+      const toIso=v=>{
+        if(typeof v==='number'&&v>40000&&v<60000){
+          // Excel date serial (covers 2009-2064)
+          try{const dc=XLSX.SSF.parse_date_code(v);if(dc&&dc.y)return `${dc.y}-${String(dc.m).padStart(2,'0')}-${String(dc.d).padStart(2,'0')}`;}catch(_){}
+          // Fallback manual conversion (Excel epoch Jan 0, 1900, with leap year bug)
+          const ms=(v-25569)*86400000;const d=new Date(ms);
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+        }
+        const s=String(v||'').trim();
+        // DD-MM-YYYY or DD/MM/YYYY (Shopee export format: day first)
+        const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if(m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+        // M/D/YY or M/D/YYYY (SheetJS raw:false US format fallback)
+        const m2=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if(m2){const yr=m2[3].length===2?2000+parseInt(m2[3]):parseInt(m2[3]);return `${yr}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;}
+        return null;
+      };
       let inShopeeAds=false,curSrc=null,dataCol=0,parsedDays=0;
-      for(const row of rows){
-        // Find which column offset the data is in (some sheets have a blank col A)
-        // We detect the data column once when we see a "Shopee Ads" header anywhere in first 3 cols
+      for(const row of rawRows){
         if(!inShopeeAds){
           for(let ci=0;ci<Math.min(3,row.length);ci++){
             if(/^shopee ads$/i.test(String(row[ci]||'').trim())){
-              inShopeeAds=true; dataCol=ci; curSrc=null; break;
+              inShopeeAds=true;dataCol=ci;curSrc=null;break;
             }
           }
           continue;
         }
-        const fc=String(row[dataCol]||'').trim();
+        const cv=row[dataCol];
+        const fc=String(cv||'').trim();
         if(!fc) continue;
-        // Check date rows FIRST (DD-MM-YYYY or DD/MM/YYYY)
-        const dm=fc.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-        if(!dm){
-          // Not a date — identify source aggregate rows by % in the next column
-          const pctCol=String(row[dataCol+1]||'').trim();
-          if(/^\d+(\.\d+)?%$/.test(pctCol)&&fc.length>4) curSrc=fc;
-          // Also stop Shopee Ads section if we hit a new top-level section header (no %)
+        // Check date FIRST — handles both numeric serials and DD-MM-YYYY strings
+        const isoDate=toIso(cv);
+        if(!isoDate){
+          // Not a date — identify source aggregate rows by % ratio in adjacent col
+          const pctRaw=row[dataCol+1];
+          const isPct=(typeof pctRaw==='number'&&pctRaw>0&&pctRaw<=1)||(typeof pctRaw==='string'&&/^\d+(\.\d+)?%$/.test(String(pctRaw).trim()));
+          if(isPct&&fc.length>4) curSrc=fc;
           continue;
         }
-        const isoDate=`${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`;
-        const s=numC(String(row[dataCol+2]||''));
-        const imp=numC(String(row[dataCol+3]||''));
-        const o=Math.round(numC(String(row[dataCol+4]||'')));
-        const exp=numC(String(row[dataCol+6]||''));
+        // Date row — extract metrics
+        const s=numC(row[dataCol+2]);   // Sales (MY) = GMV
+        const imp=numC(row[dataCol+3]); // Ads Impressions
+        const o=Math.round(numC(row[dataCol+4])); // Orders
+        const exp=numC(row[dataCol+6]); // Ads Expense
         if(!s&&!exp) continue;
         parsedDays++;
-        // Accumulate total across all sources
         if(!D[dKey].adsDailyByDate) D[dKey].adsDailyByDate={};
         const ex=D[dKey].adsDailyByDate[isoDate];
         if(ex){ex.s=+(ex.s+s).toFixed(2);ex.imp+=Math.round(imp);ex.o+=o;ex.exp=+(ex.exp+exp).toFixed(2);ex.roas=ex.exp>0?+(ex.s/ex.exp).toFixed(2):0;}
         else D[dKey].adsDailyByDate[isoDate]={date:isoDate,s:+s.toFixed(2),imp:Math.round(imp),o,exp:+exp.toFixed(2),roas:exp>0?+(s/exp).toFixed(2):0};
-        // Accumulate per-source
         if(curSrc){
           if(!D[dKey].adsDailySrc) D[dKey].adsDailySrc={};
           if(!D[dKey].adsDailySrc[curSrc]) D[dKey].adsDailySrc[curSrc]={};
@@ -3012,7 +3032,7 @@ function extractExtraSheets(wb,platform,fname){
           if(!D[dKey].adsSrcOrder.includes(curSrc)) D[dKey].adsSrcOrder.push(curSrc);
         }
       }
-      syncLog(`  [${platform}] Source Contribution "${sn}": ${parsedDays} daily rows, ${Object.keys(D[dKey].adsDailyByDate||{}).length} dates, ${(D[dKey].adsSrcOrder||[]).length} sources`);
+      syncLog(`  [${platform}] Source Contribution "${sn}": ${parsedDays} daily rows, ${Object.keys(D[dKey].adsDailyByDate||{}).length} total dates, ${(D[dKey].adsSrcOrder||[]).length} sources`);
       continue;
     }
 
