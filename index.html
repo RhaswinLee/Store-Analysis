@@ -1173,10 +1173,16 @@ function renderShopeeAds(){
       if(!allDays.length){
         const _totDates=Object.keys(D.shopee.adsDailyByDate||{}).length;
         const _totSrcs=(D.shopee.adsSrcOrder||[]).length;
+        const _log=(window._adsParseLog||[]).slice(-8).join('<br>');
         const _dbg=_totDates>0
-          ? `${_totDates} dates found (${_totSrcs} sources) — select a different month or re-sync`
-          : `0 dates parsed — re-sync Google Drive then check the sync log`;
-        el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data for this period<br><span style="font-size:9px;opacity:0.7">${_dbg}</span><br><button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px;margin-top:6px">Sync Log ↗</button></div>`;
+          ? `${_totDates} dates stored (${_totSrcs} sources) — select different month or re-sync`
+          : `0 dates parsed — sync log below`;
+        el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:16px 20px;text-align:center">
+          No daily data for this period<br>
+          <span style="font-size:9px;opacity:0.7">${_dbg}</span>
+          ${_log?`<pre style="font-size:8px;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin:8px 0 4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--t2)">${_log}</pre>`:''}
+          <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Full Sync Log ↗</button>
+        </div>`;
       } else {
         const srcData=srcNames.map((src,i)=>{
           const days=Object.values((D.shopee.adsDailySrc||{})[src]||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -2879,6 +2885,8 @@ function extractExtraSheets(wb,platform,fname){
 
   syncLog(`  [${platform}] Scanning "${fname}": sheets=[${wb.SheetNames.join(', ')}]`);
   console.log(`[AdsDebug] extractExtraSheets: file="${fname}" sheets=`, wb.SheetNames);
+  if(!window._adsParseLog) window._adsParseLog=[];
+  window._adsParseLog.push(`FILE: ${fname} | sheets: ${wb.SheetNames.join(' · ')}`);
   for(const sn of wb.SheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
     // Skip primary revenue/product sheets already handled
@@ -2978,8 +2986,9 @@ function extractExtraSheets(wb,platform,fname){
     if((/source.*contribution/i.test(sn)||/source.*contribution/i.test(sl))&&(/confirm/i.test(sn)||/confirm/i.test(sl))){
       // Use raw:true so date serials come through as numbers, not locale-formatted strings
       const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+      window._adsParseLog.push(`SRC_CONTRIB FOUND: "${sn}" → ${rawRows.length} rows`);
       console.log(`[AdsDebug] Source Contribution sheet found: "${sn}" → ${rawRows.length} rows`);
-      if(!rawRows||rawRows.length<2){console.log('[AdsDebug] Sheet has <2 rows, skipping');continue;}
+      if(!rawRows||rawRows.length<2){window._adsParseLog.push('SKIP: sheet has <2 rows');console.log('[AdsDebug] Sheet has <2 rows, skipping');continue;}
       const numC=v=>{
         if(typeof v==='number') return v;
         return parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
@@ -3009,6 +3018,7 @@ function extractExtraSheets(wb,platform,fname){
             const cell=String(row[ci]||'').trim();
             if(/^shopee ads$/i.test(cell)){
               inShopeeAds=true;dataCol=ci;curSrc=null;
+              window._adsParseLog.push(`SHOPEE ADS HEADER found at dataCol=${ci}`);
               console.log(`[AdsDebug] Found "Shopee Ads" section at dataCol=${ci}`);
               break;
             }
@@ -3032,7 +3042,8 @@ function extractExtraSheets(wb,platform,fname){
         const imp=numC(row[dataCol+3]); // Ads Impressions
         const o=Math.round(numC(row[dataCol+4])); // Orders
         const exp=numC(row[dataCol+6]); // Ads Expense
-        if(parsedDays===0) console.log(`[AdsDebug] First date row: date=${isoDate} cv=${cv}(type=${typeof cv}) s=${s} exp=${exp} curSrc="${curSrc}"`);
+        if(parsedDays===0){window._adsParseLog.push(`FIRST DATE ROW: ${isoDate} | cv=${cv}(${typeof cv}) | s=${s} exp=${exp} | src="${curSrc}"`);console.log(`[AdsDebug] First date row: date=${isoDate} cv=${cv}(type=${typeof cv}) s=${s} exp=${exp} curSrc="${curSrc}"`);}
+
         if(!s&&!exp) continue;
         parsedDays++;
         if(!D[dKey].adsDailyByDate) D[dKey].adsDailyByDate={};
@@ -3049,6 +3060,7 @@ function extractExtraSheets(wb,platform,fname){
           if(!D[dKey].adsSrcOrder.includes(curSrc)) D[dKey].adsSrcOrder.push(curSrc);
         }
       }
+      window._adsParseLog.push(`DONE: ${parsedDays} rows parsed | inShopeeAds=${inShopeeAds}`);
       console.log(`[AdsDebug] Done: ${parsedDays} date rows parsed, inShopeeAds was ${inShopeeAds}`);
       syncLog(`  [${platform}] Source Contribution "${sn}": ${parsedDays} daily rows, ${Object.keys(D[dKey].adsDailyByDate||{}).length} total dates, ${(D[dKey].adsSrcOrder||[]).length} sources`);
       continue;
