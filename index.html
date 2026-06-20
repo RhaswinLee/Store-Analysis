@@ -918,6 +918,7 @@ const S = {
   adsDateEnd:null,      // 'YYYY-MM' for 'custom' grain
   adsDate:null,         // 'YYYY-MM-DD' for 'daily' grain
   adsSrc:'all',         // selected source filter in Summary tab
+  adsExpanded:new Set(),// set of expanded source names in monthly accordion
 };
 
 /* ─── FILTERED DATA ─── */
@@ -1024,9 +1025,15 @@ function momChip(curr,prev,lowerBetter){
 
 /* ─── CHARTS MAP ─── */
 const charts={};
+function toggleAdsExpand(idx){
+  const src=(D.shopee.adsSrcOrder||[])[parseInt(idx)];
+  if(!src) return;
+  if(S.adsExpanded.has(src)) S.adsExpanded.delete(src); else S.adsExpanded.add(src);
+  renderShopeeAds();
+}
 function setAdsGrain(grain){
   S.adsGrain=grain;
-  S.adsSrc='all';
+  S.adsSrc='all'; S.adsExpanded=new Set();
   document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===grain));
   renderAdsSub();
   // Only render content immediately if the grain doesn't need a sub-selection first
@@ -1060,7 +1067,7 @@ function applyAdsMonth(val){
   if(!val) return;
   const[y,m]=val.split('-').map(Number);
   S.adsMonth={month:m-1,year:y};
-  S.adsSrc='all';
+  S.adsSrc='all'; S.adsExpanded=new Set();
   renderShopeeAds();
 }
 function applyAdsCustom(){
@@ -1128,71 +1135,130 @@ function renderShopeeAds(){
 
   // TAB 0 — Summary
   {
-    let rows=[];
-    let isDateRows=false; // true when rows have a .date field (daily/single-day)
     if(g==='monthly'&&S.adsMonth){
-      isDateRows=true;
+      // Accordion: one aggregate row per source, click to expand daily rows
       const{month,year}=S.adsMonth;
       const pfx=`${year}-${String(month+1).padStart(2,'0')}-`;
-      if(S.adsSrc==='all'){
-        rows=Object.values(D.shopee.adsDailyByDate||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
+      const srcNames=D.shopee.adsSrcOrder||[];
+      const allDays=Object.values(D.shopee.adsDailyByDate||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
+      const el0=document.getElementById('shopeeAdsTab0');
+      if(!allDays.length){
+        el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data — re-sync Google Drive to load Source Contribution sheet · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Configure ↗</button></div>`;
       } else {
-        const srcMap=(D.shopee.adsDailySrc||{})[S.adsSrc]||{};
-        rows=Object.values(srcMap).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
-      }
-    } else if(g==='daily'&&S.adsDate){
-      isDateRows=true;
-      const r=S.adsSrc==='all'?(D.shopee.adsDailyByDate||{})[S.adsDate]:((D.shopee.adsDailySrc||{})[S.adsSrc]||{})[S.adsDate];
-      if(r) rows=[r];
-    } else if(g==='custom'){
-      rows=adArr.filter(inCustom);
-    } else {
-      rows=adArr;
-    }
-    const tS=rows.reduce((a,r)=>a+r.s,0),tImp=rows.reduce((a,r)=>a+r.imp,0),tO=rows.reduce((a,r)=>a+r.o,0),tExp=rows.reduce((a,r)=>a+r.exp,0);
-    const tRoas=tExp>0?+(tS/tExp).toFixed(2):0;
-    const lbl=r=>isDateRows?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+' '+(r.year||''));
-    const srcNames=D.shopee.adsSrcOrder||[];
-    const showPills=isDateRows&&srcNames.length;
-    const pillsHTML=showPills?
-      `<div style="display:flex;gap:4px;flex-wrap:wrap;padding:6px 0 4px">
-        <button class="ads-tab ${S.adsSrc==='all'?'active':''}" data-src="all" onclick="selectAdsSrc(this.dataset.src)">All</button>
-        ${srcNames.map(sn=>`<button class="ads-tab ${S.adsSrc===sn?'active':''}" data-src="${sn.replace(/"/g,'&quot;')}" onclick="selectAdsSrc(this.dataset.src)">${sn}</button>`).join('')}
-      </div>`:'';
-    const noDataMsg=isDateRows
-      ?`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No daily data — re-sync Google Drive to load Source Contribution sheet · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Configure ↗</button></div>`
-      :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`;
-    document.getElementById('shopeeAdsTab0').innerHTML=pillsHTML+(rows.length?
-      `<table style="width:100%;border-collapse:collapse;font-size:10px">
-        <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
-          <th style="padding:4px 8px;text-align:left">${isDateRows?'Date':'Month'}</th>
-          <th style="padding:4px 8px;text-align:right">GMV</th>
-          <th style="padding:4px 8px;text-align:right">Expense</th>
-          <th style="padding:4px 8px;text-align:right">Impressions</th>
-          <th style="padding:4px 8px;text-align:right">Orders</th>
-          <th style="padding:4px 8px;text-align:right">Conv%</th>
-          <th style="padding:4px 8px;text-align:right">ROAS</th>
-        </tr></thead>
-        <tbody>
-        ${rows.map(r=>{const conv=r.imp>0?+(r.o/r.imp*100).toFixed(2):0;return`<tr style="border-top:1px solid var(--border-sub)">
-          <td style="padding:4px 8px;font-weight:600;color:var(--t1)">${lbl(r)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(r.s)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(r.exp)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(r.imp)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(r.o)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t3)">${conv?conv+'%':'—'}</td>
-          <td style="padding:4px 8px;text-align:right" class="${rc(r.roas)}">${r.roas}x</td>
-        </tr>`;}).join('')}
-        ${rows.length>1?`<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
+        const srcData=srcNames.map((src,i)=>{
+          const days=Object.values((D.shopee.adsDailySrc||{})[src]||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
+          const tS=days.reduce((a,r)=>a+r.s,0),tImp=days.reduce((a,r)=>a+r.imp,0),tO=days.reduce((a,r)=>a+r.o,0),tExp=days.reduce((a,r)=>a+r.exp,0);
+          return{src,i,days,tS,tImp,tO,tExp,roas:tExp>0?+(tS/tExp).toFixed(2):0};
+        }).filter(d=>d.tS>0||d.tExp>0);
+        const gS=allDays.reduce((a,r)=>a+r.s,0),gImp=allDays.reduce((a,r)=>a+r.imp,0),gO=allDays.reduce((a,r)=>a+r.o,0),gExp=allDays.reduce((a,r)=>a+r.exp,0);
+        const gRoas=gExp>0?+(gS/gExp).toFixed(2):0;
+        const nS=srcData.reduce((a,d)=>a+d.tS,0),nImp=srcData.reduce((a,d)=>a+d.tImp,0),nO=srcData.reduce((a,d)=>a+d.tO,0),nExp=srcData.reduce((a,d)=>a+d.tExp,0);
+        const othS=+(gS-nS).toFixed(2),othImp=gImp-nImp,othO=gO-nO,othExp=+(gExp-nExp).toFixed(2);
+        const othRoas=othExp>0?+(othS/othExp).toFixed(2):0;
+        const df=d=>d.date.slice(8)+'/'+d.date.slice(5,7);
+        let tb='';
+        srcData.forEach(({src,i,days,tS,tImp,tO,tExp,roas})=>{
+          const open=S.adsExpanded.has(src),conv=tImp>0?+(tO/tImp*100).toFixed(2):0;
+          tb+=`<tr style="border-top:1px solid var(--border-sub);cursor:pointer;background:var(--bg2)" onclick="toggleAdsExpand(${i})">
+            <td style="padding:4px 6px 4px 8px;font-weight:600;color:var(--t1)"><span style="font-size:9px;color:var(--indigo);margin-right:3px">${open?'▼':'▶'}</span>${src}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(tS)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(tExp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(tImp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(tO)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t3)">${conv?conv+'%':'—'}</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(roas)}">${roas}x</td></tr>`;
+          if(open) days.forEach(r=>{
+            const dc=r.imp>0?+(r.o/r.imp*100).toFixed(2):0;
+            tb+=`<tr style="border-top:1px solid var(--border-sub)">
+              <td style="padding:3px 8px 3px 22px;color:var(--t2);font-size:9.5px">${df(r)}</td>
+              <td style="padding:3px 8px;text-align:right;color:var(--t1);font-size:9.5px">${RMk(r.s)}</td>
+              <td style="padding:3px 8px;text-align:right;color:var(--t2);font-size:9.5px">${RMk(r.exp)}</td>
+              <td style="padding:3px 8px;text-align:right;color:var(--t2);font-size:9.5px">${fmtI(r.imp)}</td>
+              <td style="padding:3px 8px;text-align:right;color:var(--t2);font-size:9.5px">${Num(r.o)}</td>
+              <td style="padding:3px 8px;text-align:right;color:var(--t3);font-size:9.5px">${dc?dc+'%':'—'}</td>
+              <td style="padding:3px 8px;text-align:right;font-size:9.5px" class="${rc(r.roas)}">${r.roas}x</td></tr>`;
+          });
+        });
+        if(othS>0.01||othExp>0.01){
+          const oc=othImp>0?+(othO/othImp*100).toFixed(2):0;
+          tb+=`<tr style="border-top:1px solid var(--border-sub)">
+            <td style="padding:4px 8px;color:var(--t3);font-style:italic">Others</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(othS)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(othExp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(othImp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(othO)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t3)">${oc?oc+'%':'—'}</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(othRoas)}">${othRoas}x</td></tr>`;
+        }
+        const gc=gImp>0?+(gO/gImp*100).toFixed(2):0;
+        tb+=`<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
           <td style="padding:4px 8px;color:var(--t1)">Total</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(tS)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(tExp)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(tImp)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(tO)}</td>
-          <td style="padding:4px 8px;text-align:right;color:var(--t3)">—</td>
-          <td style="padding:4px 8px;text-align:right" class="${rc(tRoas)}">${tRoas}x</td>
-        </tr>`:''}
-        </tbody></table>`:noDataMsg);
+          <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(gS)}</td>
+          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(gExp)}</td>
+          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(gImp)}</td>
+          <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(gO)}</td>
+          <td style="padding:4px 8px;text-align:right;color:var(--t3)">${gc?gc+'%':'—'}</td>
+          <td style="padding:4px 8px;text-align:right" class="${rc(gRoas)}">${gRoas}x</td></tr>`;
+        el0.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+            <th style="padding:4px 8px;text-align:left">Source / Date</th>
+            <th style="padding:4px 8px;text-align:right">GMV</th>
+            <th style="padding:4px 8px;text-align:right">Expense</th>
+            <th style="padding:4px 8px;text-align:right">Impressions</th>
+            <th style="padding:4px 8px;text-align:right">Orders</th>
+            <th style="padding:4px 8px;text-align:right">Conv%</th>
+            <th style="padding:4px 8px;text-align:right">ROAS</th>
+          </tr></thead><tbody>${tb}</tbody></table>`;
+      }
+    } else {
+      // Flat table for all/custom/daily grains
+      let rows=[],isDateRows=false;
+      if(g==='daily'&&S.adsDate){
+        isDateRows=true;
+        const r=(D.shopee.adsDailyByDate||{})[S.adsDate];
+        if(r) rows=[r];
+      } else if(g==='custom'){
+        rows=adArr.filter(inCustom);
+      } else {
+        rows=adArr;
+      }
+      const tS=rows.reduce((a,r)=>a+r.s,0),tImp=rows.reduce((a,r)=>a+r.imp,0),tO=rows.reduce((a,r)=>a+r.o,0),tExp=rows.reduce((a,r)=>a+r.exp,0);
+      const tRoas=tExp>0?+(tS/tExp).toFixed(2):0;
+      const lbl=r=>isDateRows?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+' '+(r.year||''));
+      const noDataMsg=isDateRows
+        ?`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this date</div>`
+        :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No ads data for this period</div>`;
+      document.getElementById('shopeeAdsTab0').innerHTML=rows.length?
+        `<table style="width:100%;border-collapse:collapse;font-size:10px">
+          <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+            <th style="padding:4px 8px;text-align:left">${isDateRows?'Date':'Month'}</th>
+            <th style="padding:4px 8px;text-align:right">GMV</th>
+            <th style="padding:4px 8px;text-align:right">Expense</th>
+            <th style="padding:4px 8px;text-align:right">Impressions</th>
+            <th style="padding:4px 8px;text-align:right">Orders</th>
+            <th style="padding:4px 8px;text-align:right">Conv%</th>
+            <th style="padding:4px 8px;text-align:right">ROAS</th>
+          </tr></thead><tbody>
+          ${rows.map(r=>{const conv=r.imp>0?+(r.o/r.imp*100).toFixed(2):0;return`<tr style="border-top:1px solid var(--border-sub)">
+            <td style="padding:4px 8px;font-weight:600;color:var(--t1)">${lbl(r)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(r.s)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(r.exp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(r.imp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(r.o)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t3)">${conv?conv+'%':'—'}</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(r.roas)}">${r.roas}x</td>
+          </tr>`;}).join('')}
+          ${rows.length>1?`<tr style="border-top:2px solid var(--border);font-weight:700;background:var(--bg2)">
+            <td style="padding:4px 8px;color:var(--t1)">Total</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t1)">${RMk(tS)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${RMk(tExp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${fmtI(tImp)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t2)">${Num(tO)}</td>
+            <td style="padding:4px 8px;text-align:right;color:var(--t3)">—</td>
+            <td style="padding:4px 8px;text-align:right" class="${rc(tRoas)}">${tRoas}x</td>
+          </tr>`:''}
+          </tbody></table>`:noDataMsg;
+    }
   }
 
   // TAB 1 — By Source
