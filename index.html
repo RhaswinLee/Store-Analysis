@@ -1041,6 +1041,19 @@ function setAdsGrain(grain){
     S.adsDate=S.selectedDate||new Date().toISOString().slice(0,10);
   if(grain==='custom'&&(!S.adsDateStart||!S.adsDateEnd)){
     if(S.customStart&&S.customEnd){S.adsDateStart=S.customStart;S.adsDateEnd=S.customEnd;}
+    else{
+      const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const ads=D.shopee.ads;
+      if(ads.length){
+        const f=ads[0],l=ads[ads.length-1];
+        S.adsDateStart=`${f.year||2026}-${String(MN.indexOf(f.m)+1).padStart(2,'0')}`;
+        S.adsDateEnd=`${l.year||2026}-${String(MN.indexOf(l.m)+1).padStart(2,'0')}`;
+      } else {
+        const n=new Date();
+        S.adsDateStart=`${n.getFullYear()}-01`;
+        S.adsDateEnd=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+      }
+    }
   }
   document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===grain));
   renderAdsSub();
