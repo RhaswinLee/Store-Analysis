@@ -444,7 +444,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <div style="display:flex;gap:2px">
-              <button class="ads-grain active" data-ag="all" onclick="setAdsGrain('all')">All</button>
+              <button class="ads-grain active" data-ag="all" onclick="setAdsGrain('all')">Auto</button>
               <button class="ads-grain" data-ag="monthly" onclick="setAdsGrain('monthly')">By Month</button>
               <button class="ads-grain" data-ag="custom" onclick="setAdsGrain('custom')">Custom</button>
               <button class="ads-grain" data-ag="daily" onclick="setAdsGrain('daily')">Daily</button>
@@ -1093,12 +1093,19 @@ function renderShopeeAds(){
   const MNA=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const fmtI=v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':Num(v);
   const rc=v=>v>=5?'roi-good':v>=3.5?'roi-warn':'roi-bad';
-  const g=S.adsGrain;
+  // When adsGrain==='all', auto-follow the main period selector
+  let g=S.adsGrain;
+  let adsMonth=S.adsMonth, adsDate=S.adsDate, adsDateStart=S.adsDateStart, adsDateEnd=S.adsDateEnd;
+  if(g==='all'){
+    if(S.grain==='monthly'&&S.selectedMonth){g='monthly';adsMonth=S.selectedMonth;}
+    else if(S.grain==='daily'&&S.selectedDate){g='daily';adsDate=S.selectedDate;}
+    else if(S.grain==='custom'&&S.customStart&&S.customEnd){g='custom';adsDateStart=S.customStart;adsDateEnd=S.customEnd;}
+  }
   // Helper: is a monthly adArr entry within the custom range?
   const inCustom=r=>{
-    if(!S.adsDateStart||!S.adsDateEnd) return true;
-    const[sy,sm]=S.adsDateStart.split('-').map(Number);
-    const[ey,em]=S.adsDateEnd.split('-').map(Number);
+    if(!adsDateStart||!adsDateEnd) return true;
+    const[sy,sm]=adsDateStart.split('-').map(Number);
+    const[ey,em]=adsDateEnd.split('-').map(Number);
     const ri=MNA.indexOf(r.m),ry=r.year||2026;
     const rn=ry*12+ri,sn=sy*12+(sm-1),en=ey*12+(em-1);
     return rn>=sn&&rn<=en;
@@ -1120,13 +1127,13 @@ function renderShopeeAds(){
   // Subtitle
   const sub=document.getElementById('shopeeAdsSub');
   if(sub){
-    if(g==='monthly'&&S.adsMonth) sub.textContent=`${MNA[S.adsMonth.month]} ${S.adsMonth.year} — Daily`;
-    else if(g==='custom'&&S.adsDateStart&&S.adsDateEnd){
+    if(g==='monthly'&&adsMonth) sub.textContent=`${MNA[adsMonth.month]} ${adsMonth.year} — Daily`;
+    else if(g==='custom'&&adsDateStart&&adsDateEnd){
       const fmt=v=>{const[y,m]=v.split('-');return MNA[parseInt(m)-1]+' '+y;};
-      sub.textContent=`${fmt(S.adsDateStart)} → ${fmt(S.adsDateEnd)}`;
+      sub.textContent=`${fmt(adsDateStart)} → ${fmt(adsDateEnd)}`;
     }
-    else if(g==='daily'&&S.adsDate){
-      const[dy,dmo,dd]=S.adsDate.split('-');
+    else if(g==='daily'&&adsDate){
+      const[dy,dmo,dd]=adsDate.split('-');
       sub.textContent=`${dd} ${MNA[parseInt(dmo)-1]} ${dy}`;
     }
     else if(adArr.length) sub.textContent=`${adArr[0].m} ${adArr[0].year||''} – ${adArr[adArr.length-1].m} ${adArr[adArr.length-1].year||''}`;
@@ -1135,9 +1142,9 @@ function renderShopeeAds(){
 
   // TAB 0 — Summary
   {
-    if(g==='monthly'&&S.adsMonth){
+    if(g==='monthly'&&adsMonth){
       // Accordion: one aggregate row per source, click to expand daily rows
-      const{month,year}=S.adsMonth;
+      const{month,year}=adsMonth;
       const pfx=`${year}-${String(month+1).padStart(2,'0')}-`;
       const srcNames=D.shopee.adsSrcOrder||[];
       const allDays=Object.values(D.shopee.adsDailyByDate||{}).filter(r=>r.date.startsWith(pfx)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -1213,9 +1220,9 @@ function renderShopeeAds(){
     } else {
       // Flat table for all/custom/daily grains
       let rows=[],isDateRows=false;
-      if(g==='daily'&&S.adsDate){
+      if(g==='daily'&&adsDate){
         isDateRows=true;
-        const r=(D.shopee.adsDailyByDate||{})[S.adsDate];
+        const r=(D.shopee.adsDailyByDate||{})[adsDate];
         if(r) rows=[r];
       } else if(g==='custom'){
         rows=adArr.filter(inCustom);
@@ -1264,15 +1271,15 @@ function renderShopeeAds(){
   // TAB 1 — By Source
   {
     let srcs=[];
-    if(g==='monthly'&&S.adsMonth){
-      const key=MNA[S.adsMonth.month]+S.adsMonth.year;
+    if(g==='monthly'&&adsMonth){
+      const key=MNA[adsMonth.month]+adsMonth.year;
       srcs=aggSrcs([key]);
-    } else if(g==='daily'&&S.adsDate){
+    } else if(g==='daily'&&adsDate){
       // Build per-source snapshot for this specific date
       const srcData=D.shopee.adsDailySrc||{};
       const seenD={};
       Object.entries(srcData).forEach(([src,days])=>{
-        const r=days[S.adsDate]; if(!r) return;
+        const r=days[adsDate]; if(!r) return;
         seenD[src]={src,s:r.s,imp:r.imp,o:r.o,exp:r.exp,roas:r.roas};
       });
       srcs=Object.values(seenD).sort((a,b)=>b.s-a.s);
