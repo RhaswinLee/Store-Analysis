@@ -24,8 +24,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-/* SIDEBAR */
-.sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;overflow-y:auto}
+/* SIDEBAR DRAWER */
+.sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:200;overflow-y:auto;transform:translateX(-220px);transition:transform .22s cubic-bezier(.4,0,.2,1);box-shadow:none}
+.sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.12)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:199;backdrop-filter:blur(1px)}
+.sb-overlay.show{display:block}
 .sb-brand{padding:18px 16px 14px;border-bottom:1px solid var(--border-sub)}
 .sb-logo{display:flex;align-items:center;gap:10px}
 .sb-icon{width:32px;height:32px;background:linear-gradient(135deg,#f97316,#f43f5e);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff;letter-spacing:-1px}
@@ -42,9 +45,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .sb-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
 .sb-uinfo p{font-size:12px;font-weight:600}
 .sb-uinfo span{font-size:10px;color:var(--t3)}
+/* Menu toggle button */
+.menu-btn{width:32px;height:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4.5px;cursor:pointer;border:none;background:transparent;border-radius:6px;flex-shrink:0;padding:0}
+.menu-btn:hover{background:var(--bg)}
+.menu-btn span{width:18px;height:2px;background:var(--t2);border-radius:2px;transition:all .2s}
 
-/* MAIN */
-.main{margin-left:220px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+/* MAIN — full width, no left offset */
+.main{margin-left:0;flex:1;display:flex;flex-direction:column;min-height:100vh;width:100%}
 
 /* SYNC BANNER */
 .sync-banner{background:var(--surface);border-bottom:1px solid var(--border-sub);padding:7px 22px;display:flex;align-items:center;gap:10px;font-size:11px}
@@ -272,8 +279,11 @@ tr:hover td{background:rgba(0,0,0,.02)}
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
+<!-- SIDEBAR OVERLAY (closes drawer when clicking outside) -->
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR DRAWER -->
+<aside class="sidebar" id="sidebar">
   <div class="sb-brand">
     <div class="sb-logo">
       <div class="sb-icon">HY</div>
@@ -320,6 +330,9 @@ tr:hover td{background:rgba(0,0,0,.02)}
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleSidebar()" title="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <span class="topbar-title" id="pageTitle">Performance Overview</span>
     </div>
     <div class="ptabs" id="ptabs">
@@ -2375,6 +2388,17 @@ function renderPromos(){
 }
 
 /* ─── NAV ─── */
+// ── Sidebar drawer ──
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sbOverlay');
+  const isOpen=sb.classList.contains('open');
+  if(isOpen){closeSidebar();}else{sb.classList.add('open');ov.classList.add('show');}
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('show');
+}
 function showPanel(name){
   S.nav=name;
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -2542,7 +2566,7 @@ function applyCustom(){} // legacy stub
 
 /* ─── SIDEBAR NAV ─── */
 document.querySelectorAll('.sb-item').forEach(i=>{
-  i.addEventListener('click',()=>showPanel(i.dataset.nav));
+  i.addEventListener('click',()=>{showPanel(i.dataset.nav);closeSidebar();});
 });
 
 /* ─── GOOGLE DRIVE SYNC ─── */
