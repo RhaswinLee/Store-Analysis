@@ -1186,7 +1186,7 @@ function renderShopeeAds(){
       if(!allDays.length){
         const _totDates=Object.keys(D.shopee.adsDailyByDate||{}).length;
         const _totSrcs=(D.shopee.adsSrcOrder||[]).length;
-        const _log=(window._adsParseLog||[]).slice(-8).join('<br>');
+        const _log=(window._adsParseLog||[]).slice(-15).join('<br>');
         const _dbg=_totDates>0
           ? `${_totDates} dates stored (${_totSrcs} sources) — select different month or re-sync`
           : `0 dates parsed — sync log below`;
@@ -2582,7 +2582,7 @@ const PLAT_S = {
 
 // ── Cache helpers — persist parsed data across sessions ──
 const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
-const CACHE_VER=3; // Bump when adding new parsed fields to force re-sync of old caches
+const CACHE_VER=4; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -2913,8 +2913,10 @@ function extractExtraSheets(wb,platform,fname){
   window._adsParseLog.push(`FILE: ${fname} | sheets: ${wb.SheetNames.join(' · ')}`);
   for(const sn of wb.SheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
-    // Skip primary revenue/product sheets already handled
-    if(/confirmedorder|placedorder|topperforming/i.test(sn)){console.log(`[AdsDebug] SKIP "${sn}"`);continue;}
+    console.log(`[AdsDebug] SHEET: "${sn}" sl="${sl}"`);
+
+    // Skip primary revenue/product sheets already handled (use sl for robustness)
+    if(sl==='confirmedorder'||sl==='placedorder'||/topperforming/i.test(sn)){continue;}
 
     // ── Traffic Sources (Confirmed Order) → Sales Channel Mix ──
     if(/traffic.*source/i.test(sn)&&/confirm/i.test(sn)){
@@ -3006,8 +3008,8 @@ function extractExtraSheets(wb,platform,fname){
     }
 
     // ── Source Contribution (Confirmed Order) → daily Shopee Ads data (total + per-source) ──
-    // Match against both raw name and normalized (handles invisible chars / encoding variations)
-    if((/source.*contribution/i.test(sn)||/source.*contribution/i.test(sl))&&(/confirm/i.test(sn)||/confirm/i.test(sl))){
+    // Use sl (normalized, no spaces) to reliably match "confirmedorder" regardless of spacing
+    if(sl.startsWith('sourcecontribution')&&sl.includes('confirm')){
       // Use raw:true so date serials come through as numbers, not locale-formatted strings
       const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
       window._adsParseLog.push(`SRC_CONTRIB FOUND: "${sn}" → ${rawRows.length} rows`);
