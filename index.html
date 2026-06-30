@@ -460,7 +460,6 @@ tr:hover td{background:rgba(0,0,0,.02)}
               <button class="ads-grain active" data-ag="all" onclick="setAdsGrain('all')">Auto</button>
               <button class="ads-grain" data-ag="monthly" onclick="setAdsGrain('monthly')">By Month</button>
               <button class="ads-grain" data-ag="custom" onclick="setAdsGrain('custom')">Custom</button>
-              <button class="ads-grain" data-ag="daily" onclick="setAdsGrain('daily')">Daily</button>
             </div>
             <div style="display:flex;gap:4px" id="shopeeAdsTabRow">
               <button class="ads-tab active" onclick="switchAdsTab(0)">Summary</button>
@@ -2582,7 +2581,7 @@ const PLAT_S = {
 
 // ── Cache helpers — persist parsed data across sessions ──
 const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
-const CACHE_VER=4; // Bump when adding new parsed fields to force re-sync of old caches
+const CACHE_VER=5; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -3009,12 +3008,15 @@ function extractExtraSheets(wb,platform,fname){
 
     // ── Source Contribution (Confirmed Order) → daily Shopee Ads data (total + per-source) ──
     // Use sl (normalized, no spaces) to reliably match "confirmedorder" regardless of spacing
+    if(sl.includes('source')&&sl.includes('contribution')){
+      window._adsParseLog.push(`SC_CAND: "${sn.slice(0,40)}" conf=${sl.includes('confirm')}`);
+    }
     if(sl.startsWith('sourcecontribution')&&sl.includes('confirm')){
       // Use raw:true so date serials come through as numbers, not locale-formatted strings
       const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
-      window._adsParseLog.push(`SRC_CONTRIB FOUND: "${sn}" → ${rawRows.length} rows`);
+      window._adsParseLog.push(`SRC_FOUND: rows=${rawRows.length} sn="${sn.slice(0,30)}"`);
       console.log(`[AdsDebug] Source Contribution sheet found: "${sn}" → ${rawRows.length} rows`);
-      if(!rawRows||rawRows.length<2){window._adsParseLog.push('SKIP: sheet has <2 rows');console.log('[AdsDebug] Sheet has <2 rows, skipping');continue;}
+      if(!rawRows||rawRows.length<2){window._adsParseLog.push('SKIP: <2 rows');continue;}
       const numC=v=>{
         if(typeof v==='number') return v;
         return parseFloat(String(v||'').replace(/[,$%\s]/g,''))||0;
@@ -3037,15 +3039,24 @@ function extractExtraSheets(wb,platform,fname){
         if(m2){const yr=m2[3].length===2?2000+parseInt(m2[3]):parseInt(m2[3]);return `${yr}-${m2[1].padStart(2,'0')}-${m2[2].padStart(2,'0')}`;}
         return null;
       };
+      // Find exact row index and cell value where "shopee" appears, for diagnostics
+      const shopeeRowIdx=rawRows.findIndex(r=>r&&Array.isArray(r)&&r.some(c=>{const cc=String(c||'');return cc.toLowerCase().includes('shopee');}));
+      if(shopeeRowIdx>=0){
+        const sv=rawRows[shopeeRowIdx];
+        const hits=sv.map((c,i)=>String(c||'').trim().length?`[${i}]="${String(c).slice(0,15)}"`:null).filter(Boolean).join(' ');
+        window._adsParseLog.push(`SHOPEE_ROW ${shopeeRowIdx}: ${hits.slice(0,80)}`);
+      } else {
+        window._adsParseLog.push(`SHOPEE_ROW: not found in ${rawRows.length} rows`);
+      }
       let inShopeeAds=false,curSrc=null,dataCol=0,parsedDays=0;
       for(const row of rawRows){
         if(!inShopeeAds){
-          for(let ci=0;ci<Math.min(3,row.length);ci++){
-            const cell=String(row[ci]||'').trim();
-            if(/^shopee ads$/i.test(cell)){
+          // Search ALL columns; normalize non-breaking spaces before matching
+          for(let ci=0;ci<row.length;ci++){
+            const cell=String(row[ci]||'').split('').map(c=>c.charCodeAt(0)>126?' ':c).join('').trim();
+            if(/^shopee\s*ads$/i.test(cell)){
               inShopeeAds=true;dataCol=ci;curSrc=null;
-              window._adsParseLog.push(`SHOPEE ADS HEADER found at dataCol=${ci}`);
-              console.log(`[AdsDebug] Found "Shopee Ads" section at dataCol=${ci}`);
+              window._adsParseLog.push(`SHOPEE ADS @ ci=${ci} row=${rawRows.indexOf(row)}`);
               break;
             }
           }
