@@ -1361,22 +1361,17 @@ function renderShopeeAds(){
       :`<div style="color:var(--t3);font-size:11px;padding:20px;text-align:center">No source data for this period</div>`;
   }
 
-  // TAB 2 — ROAS/Expense trend chart (always all-time)
+  // TAB 2 — ROAS trend chart (all-time)
   mkChart('shopeeRoiChart',{type:'line',data:{
     labels:adArr.map(r=>r.m+(r.year===2025?" '25":" '26")),
     datasets:[
       {label:'ROAS',data:adArr.map(r=>r.roas),borderColor:'#3fb950',borderWidth:2.5,pointRadius:4,pointBackgroundColor:adArr.map(r=>r.roas>=5?'#3fb950':r.roas>=3.5?'#f59e0b':'#f85149'),tension:.4,yAxisID:'y'},
-      {label:'Expense (RM)',data:adArr.map(r=>r.exp),borderColor:'#6366f1',borderWidth:1.5,borderDash:[3,2],pointRadius:2,tension:.4,yAxisID:'y2'},
     ]
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
-      if(c.dataset.label==='ROAS') return ` ROAS: ${c.raw}x`;
-      return ` Expense: RM${Math.round(c.raw).toLocaleString()}`;
-    }}}},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ROAS: ${(+c.raw).toFixed(2)}x`}}},
     scales:{
       x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>v+'x'},title:{display:true,text:'ROAS',font:{size:9}}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>(+v).toFixed(1)+'x'},title:{display:true,text:'ROAS',font:{size:9}}},
     }}});
 }
 function switchAdsTab(idx){
