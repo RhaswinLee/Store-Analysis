@@ -2581,7 +2581,7 @@ const PLAT_S = {
 
 // ── Cache helpers — persist parsed data across sessions ──
 const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
-const CACHE_VER=5; // Bump when adding new parsed fields to force re-sync of old caches
+const CACHE_VER=6; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -3007,11 +3007,12 @@ function extractExtraSheets(wb,platform,fname){
     }
 
     // ── Source Contribution (Confirmed Order) → daily Shopee Ads data (total + per-source) ──
-    // Use sl (normalized, no spaces) to reliably match "confirmedorder" regardless of spacing
+    // Exclude placed/paid order variants — any Source Contribution that is NOT placed/paid is confirmed
+    // Using negative check because "confirmed" may use non-ASCII chars in Shopee XLSX exports
     if(sl.includes('source')&&sl.includes('contribution')){
-      window._adsParseLog.push(`SC_CAND: "${sn.slice(0,40)}" conf=${sl.includes('confirm')}`);
+      window._adsParseLog.push(`SC_CAND: "${sn.slice(0,40)}" placed=${sl.includes('place')} paid=${sl.includes('paid')}`);
     }
-    if(sl.startsWith('sourcecontribution')&&sl.includes('confirm')){
+    if(sl.startsWith('sourcecontribution')&&!sl.includes('place')&&!sl.includes('paid')){
       // Use raw:true so date serials come through as numbers, not locale-formatted strings
       const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
       window._adsParseLog.push(`SRC_FOUND: rows=${rawRows.length} sn="${sn.slice(0,30)}"`);
