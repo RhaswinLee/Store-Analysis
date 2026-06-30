@@ -1201,6 +1201,12 @@ function renderShopeeAds(){
           const tS=days.reduce((a,r)=>a+r.s,0),tImp=days.reduce((a,r)=>a+r.imp,0),tO=days.reduce((a,r)=>a+r.o,0),tExp=days.reduce((a,r)=>a+r.exp,0);
           return{src,i,days,tS,tImp,tO,tExp,roas:tExp>0?+(tS/tExp).toFixed(2):0};
         }).filter(d=>d.tS>0||d.tExp>0);
+        // Sort: "Others" always last, rest by GMV descending
+        srcData.sort((a,b)=>{
+          if(/^others$/i.test(a.src)) return 1;
+          if(/^others$/i.test(b.src)) return -1;
+          return b.tS-a.tS;
+        });
         const gS=allDays.reduce((a,r)=>a+r.s,0),gImp=allDays.reduce((a,r)=>a+r.imp,0),gO=allDays.reduce((a,r)=>a+r.o,0),gExp=allDays.reduce((a,r)=>a+r.exp,0);
         const gRoas=gExp>0?+(gS/gExp).toFixed(2):0;
         const nS=srcData.reduce((a,d)=>a+d.tS,0),nImp=srcData.reduce((a,d)=>a+d.tImp,0),nO=srcData.reduce((a,d)=>a+d.tO,0),nExp=srcData.reduce((a,d)=>a+d.tExp,0);
