@@ -434,8 +434,14 @@ tr:hover td{background:rgba(0,0,0,.02)}
       </div>
       <div class="cg cg-2">
         <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Buyers Composition</div><div class="cc-sub">New vs Existing 2026</div></div></div>
-          <div class="buyer-list" id="buyerList"></div>
+          <div class="cc-head"><div><div class="cc-title">Buyers Composition</div><div class="cc-sub" id="buyersCompSub">—</div></div>
+            <div style="display:flex;gap:2px;margin-left:auto">
+              <button class="ads-tab active" id="bcTab0" onclick="switchBuyersTab(0)">Type</button>
+              <button class="ads-tab" id="bcTab1" onclick="switchBuyersTab(1)">Price</button>
+              <button class="ads-tab" id="bcTab2" onclick="switchBuyersTab(2)">Category</button>
+            </div>
+          </div>
+          <div id="buyerList" style="overflow-x:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub">Feb–Mar 2026</div></div></div>
@@ -888,7 +894,7 @@ tr:hover td{background:rgba(0,0,0,.02)}
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
@@ -1043,6 +1049,42 @@ function toggleAdsExpand(idx){
   if(S.adsExpanded.has(src)) S.adsExpanded.delete(src); else S.adsExpanded.add(src);
   renderShopeeAds();
 }
+// ── Buyers Composition tabs ──
+let _buyersTab=0;
+function switchBuyersTab(idx){
+  _buyersTab=idx;
+  [0,1,2].forEach(i=>document.getElementById('bcTab'+i).classList.toggle('active',i===idx));
+  renderBuyersComp(idx);
+}
+function renderBuyersComp(idx){
+  const bl=document.getElementById('buyerList');
+  const comp=D.shopee.composition;
+  if(!comp){bl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px 0">No data — sync a sales_composition file</div>';return;}
+  document.getElementById('buyersCompSub').textContent=comp.month||'';
+  const fmtN=v=>v>=1000?(v/1000).toFixed(1)+'k':String(Math.round(v));
+  const fmtRM=v=>'RM'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0));
+  const fmtP=v=>v.toFixed(2)+'%';
+  const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${c}</th>`).join('')}</tr>`;
+  const td=(cells,bold=false)=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}${bold?'font-weight:700;':''}color:var(--t1)">${c}</td>`).join('')}</tr>`;
+  const tbl=(head,rows)=>`<table style="width:100%;border-collapse:collapse;margin-top:6px">${head}${rows}</table>`;
+  if(idx===0){
+    // Type of Buyers
+    const head=th(['Type','Buyers','Buyers%','Sales','Sales%','Conv%']);
+    const rows=comp.typeOfBuyers.map(r=>td([r.type,fmtN(r.buyers),fmtP(r.buyersPct),fmtRM(r.sales),fmtP(r.salesPct),fmtP(r.cr)])).join('');
+    bl.innerHTML=tbl(head,rows);
+  } else if(idx===1){
+    // Price Range
+    const head=th(['Price (MYR)','Buyers','Buyers%','Sales','Conv%']);
+    const rows=comp.priceRange.map(r=>td([r.range,fmtN(r.buyers),fmtP(r.buyersPct),fmtRM(r.sales),fmtP(r.cr)])).join('');
+    bl.innerHTML=tbl(head,rows);
+  } else {
+    // Sub-Category
+    const head=th(['Category','Sub-Category','Buyers','Sales','Sales%','Conv%']);
+    const rows=comp.subCategory.map(r=>td([r.category,r.subCategory,fmtN(r.buyers),fmtRM(r.sales),fmtP(r.salesPct),fmtP(r.cr)])).join('');
+    bl.innerHTML=tbl(head,rows);
+  }
+}
+
 function setAdsGrain(grain){
   S.adsGrain=grain;
   S.adsSrc='all'; S.adsExpanded=new Set();
@@ -1736,22 +1778,7 @@ function renderShopee(){
   renderShopeeAds();
 
   // Buyers composition
-  const bl=document.getElementById('buyerList');
-  bl.innerHTML=D.shopee.buyers.map(b=>`
-    <div class="buyer-row">
-      <div class="buyer-meta">
-        <span>${b.m} 2026</span>
-        <span style="color:var(--t1);font-weight:700">${Num(b.nb+b.eb)} buyers</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:4px">
-        <span>New ${b.np.toFixed(1)}% (${Num(b.nb)})</span>
-        <span>Existing ${b.ep.toFixed(1)}% (${Num(b.eb)})</span>
-      </div>
-      <div class="buyer-track" style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex">
-        <div class="b-new" style="width:${b.np}%"></div>
-        <div class="b-ex" style="width:${b.ep}%"></div>
-      </div>
-    </div>`).join('');
+  renderBuyersComp(0);
 
   // Ads table
   document.getElementById('shopeeAdsTbl').innerHTML=adArr.map(r=>{
@@ -2581,8 +2608,8 @@ const PLAT_S = {
 };
 
 // ── Cache helpers — persist parsed data across sessions ──
-const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily'];
-const CACHE_VER=6; // Bump when adding new parsed fields to force re-sync of old caches
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','camps26','camps25','breakdown','affiliate','ads','daily','composition'];
+const CACHE_VER=7; // Bump when adding new parsed fields to force re-sync of old caches
 function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -2911,6 +2938,46 @@ function extractExtraSheets(wb,platform,fname){
   console.log(`[AdsDebug] extractExtraSheets: file="${fname}" sheets=`, wb.SheetNames);
   if(!window._adsParseLog) window._adsParseLog=[];
   window._adsParseLog.push(`FILE: ${fname} | sheets: ${wb.SheetNames.join(' · ')}`);
+
+  // ── Sales Composition file → Buyers Composition card ──
+  if(/sales.?composition/i.test(fname)){
+    const csn=wb.SheetNames.find(s=>s.toLowerCase().replace(/\s/g,'').includes('confirmed'));
+    if(csn){
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[csn],{header:1,raw:false,defval:''});
+      const numC=v=>parseFloat(String(v||'').replace(/[,%\s]/g,''))||0;
+      const str=v=>String(v||'').trim();
+      // Detect table starts by scanning for known header keywords
+      let typeOfBuyers=[],priceRange=[],subCategory=[];
+      let mode=null;
+      for(let ri=0;ri<rows.length;ri++){
+        const row=rows[ri];
+        const c0=str(row[0]).toLowerCase();
+        // Detect section headers
+        if(c0.includes('type of buyer')){mode='type';continue;}
+        if(c0.includes('price range')){mode='price';continue;}
+        if(c0.includes('shopee category')&&str(row[1]).toLowerCase().includes('sub')){mode='subcat';continue;}
+        if(c0.includes('shopee category')&&!str(row[1]).toLowerCase().includes('sub')){mode=null;continue;}
+        // Skip empty/header rows without data
+        if(!c0||numC(row[1])===0&&numC(row[2])===0) continue;
+        if(mode==='type'){
+          typeOfBuyers.push({type:str(row[0]),buyers:numC(row[1]),buyersPct:numC(row[2]),sales:numC(row[3]),salesPct:numC(row[4]),cr:numC(row[5])});
+        } else if(mode==='price'){
+          priceRange.push({range:str(row[0]),buyers:numC(row[1]),buyersPct:numC(row[2]),sales:numC(row[3]),cr:numC(row[4])});
+        } else if(mode==='subcat'){
+          subCategory.push({category:str(row[0]),subCategory:str(row[1]),buyers:numC(row[2]),sales:numC(row[3]),salesPct:numC(row[4]),cr:numC(row[5])});
+        }
+      }
+      // Extract month label from filename e.g. sales_composition_20260501-20260531.xlsx
+      const mMatch=fname.match(/(\d{4})(\d{2})\d{2}-\d{8}/);
+      const mLabel=mMatch?((['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(mMatch[2])-1]+' '+mMatch[1]):'';
+      if(typeOfBuyers.length||priceRange.length||subCategory.length){
+        D[dKey].composition={month:mLabel,typeOfBuyers,priceRange,subCategory};
+        syncLog(`  [${platform}] Sales Composition "${csn}": ${typeOfBuyers.length} buyer types, ${priceRange.length} price ranges, ${subCategory.length} sub-categories`);
+      }
+    }
+    return;
+  }
+
   for(const sn of wb.SheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
     console.log(`[AdsDebug] SHEET: "${sn}" sl="${sl}"`);
