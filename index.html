@@ -2753,7 +2753,14 @@ async function loadPlatformFolder(platform,folderId,folderName){
       // Files directly in connected folder — apply filename filter
       const rev=filterRevFiles(loadables,platform);
       toLoad=rev.length?rev:loadables;
-      syncLog(`[${platform}] Found ${toLoad.length} revenue file(s) in "${folderName}"`);
+      // Non-revenue xlsx files get scanned for extra sheets (sales_composition, Source Contribution, etc.)
+      if(rev.length){
+        PLAT_S[platform]._extraXlsx=loadables.filter(f=>{
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          return isXlsx&&!toLoad.find(t=>t.id===f.id);
+        });
+      }
+      syncLog(`[${platform}] Found ${toLoad.length} revenue file(s) in "${folderName}"${PLAT_S[platform]._extraXlsx?.length?`, ${PLAT_S[platform]._extraXlsx.length} extra xlsx to scan`:''}`);
     } else if(subfolders.length>0){
       // Prefer "Sales Data" sub-folder for revenue data
       const salesFolder=subfolders.find(f=>f.name.toLowerCase()==='sales data');
