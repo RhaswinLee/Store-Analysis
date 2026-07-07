@@ -349,6 +349,8 @@ tr:hover td{background:rgba(0,0,0,.02)}
       <div class="period-dd" id="periodDd">
         <div class="pd-left">
           <div class="pd-opt active" data-opt="all">All Time</div>
+          <div class="pd-opt" data-opt="y2026">Year 2026 (YTD)</div>
+          <div class="pd-opt" data-opt="y2025">Year 2025</div>
           <div class="pd-opt" data-opt="today">Today</div>
           <div class="pd-opt" data-opt="yesterday">Yesterday</div>
           <div class="pd-opt" data-opt="7d">Last 7 Days</div>
@@ -943,6 +945,8 @@ const S = {
 function filteredShopee(){
   const all=[...D.shopee.m2025,...D.shopee.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='y2025') return D.shopee.m2025;
+  if(S.grain==='y2026') return D.shopee.m2026;
   if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopee.m2026.slice(-1);
   if(S.grain==='daily'&&S.selectedDate){
     // Return the aggregated monthly record for the selected date's month (for KPI context)
@@ -977,6 +981,8 @@ function filteredShopee(){
 function filteredTT(){
   const all=[...D.tiktok.m2025,...D.tiktok.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='y2025') return D.tiktok.m2025;
+  if(S.grain==='y2026') return D.tiktok.m2026;
   if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktok.m2026.slice(-1);
   if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -991,6 +997,8 @@ function filteredTT(){
 function filteredShopeeSG(){
   const all=[...D.shopeeSG.m2025,...D.shopeeSG.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='y2025') return D.shopeeSG.m2025;
+  if(S.grain==='y2026') return D.shopeeSG.m2026;
   if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopeeSG.m2026.slice(-1);
   if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1005,6 +1013,8 @@ function filteredShopeeSG(){
 function filteredTiktokSG(){
   const all=[...D.tiktokSG.m2025,...D.tiktokSG.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
+  if(S.grain==='y2025') return D.tiktokSG.m2025;
+  if(S.grain==='y2026') return D.tiktokSG.m2026;
   if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktokSG.m2026.slice(-1);
   if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1027,6 +1037,9 @@ function getPrevShopee(){
     const r=src.find(x=>x.m===mNames[pm]);
     return r?[r]:[];
   }
+  // For year views, compare against the other year
+  if(S.grain==='y2026') return D.shopee.m2025;
+  if(S.grain==='y2025') return [];
   const sf=filteredShopee();
   return sf.length>=2?[sf[sf.length-2]]:[];
 }
@@ -2583,7 +2596,7 @@ document.querySelectorAll('.pd-opt').forEach(opt=>{
     if(o==='monthly'||o==='custom'||o==='daily'){showPdSub(o);setPdActive(o);return;}
     setPdActive(o);
     S.grain=o;
-    const labels={all:'All Time',today:'Today',yesterday:'Yesterday','7d':'Last 7 Days','30d':'Last 30 Days'};
+    const labels={all:'All Time',y2025:'Year 2025',y2026:'Year 2026 (YTD)',today:'Today',yesterday:'Yesterday','7d':'Last 7 Days','30d':'Last 30 Days'};
     document.getElementById('periodLabel').textContent=labels[o]||o;
     renderKPIs(); showPanel(S.nav); closePeriod();
   });
