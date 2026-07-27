@@ -1794,7 +1794,7 @@ function renderShopee(){
   renderBuyersComp(0);
 
   // Ads table
-  document.getElementById('shopeeAdsTbl').innerHTML=adArr.map(r=>{
+  document.getElementById('shopeeAdsTbl').innerHTML=D.shopee.ads.map(r=>{
     const rc=r.roas>=5?'roi-good':r.roas>=3.5?'roi-warn':'roi-bad';
     const impStr=r.imp>=1000000?(r.imp/1000000).toFixed(1)+'M':r.imp>=1000?(r.imp/1000).toFixed(1)+'k':Num(r.imp);
     return `<tr>
@@ -2769,7 +2769,7 @@ async function loadPlatformFolder(platform,folderId,folderName){
       // Non-revenue xlsx files get scanned for extra sheets (sales_composition, Source Contribution, etc.)
       if(rev.length){
         PLAT_S[platform]._extraXlsx=loadables.filter(f=>{
-          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
           return isXlsx&&!toLoad.find(t=>t.id===f.id);
         });
       }
@@ -2784,7 +2784,7 @@ async function loadPlatformFolder(platform,folderId,folderName){
         toLoad=rev.length?rev:sfl;
         // Non-revenue xlsx files also get scanned for extra sheets (Source Contribution, etc.)
         PLAT_S[platform]._extraXlsx=sfl.filter(f=>{
-          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
           return isXlsx&&!toLoad.find(t=>t.id===f.id);
         });
         syncLog(`  → ${toLoad.length} revenue file(s) to load${PLAT_S[platform]._extraXlsx.length?`, ${PLAT_S[platform]._extraXlsx.length} extra xlsx to scan`:''}`)
@@ -2841,10 +2841,11 @@ const FOLDER_MIME='application/vnd.google-apps.folder';
 const SHEET_MIME='application/vnd.google-apps.spreadsheet';
 const XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const CSV_MIME='text/csv';
+const XLS_MIME='application/vnd.ms-excel';
 
 function isLoadable(f){
-  return f.mimeType===SHEET_MIME||f.mimeType===XLSX_MIME||f.mimeType===CSV_MIME
-    ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv');
+  return f.mimeType===SHEET_MIME||f.mimeType===XLSX_MIME||f.mimeType===CSV_MIME||f.mimeType===XLS_MIME
+    ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv')||f.name.toLowerCase().endsWith('.xls');
 }
 
 // Extract month abbreviation from filename
@@ -3588,7 +3589,7 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
         const y26=m2026.map(m=>m.m).join(',');
         syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]${daily.length?` · ${daily.length}d`:''}`);}
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
-      const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+      const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
       if(isXlsx){
         try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
         catch(e){syncLog(`  ⚠ Extra-sheets parse error in "${f.name}": ${e.message}`);}
