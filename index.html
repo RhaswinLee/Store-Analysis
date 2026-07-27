@@ -1101,16 +1101,19 @@ function renderBuyersComp(idx){
 function setAdsGrain(grain){
   S.adsGrain=grain;
   S.adsSrc='all'; S.adsExpanded=new Set();
-  // Default sub-selections from the main period when first switching grain
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ads=D.shopee.ads;
+  // Default sub-selections to the latest month/day with real data, not today's calendar date —
+  // otherwise opening the tab lands on an empty screen whenever this month hasn't synced yet.
   if(grain==='monthly'&&!S.adsMonth)
-    S.adsMonth=S.selectedMonth||{month:new Date().getMonth(),year:new Date().getFullYear()};
-  if(grain==='daily'&&!S.adsDate)
-    S.adsDate=S.selectedDate||new Date().toISOString().slice(0,10);
+    S.adsMonth=S.selectedMonth||(ads.length?{month:MN.indexOf(ads[ads.length-1].m),year:ads[ads.length-1].year||2026}:{month:new Date().getMonth(),year:new Date().getFullYear()});
+  if(grain==='daily'&&!S.adsDate){
+    const dates=Object.keys(D.shopee.adsDailyByDate||{}).sort();
+    S.adsDate=S.selectedDate||dates[dates.length-1]||new Date().toISOString().slice(0,10);
+  }
   if(grain==='custom'&&(!S.adsDateStart||!S.adsDateEnd)){
     if(S.customStart&&S.customEnd){S.adsDateStart=S.customStart;S.adsDateEnd=S.customEnd;}
     else{
-      const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const ads=D.shopee.ads;
       if(ads.length){
         const f=ads[0],l=ads[ads.length-1];
         S.adsDateStart=`${f.year||2026}-${String(MN.indexOf(f.m)+1).padStart(2,'0')}`;
@@ -1172,7 +1175,6 @@ function applyAdsDate(val){
   S.adsSrc='all';
   renderShopeeAds();
 }
-function selectAdsSrc(src){S.adsSrc=src;renderShopeeAds();}
 function renderShopeeAds(){
   // Sync grain button active states and sub-picker visibility
   document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===S.adsGrain));
@@ -1240,14 +1242,13 @@ function renderShopeeAds(){
       if(!allDays.length){
         const _totDates=Object.keys(D.shopee.adsDailyByDate||{}).length;
         const _totSrcs=(D.shopee.adsSrcOrder||[]).length;
-        const _log=(window._adsParseLog||[]).slice(-15).join('<br>');
+        // Full parser trace stays in window._adsParseLog for devtools — never render it, end users don't need SheetJS internals
         const _dbg=_totDates>0
           ? `${_totDates} dates stored (${_totSrcs} sources) — select different month or re-sync`
           : `0 dates parsed — sync log below`;
         el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:16px 20px;text-align:center">
           No daily data for this period<br>
           <span style="font-size:9px;opacity:0.7">${_dbg}</span>
-          ${_log?`<pre style="font-size:8px;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin:8px 0 4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--t2)">${_log}</pre>`:''}
           <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Full Sync Log ↗</button>
         </div>`;
       } else {
@@ -2602,8 +2603,6 @@ document.querySelectorAll('.pd-opt').forEach(opt=>{
   });
 });
 
-function applyCustom(){} // legacy stub
-
 /* ─── SIDEBAR NAV ─── */
 document.querySelectorAll('.sb-item').forEach(i=>{
   i.addEventListener('click',()=>{showPanel(i.dataset.nav);closeSidebar();});
@@ -3674,35 +3673,10 @@ async function loadProductFiles(files,platform){
   if(S.nav==='products') renderProducts();
 }
 
-async function loadSheetById(sheetId,gid='0',name='Sheet',platform='shopee'){
-  syncLog(`[${platform}] Loading sheet "${name}"…`);
-  setPlatformStatus(platform,'fetching','Loading…');
-  try{
-    const rows=await fetchRawRows({id:sheetId,mimeType:SHEET_MIME,name});
-    if(rows.length<2) throw new Error('Sheet is empty or missing data rows.');
-    applyParsedRows(rows,name,sheetId,platform);
-    startAutoRefresh();
-  }catch(e){
-    setPlatformStatus(platform,'error',e.message.slice(0,50));
-    syncLog(`Error: ${e.message}`,true);
-  }
-}
-
-function loadFile(fileId,name,mimeType,platform='shopee'){
-  const f={id:fileId,name,mimeType};
-  setPlatformStatus(platform,'fetching','Loading…');
-  fetchRawRows(f).then(rows=>{
-    applyParsedRows(rows,name,fileId,platform);
-    startAutoRefresh();
-  }).catch(e=>{
-    setPlatformStatus(platform,'error',e.message.slice(0,50));
-    syncLog(`Error: ${e.message}`,true);
-  });
-}
-
 // ── Auto-refresh every 5 min ──
 let _autoRefreshTimer=null;
-function startAutoRefresh(intervalMs=5*60*1000){
+function startAutoRefresh(){
+  const intervalMs=5*60*1000;
   if(_autoRefreshTimer) clearInterval(_autoRefreshTimer);
   _autoRefreshTimer=setInterval(async()=>{
     if(!GS.apiKey) return;
@@ -3741,10 +3715,6 @@ function applyParsedRows(rows,name,fileId,platform='shopee'){
   }
   applyMonths(m2026,m2025,name,fileId,platform);
 }
-
-// Legacy stubs (kept for any lingering references)
-function clearSync(){ disconnectPlatform('shopee'); }
-function doSync(){} function doSyncPanel(){} function parseAndApplyCSV(){} function parseGDriveUrl(){}
 
 /* ─── INIT ─── */
 window.addEventListener('DOMContentLoaded',()=>{
