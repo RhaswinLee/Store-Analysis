@@ -2894,8 +2894,10 @@ function findHeaderRow(rows){
 
 // Download and cache xlsx workbooks (avoids re-downloading the same file)
 const _wbCache={};
+let _dl403=0; // consecutive all-URL 403 failures — Google's per-IP "automated queries" block trips this
 async function fetchXlsxWorkbook(file){
   if(_wbCache[file.id]) return _wbCache[file.id];
+  if(_dl403>=3) throw new Error('Google is rate-limiting downloads from this network — wait ~30 min, then re-sync.');
   if(typeof XLSX==='undefined') throw new Error('SheetJS not loaded — refresh the page.');
   const urls=[
     // /api/download proxies the request server-side — no CORS, no referrer issues
@@ -2911,14 +2913,16 @@ async function fetchXlsxWorkbook(file){
       if(r.ok){ab=await r.arrayBuffer();break;}
       // Non-OK from proxy returns JSON error; direct API also returns JSON
       const ej=await r.json().catch(()=>({}));
-      errors.push(ej.error||ej.message||(ej+'')||('HTTP '+r.status));
+      errors.push(ej.error?.message||ej.error||ej.message||('HTTP '+r.status));
     }catch(e){errors.push(e.message);}
   }
   if(!ab){
+    if(errors.some(e=>/403/.test(String(e)))) _dl403++;
     // Show first non-CORS error for a useful message; fall back to last error
     const meaningful=errors.find(e=>e&&e!=='Failed to fetch'&&!e.includes('NetworkError'));
     throw new Error(`Download failed: ${meaningful||errors.at(-1)||'unknown'}. Ensure the file/folder is shared "Anyone with the link can view".`);
   }
+  _dl403=0;
   const wb=XLSX.read(ab,{type:'array'});
   if(!wb.SheetNames.length) throw new Error('No sheets in xlsx file.');
   _wbCache[file.id]=wb;
@@ -3574,6 +3578,11 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   for(const f of sorted){
     try{
       const rows=await fetchRawRows(f);
+      // Shopee Live exports share column words with shop stats and parse as garbage — skip with a clear message
+      if(rows.slice(0,5).some(r=>Array.isArray(r)&&r.some(c=>/livestream name/i.test(String(c))))){
+        syncLog(`  ⚠ Skipped "${f.name}": Shopee Live report — export "Shop Performance" (shop-stats) instead`);
+        continue;
+      }
       const {m2025,m2026}=rowsToMonths(rows,f.name);
       if(!m2025.length&&!m2026.length){
         const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
