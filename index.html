@@ -566,8 +566,8 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <div class="panel" id="panel-shopee-sg">
       <div class="preferred" style="background:linear-gradient(135deg,rgba(234,108,0,.06),rgba(234,108,0,.02));border-color:rgba(234,108,0,.2)">
         <span style="font-size:20px">🇸🇬</span>
-        <div><strong style="color:var(--shopee)">Shopee Singapore</strong> — Market data in SGD · Q1 2026 performance · Early growth stage</div>
-        <div class="preferred-alert" style="background:var(--shopee-d);color:var(--shopee)">↑ 59.8% QoQ</div>
+        <div><strong style="color:var(--shopee)">Shopee Singapore</strong> — Market data in SGD · Early growth stage</div>
+        <div class="preferred-alert" id="shopeeSgMomBadge" style="background:var(--shopee-d);color:var(--shopee)"></div>
       </div>
       <div class="kpi-grid" id="shopeeSgKpi"></div>
       <div class="kpi-grid" id="shopeeSgMetrics2" style="grid-template-columns:repeat(6,1fr);margin-top:-8px"></div>
@@ -615,8 +615,8 @@ tr:hover td{background:rgba(0,0,0,.02)}
     <div class="panel" id="panel-tiktok-sg">
       <div class="preferred" style="background:linear-gradient(135deg,rgba(225,29,72,.06),rgba(225,29,72,.02));border-color:rgba(225,29,72,.2)">
         <span style="font-size:20px">🇸🇬</span>
-        <div><strong style="color:var(--tiktok)">TikTok Shop Singapore</strong> — Market data in SGD · Q1 2026 performance · Early growth stage</div>
-        <div class="preferred-alert" style="background:var(--tiktok-d);color:var(--tiktok)">↑ 72.6% QoQ</div>
+        <div><strong style="color:var(--tiktok)">TikTok Shop Singapore</strong> — Market data in SGD · Early growth stage</div>
+        <div class="preferred-alert" id="tiktokSgMomBadge" style="background:var(--tiktok-d);color:var(--tiktok)"></div>
       </div>
       <div class="kpi-grid" id="tiktokSgKpi"></div>
       <div class="cg cg-21">
@@ -897,9 +897,9 @@ tr:hover td{background:rgba(0,0,0,.02)}
 ───────────────────────────────────────────── */
 const D = {
   shopee:   { m2026:[], m2025:[], products:[], channels:null, camps25:[], camps26:[], ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null },
-  tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[] },
-  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{} },
-  tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[] },
+  tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[], daily:[] },
+  shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, daily:[] },
+  tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], daily:[] },
   promos:   { monthly:[], vouchers:[], voucherDetail:[], live:[], types:[] },
   products: [],
 };
@@ -941,30 +941,35 @@ const S = {
   adsExpanded:new Set(),// set of expanded source names in monthly accordion
 };
 
-/* ─── FILTERED DATA ─── */
-function filteredShopee(){
-  const all=[...D.shopee.m2025,...D.shopee.m2026];
+/* ─── FILTERED DATA ───
+   One shared implementation for all 4 platforms — was 4 near-duplicate copies where
+   only Shopee MY's had 'daily'/'custom' grain support, so switching the global period
+   picker to Daily or Custom Range on TikTok MY/Shopee SG/TikTok SG silently fell through
+   to full-year data instead of respecting the selected period. */
+function filteredByKey(dKey){
+  const Dp=D[dKey];
+  const all=[...Dp.m2025,...Dp.m2026];
   if(S.grain==='all'||S.grain==='12m') return all;
-  if(S.grain==='y2025') return D.shopee.m2025;
-  if(S.grain==='y2026') return D.shopee.m2026;
-  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopee.m2026.slice(-1);
+  if(S.grain==='y2025') return Dp.m2025;
+  if(S.grain==='y2026') return Dp.m2026;
+  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return Dp.m2026.slice(-1);
   if(S.grain==='daily'&&S.selectedDate){
     // Return the aggregated monthly record for the selected date's month (for KPI context)
     const [y,,mo]=S.selectedDate.split('-').map(Number);
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const src=y===2025?D.shopee.m2025:D.shopee.m2026;
+    const src=y===2025?Dp.m2025:Dp.m2026;
     const r=src.find(x=>x.m===mNames[mo-1]);
     // Return the specific daily record, fall back to monthly if not available
-    const dr=D.shopee.daily.find(x=>x.date===S.selectedDate);
-    return dr?[dr]:r?[r]:D.shopee.m2026.slice(-1);
+    const dr=(Dp.daily||[]).find(x=>x.date===S.selectedDate);
+    return dr?[dr]:r?[r]:Dp.m2026.slice(-1);
   }
   if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const mn=mNames[S.selectedMonth.month];
     const yr=S.selectedMonth.year;
-    const src=yr===2025?D.shopee.m2025:D.shopee.m2026;
+    const src=yr===2025?Dp.m2025:Dp.m2026;
     const r=src.find(x=>x.m===mn);
-    return r?[r]:D.shopee.m2026.slice(-1);
+    return r?[r]:Dp.m2026.slice(-1);
   }
   if(S.grain==='custom'&&S.customStart&&S.customEnd){
     const [sy,sm]=S.customStart.split('-').map(Number);
@@ -972,77 +977,35 @@ function filteredShopee(){
     return all.filter(r=>{
       const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const mi=mNames.indexOf(r.m);
-      const yr=D.shopee.m2025.includes(r)?2025:2026;
+      const yr=Dp.m2025.includes(r)?2025:2026;
       return (yr>sy||(yr===sy&&mi+1>=sm))&&(yr<ey||(yr===ey&&mi+1<=em));
     });
   }
-  return D.shopee.m2026;
+  return Dp.m2026;
 }
-function filteredTT(){
-  const all=[...D.tiktok.m2025,...D.tiktok.m2026];
-  if(S.grain==='all'||S.grain==='12m') return all;
-  if(S.grain==='y2025') return D.tiktok.m2025;
-  if(S.grain==='y2026') return D.tiktok.m2026;
-  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktok.m2026.slice(-1);
-  if(S.grain==='monthly'&&S.selectedMonth){
-    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const mn=mNames[S.selectedMonth.month];
-    const yr=S.selectedMonth.year;
-    const src=yr===2025?D.tiktok.m2025:D.tiktok.m2026;
-    const r=src.find(x=>x.m===mn);
-    return r?[r]:D.tiktok.m2026.slice(-1);
-  }
-  return D.tiktok.m2026;
-}
-function filteredShopeeSG(){
-  const all=[...D.shopeeSG.m2025,...D.shopeeSG.m2026];
-  if(S.grain==='all'||S.grain==='12m') return all;
-  if(S.grain==='y2025') return D.shopeeSG.m2025;
-  if(S.grain==='y2026') return D.shopeeSG.m2026;
-  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.shopeeSG.m2026.slice(-1);
-  if(S.grain==='monthly'&&S.selectedMonth){
-    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const mn=mNames[S.selectedMonth.month];
-    const yr=S.selectedMonth.year;
-    const src=yr===2025?D.shopeeSG.m2025:D.shopeeSG.m2026;
-    const r=src.find(x=>x.m===mn);
-    return r?[r]:D.shopeeSG.m2026.slice(-1);
-  }
-  return D.shopeeSG.m2026;
-}
-function filteredTiktokSG(){
-  const all=[...D.tiktokSG.m2025,...D.tiktokSG.m2026];
-  if(S.grain==='all'||S.grain==='12m') return all;
-  if(S.grain==='y2025') return D.tiktokSG.m2025;
-  if(S.grain==='y2026') return D.tiktokSG.m2026;
-  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return D.tiktokSG.m2026.slice(-1);
-  if(S.grain==='monthly'&&S.selectedMonth){
-    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const mn=mNames[S.selectedMonth.month];
-    const yr=S.selectedMonth.year;
-    const src=yr===2025?D.tiktokSG.m2025:D.tiktokSG.m2026;
-    const r=src.find(x=>x.m===mn);
-    return r?[r]:D.tiktokSG.m2026.slice(-1);
-  }
-  return D.tiktokSG.m2026;
-}
+function filteredShopee(){ return filteredByKey('shopee'); }
+function filteredTT(){ return filteredByKey('tiktok'); }
+function filteredShopeeSG(){ return filteredByKey('shopeeSG'); }
+function filteredTiktokSG(){ return filteredByKey('tiktokSG'); }
 
 /* ─── PREV PERIOD HELPERS ─── */
-function getPrevShopee(){
+function getPrevByKey(dKey){
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const Dp=D[dKey];
   if(S.grain==='monthly'&&S.selectedMonth){
     const{month,year}=S.selectedMonth;
     const pm=month===0?11:month-1, py=month===0?year-1:year;
-    const src=py===2025?D.shopee.m2025:D.shopee.m2026;
+    const src=py===2025?Dp.m2025:Dp.m2026;
     const r=src.find(x=>x.m===mNames[pm]);
     return r?[r]:[];
   }
   // For year views, compare against the other year
-  if(S.grain==='y2026') return D.shopee.m2025;
+  if(S.grain==='y2026') return Dp.m2025;
   if(S.grain==='y2025') return [];
-  const sf=filteredShopee();
-  return sf.length>=2?[sf[sf.length-2]]:[];
+  const f=filteredByKey(dKey);
+  return f.length>=2?[f[f.length-2]]:[];
 }
+function getPrevShopee(){ return getPrevByKey('shopee'); }
 // Returns {ch, dir} for a MoM chip. lowerBetter=true inverts direction logic.
 function momChip(curr,prev,lowerBetter){
   if(!prev||prev===0) return{ch:'—',dir:'up'};
@@ -1101,16 +1064,19 @@ function renderBuyersComp(idx){
 function setAdsGrain(grain){
   S.adsGrain=grain;
   S.adsSrc='all'; S.adsExpanded=new Set();
-  // Default sub-selections from the main period when first switching grain
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const ads=D.shopee.ads;
+  // Default sub-selections to the latest month/day with real data, not today's calendar date —
+  // otherwise opening the tab lands on an empty screen whenever this month hasn't synced yet.
   if(grain==='monthly'&&!S.adsMonth)
-    S.adsMonth=S.selectedMonth||{month:new Date().getMonth(),year:new Date().getFullYear()};
-  if(grain==='daily'&&!S.adsDate)
-    S.adsDate=S.selectedDate||new Date().toISOString().slice(0,10);
+    S.adsMonth=S.selectedMonth||(ads.length?{month:MN.indexOf(ads[ads.length-1].m),year:ads[ads.length-1].year||2026}:{month:new Date().getMonth(),year:new Date().getFullYear()});
+  if(grain==='daily'&&!S.adsDate){
+    const dates=Object.keys(D.shopee.adsDailyByDate||{}).sort();
+    S.adsDate=S.selectedDate||dates[dates.length-1]||new Date().toISOString().slice(0,10);
+  }
   if(grain==='custom'&&(!S.adsDateStart||!S.adsDateEnd)){
     if(S.customStart&&S.customEnd){S.adsDateStart=S.customStart;S.adsDateEnd=S.customEnd;}
     else{
-      const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const ads=D.shopee.ads;
       if(ads.length){
         const f=ads[0],l=ads[ads.length-1];
         S.adsDateStart=`${f.year||2026}-${String(MN.indexOf(f.m)+1).padStart(2,'0')}`;
@@ -1172,7 +1138,6 @@ function applyAdsDate(val){
   S.adsSrc='all';
   renderShopeeAds();
 }
-function selectAdsSrc(src){S.adsSrc=src;renderShopeeAds();}
 function renderShopeeAds(){
   // Sync grain button active states and sub-picker visibility
   document.querySelectorAll('[data-ag]').forEach(b=>b.classList.toggle('active',b.dataset.ag===S.adsGrain));
@@ -1240,14 +1205,13 @@ function renderShopeeAds(){
       if(!allDays.length){
         const _totDates=Object.keys(D.shopee.adsDailyByDate||{}).length;
         const _totSrcs=(D.shopee.adsSrcOrder||[]).length;
-        const _log=(window._adsParseLog||[]).slice(-15).join('<br>');
+        // Full parser trace stays in window._adsParseLog for devtools — never render it, end users don't need SheetJS internals
         const _dbg=_totDates>0
           ? `${_totDates} dates stored (${_totSrcs} sources) — select different month or re-sync`
           : `0 dates parsed — sync log below`;
         el0.innerHTML=`<div style="color:var(--t3);font-size:11px;padding:16px 20px;text-align:center">
           No daily data for this period<br>
           <span style="font-size:9px;opacity:0.7">${_dbg}</span>
-          ${_log?`<pre style="font-size:8px;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;margin:8px 0 4px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--t2)">${_log}</pre>`:''}
           <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px">Full Sync Log ↗</button>
         </div>`;
       } else {
@@ -1444,7 +1408,7 @@ function mkChart(id,cfg){
 /* ─── RENDER KPIs ─── */
 function renderKPIs(){
   const sf=filteredShopee(), tf=filteredTT();
-  const pf=getPrevShopee();
+  const pf=getPrevShopee(), ptf=getPrevByKey('tiktok');
   const sRev=sf.reduce((a,r)=>a+r.s,0), tRev=tf.reduce((a,r)=>a+r.s,0);
   const sOrd=sf.reduce((a,r)=>a+r.o,0), tOrd=tf.reduce((a,r)=>a+r.o,0);
   const sAov=sf.length?sf.reduce((a,r)=>a+r.b,0)/sf.length:0;
@@ -1458,6 +1422,10 @@ function renderKPIs(){
   const pAov=pf.length?pf.reduce((a,r)=>a+r.b,0)/pf.length:0;
   const pCr=pf.length?pf.reduce((a,r)=>a+r.cr,0)/pf.length:0;
   const pVis=pf.length?Math.round(pf.reduce((a,r)=>a+r.v,0)/pf.length):0;
+  const ptRev=ptf.reduce((a,r)=>a+r.s,0);
+  const ptOrd=ptf.reduce((a,r)=>a+r.o,0);
+  const ptAov=ptf.length?ptf.reduce((a,r)=>a+r.b,0)/ptf.length:0;
+  const ptCr=ptf.length?ptf.reduce((a,r)=>a+r.cr,0)/ptf.length:0;
   // MoM chips
   const revMoM=momChip(sRev,pRev,false);
   const ordMoM=momChip(sOrd,pOrd,false);
@@ -1466,11 +1434,17 @@ function renderKPIs(){
   const aovMoM=momChip(sAov,pAov,false);
   const visMoM=momChip(sVis,pVis,false);
   const prevLabel=pf.length?` vs ${pf[0].m}`:'';
+  const tRevMoM=momChip(tRev,ptRev,false);
+  const tOrdMoM=momChip(tOrd,ptOrd,false);
+  const tCrChg=ptCr?(tCr-ptCr).toFixed(2):null;
+  const tCrChip={ch:tCrChg?(parseFloat(tCrChg)>=0?'↑':'↓')+Math.abs(tCrChg)+'%pts MoM':(tf.length>1?'—':'First month'),dir:parseFloat(tCrChg)>=0?'up':'warn'};
+  const tAovMoM=momChip(tAov,ptAov,true);
+  const tPrevLabel=ptf.length?` vs ${ptf[0].m}`:'';
 
   const all=[
     {l:'Total Revenue',v:RMk(sRev+tRev),...momChip(sRev+tRev,pRev,false),sub:'Shopee+TikTok combined',ico:'💰'},
     {l:'Shopee GMV',v:RMk(sRev),...revMoM,sub:`${sf.length}mo avg ${sf.length?RMk(sRev/sf.length):'RM 0'}/mo`,ico:'🛒'},
-    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length}mo`,ico:'🎵'},
+    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length}mo`,ico:'🎵'},
     {l:'Combined Orders',v:Num(sOrd+tOrd),...momChip(sOrd+tOrd,pOrd,false),sub:'All channels',ico:'📦'},
     {l:'Avg Conv. Rate',v:Pct((sCr+tCr)/2),ch:sCr>tCr?'Shopee leads':'TikTok leads',dir:'up',sub:'Platform average',ico:'⚡'},
   ];
@@ -1482,10 +1456,10 @@ function renderKPIs(){
     {l:'Avg Visitors',v:sVis?Num(sVis):'—',...visMoM,sub:`Unique visits${prevLabel}`,ico:'👥'},
   ];
   const tiktok=[
-    {l:'TikTok GMV',v:RMk(tRev),ch:'↑ 8.7%',dir:'up',sub:`${tf.length} months`,ico:'🎵'},
-    {l:'Total Orders',v:Num(tOrd),ch:'↑ 10.2%',dir:'up',sub:'Confirmed orders',ico:'📦'},
-    {l:'Conv. Rate',v:Pct(tCr),ch:'↑ improving',dir:'up',sub:'Mar: 4.94% (best)',ico:'⚡'},
-    {l:'Avg Order Value',v:'RM'+tAov.toFixed(2),ch:'↓ declining',dir:'warn',sub:'Below Shopee AOV',ico:'🎯'},
+    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length} months`,ico:'🎵'},
+    {l:'Total Orders',v:Num(tOrd),...tOrdMoM,sub:`Confirmed orders${tPrevLabel}`,ico:'📦'},
+    {l:'Conv. Rate',v:Pct(tCr),...tCrChip,sub:`Buyer conversion${tPrevLabel}`,ico:'⚡'},
+    {l:'Avg Order Value',v:'RM'+tAov.toFixed(2),...tAovMoM,sub:`vs Shopee RM${sAov.toFixed(2)}`,ico:'🎯'},
     {l:'Affiliate GMV',v:D.tiktok.affiliate&&D.tiktok.affiliate.length?RMk(D.tiktok.affiliate[D.tiktok.affiliate.length-1].gmv||0):'—',ch:'from Drive data',dir:'up',sub:'Connect TikTok MY folder',ico:'🤝'},
   ];
 
@@ -1794,7 +1768,7 @@ function renderShopee(){
   renderBuyersComp(0);
 
   // Ads table
-  document.getElementById('shopeeAdsTbl').innerHTML=adArr.map(r=>{
+  document.getElementById('shopeeAdsTbl').innerHTML=D.shopee.ads.map(r=>{
     const rc=r.roas>=5?'roi-good':r.roas>=3.5?'roi-warn':'roi-bad';
     const impStr=r.imp>=1000000?(r.imp/1000000).toFixed(1)+'M':r.imp>=1000?(r.imp/1000).toFixed(1)+'k':Num(r.imp);
     return `<tr>
@@ -2131,12 +2105,16 @@ function renderShopeeSG(){
   const last=d[d.length-1], prev=d.length>1?d[d.length-2]:null;
   const momS=prev?((last.s-prev.s)/prev.s*100).toFixed(1):null;
   const momO=prev?((last.o-prev.o)/prev.o*100).toFixed(1):null;
+  const momSChip=momS?(momS>=0?'↑ ':'↓ ')+Math.abs(momS)+'% MoM':'—';
+  const momOChip=momO?(momO>=0?'↑ ':'↓ ')+Math.abs(momO)+'% MoM':'—';
+  const badge=document.getElementById('shopeeSgMomBadge');
+  if(badge) badge.textContent=momS?(momS>=0?'↑ ':'↓ ')+Math.abs(momS)+'% MoM':'';
   const latestM=last.m+(d===D.shopeeSG.m2026?' 2026':' 2025');
   const el=document.getElementById('shopeeSgKpi');
   if(el) el.innerHTML=[
-    {l:'Total Revenue',v:SGD(totS),ch:momS?'↑ '+momS+'% MoM':'—',dir:'up',sub:`${d.length} month${d.length>1?'s':''} selected`,ico:'💵'},
-    {l:latestM+' Revenue',v:SGD(last.s),ch:momS?'↑ '+momS+'% MoM':'—',dir:'up',sub:prev?'vs '+SGD(prev.s)+' prev':'First month',ico:'📈'},
-    {l:'Total Orders',v:totO.toLocaleString(),ch:momO?'↑ '+momO+'% MoM':'—',dir:'up',sub:'Confirmed orders',ico:'📦'},
+    {l:'Total Revenue',v:SGD(totS),ch:momSChip,dir:'up',sub:`${d.length} month${d.length>1?'s':''} selected`,ico:'💵'},
+    {l:latestM+' Revenue',v:SGD(last.s),ch:momSChip,dir:'up',sub:prev?'vs '+SGD(prev.s)+' prev':'First month',ico:'📈'},
+    {l:'Total Orders',v:totO.toLocaleString(),ch:momOChip,dir:'up',sub:'Confirmed orders',ico:'📦'},
     {l:'Conv. Rate',v:last.cr+'%',ch:'Latest month',dir:'up',sub:'Buyer conversion',ico:'⚡'},
     {l:'Avg Order Value',v:'SGD '+last.b.toFixed(2),sub:'Latest month AOV',ico:'🎯',ch:'AOV',dir:'up'},
   ].map(k=>`
@@ -2226,20 +2204,25 @@ function renderShopeeSG(){
 /* ─── TIKTOK SG ─── */
 function renderTikTokSG(){
   const d=D.tiktokSG.m2026;
-  if(!d||d.length<2){
+  if(!d||d.length<1){
     const el=document.getElementById('tiktokSgKpi');
     if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect TikTok SG folder to load data</div></div>';
     return;
   }
   const SGD=v=>'SGD '+(v>=1000?(v/1000).toFixed(1)+'k':Math.round(v).toLocaleString());
-  const last=d[d.length-1], prev=d[d.length-2];
+  const last=d[d.length-1], prev=d.length>1?d[d.length-2]:null;
+  const aff=D.tiktokSG.affiliate||[], lastAff=aff.length?aff[aff.length-1]:null;
+  const momS=momChip(last.s,prev?prev.s:null,false);
+  const momO=momChip(last.o,prev?prev.o:null,false);
+  const badge=document.getElementById('tiktokSgMomBadge');
+  if(badge) badge.textContent=momS.ch==='—'?'':momS.ch;
   const el=document.getElementById('tiktokSgKpi');
   if(el) el.innerHTML=[
-    {l:'Total GMV (Q1)',v:SGD(d.reduce((a,r)=>a+r.s,0)),ch:'↑ 72.6% QoQ',dir:'up',sub:'3 months Jan–Mar 2026',ico:'🎵'},
-    {l:'Mar GMV',v:SGD(last.s),ch:'↑ '+((last.s-prev.s)/prev.s*100).toFixed(1)+'% MoM',dir:'up',sub:'vs '+SGD(prev.s)+' Feb',ico:'📈'},
-    {l:'Mar Orders',v:last.o.toLocaleString(),ch:'↑ '+((last.o-prev.o)/prev.o*100).toFixed(1)+'% MoM',dir:'up',sub:'Confirmed orders',ico:'📦'},
-    {l:'Conv. Rate (Mar)',v:last.cr+'%',ch:'Best yet',dir:'up',sub:'↑ from 3.67% Feb',ico:'⚡'},
-    {l:'Mar Affiliate GMV',v:SGD(last.aff),ch:last.creators+' creators',dir:'up',sub:'Growing network',ico:'🤝'},
+    {l:'Total GMV',v:SGD(d.reduce((a,r)=>a+r.s,0)),ch:`${d.length} month${d.length>1?'s':''}`,dir:'up',sub:d.map(r=>r.m).join('–')+' 2026',ico:'🎵'},
+    {l:last.m+' GMV',...momS,v:SGD(last.s),sub:prev?'vs '+SGD(prev.s)+' prev':'First month',ico:'📈'},
+    {l:last.m+' Orders',...momO,v:last.o.toLocaleString(),sub:'Confirmed orders',ico:'📦'},
+    {l:'Conv. Rate ('+last.m+')',v:last.cr+'%',ch:'Latest month',dir:'up',sub:'Buyer conversion',ico:'⚡'},
+    {l:(lastAff?lastAff.m:last.m)+' Affiliate GMV',v:lastAff?SGD(lastAff.gmv):'—',ch:lastAff?lastAff.creators+' creators':'No affiliate data',dir:'up',sub:'Creator network',ico:'🤝'},
   ].map(k=>`
     <div class="kpi">
       <div class="kpi-ico">${k.ico}</div>
@@ -2510,17 +2493,24 @@ function showPdSub(type){
   if(type==='monthly'){
     renderMonthPicker();
   } else if(type==='daily'){
-    const today=new Date().toISOString().slice(0,10);
-    const def=S.selectedDate||today;
+    // Default to the latest date with real synced data, not today's calendar date —
+    // otherwise "View Day" opens to an empty screen whenever today hasn't synced yet.
+    const dates=(D.shopee.daily||[]).map(r=>r.date).sort();
+    const def=S.selectedDate||dates[dates.length-1]||new Date().toISOString().slice(0,10);
     right.innerHTML=`
       <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px">Daily View</div>
       <div class="cp-field"><label>Select Date</label><input type="date" id="dpDate" value="${def}" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%;box-sizing:border-box"></div>
       <button class="cp-apply" onclick="applyDailyPeriod()" style="margin-top:10px">View Day</button>`;
   } else if(type==='custom'){
+    // Default the range to the actual synced data span instead of a hardcoded Jan–Mar 2026.
+    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const m2026=D.shopee.m2026;
+    const startDef=S.customStart||(m2026.length?`2026-${String(mNames.indexOf(m2026[0].m)+1).padStart(2,'0')}`:'2026-01');
+    const endDef=S.customEnd||(m2026.length?`2026-${String(mNames.indexOf(m2026[m2026.length-1].m)+1).padStart(2,'0')}`:'2026-03');
     right.innerHTML=`
       <div style="font-size:12px;font-weight:700;color:var(--t1);margin-bottom:12px">Custom Range</div>
-      <div class="cp-field"><label>Start Month</label><input type="month" id="cpStart" value="2026-01"></div>
-      <div class="cp-field"><label>End Month</label><input type="month" id="cpEnd" value="2026-03"></div>
+      <div class="cp-field"><label>Start Month</label><input type="month" id="cpStart" value="${startDef}"></div>
+      <div class="cp-field"><label>End Month</label><input type="month" id="cpEnd" value="${endDef}"></div>
       <button class="cp-apply" onclick="applyCustomPeriod()">Apply Range</button>`;
   } else {
     right.innerHTML='';
@@ -2601,8 +2591,6 @@ document.querySelectorAll('.pd-opt').forEach(opt=>{
     renderKPIs(); showPanel(S.nav); closePeriod();
   });
 });
-
-function applyCustom(){} // legacy stub
 
 /* ─── SIDEBAR NAV ─── */
 document.querySelectorAll('.sb-item').forEach(i=>{
@@ -2769,7 +2757,7 @@ async function loadPlatformFolder(platform,folderId,folderName){
       // Non-revenue xlsx files get scanned for extra sheets (sales_composition, Source Contribution, etc.)
       if(rev.length){
         PLAT_S[platform]._extraXlsx=loadables.filter(f=>{
-          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
           return isXlsx&&!toLoad.find(t=>t.id===f.id);
         });
       }
@@ -2784,7 +2772,7 @@ async function loadPlatformFolder(platform,folderId,folderName){
         toLoad=rev.length?rev:sfl;
         // Non-revenue xlsx files also get scanned for extra sheets (Source Contribution, etc.)
         PLAT_S[platform]._extraXlsx=sfl.filter(f=>{
-          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+          const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
           return isXlsx&&!toLoad.find(t=>t.id===f.id);
         });
         syncLog(`  → ${toLoad.length} revenue file(s) to load${PLAT_S[platform]._extraXlsx.length?`, ${PLAT_S[platform]._extraXlsx.length} extra xlsx to scan`:''}`)
@@ -2841,10 +2829,11 @@ const FOLDER_MIME='application/vnd.google-apps.folder';
 const SHEET_MIME='application/vnd.google-apps.spreadsheet';
 const XLSX_MIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const CSV_MIME='text/csv';
+const XLS_MIME='application/vnd.ms-excel';
 
 function isLoadable(f){
-  return f.mimeType===SHEET_MIME||f.mimeType===XLSX_MIME||f.mimeType===CSV_MIME
-    ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv');
+  return f.mimeType===SHEET_MIME||f.mimeType===XLSX_MIME||f.mimeType===CSV_MIME||f.mimeType===XLS_MIME
+    ||f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.csv')||f.name.toLowerCase().endsWith('.xls');
 }
 
 // Extract month abbreviation from filename
@@ -2893,8 +2882,10 @@ function findHeaderRow(rows){
 
 // Download and cache xlsx workbooks (avoids re-downloading the same file)
 const _wbCache={};
+let _dl403=0; // consecutive all-URL 403 failures — Google's per-IP "automated queries" block trips this
 async function fetchXlsxWorkbook(file){
   if(_wbCache[file.id]) return _wbCache[file.id];
+  if(_dl403>=3) throw new Error('Google is rate-limiting downloads from this network — wait ~30 min, then re-sync.');
   if(typeof XLSX==='undefined') throw new Error('SheetJS not loaded — refresh the page.');
   const urls=[
     // /api/download proxies the request server-side — no CORS, no referrer issues
@@ -2910,14 +2901,16 @@ async function fetchXlsxWorkbook(file){
       if(r.ok){ab=await r.arrayBuffer();break;}
       // Non-OK from proxy returns JSON error; direct API also returns JSON
       const ej=await r.json().catch(()=>({}));
-      errors.push(ej.error||ej.message||(ej+'')||('HTTP '+r.status));
+      errors.push(ej.error?.message||ej.error||ej.message||('HTTP '+r.status));
     }catch(e){errors.push(e.message);}
   }
   if(!ab){
+    if(errors.some(e=>/403/.test(String(e)))) _dl403++;
     // Show first non-CORS error for a useful message; fall back to last error
     const meaningful=errors.find(e=>e&&e!=='Failed to fetch'&&!e.includes('NetworkError'));
     throw new Error(`Download failed: ${meaningful||errors.at(-1)||'unknown'}. Ensure the file/folder is shared "Anyone with the link can view".`);
   }
+  _dl403=0;
   const wb=XLSX.read(ab,{type:'array'});
   if(!wb.SheetNames.length) throw new Error('No sheets in xlsx file.');
   _wbCache[file.id]=wb;
@@ -3571,8 +3564,14 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
   let ok=0,lastId='';
   const allDailyRows=[];
   for(const f of sorted){
+    if(f!==sorted[0]) await new Promise(r=>setTimeout(r,200)); // stagger requests to avoid tripping Google's per-IP rate limit
     try{
       const rows=await fetchRawRows(f);
+      // Shopee Live exports share column words with shop stats and parse as garbage — skip with a clear message
+      if(rows.slice(0,5).some(r=>Array.isArray(r)&&r.some(c=>/livestream name/i.test(String(c))))){
+        syncLog(`  ⚠ Skipped "${f.name}": Shopee Live report — export "Shop Performance" (shop-stats) instead`);
+        continue;
+      }
       const {m2025,m2026}=rowsToMonths(rows,f.name);
       if(!m2025.length&&!m2026.length){
         const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
@@ -3588,7 +3587,7 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
         const y26=m2026.map(m=>m.m).join(',');
         syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]${daily.length?` · ${daily.length}d`:''}`);}
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
-      const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.mimeType===XLSX_MIME;
+      const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
       if(isXlsx){
         try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
         catch(e){syncLog(`  ⚠ Extra-sheets parse error in "${f.name}": ${e.message}`);}
@@ -3642,6 +3641,7 @@ async function loadProductFiles(files,platform){
   const sorted=[...files].sort((a,b)=>a.name.localeCompare(b.name));
   const allProds=[];
   for(const f of sorted){
+    if(f!==sorted[0]) await new Promise(r=>setTimeout(r,200));
     try{
       const rows=await fetchRawRows(f);
       const prods=rowsToProducts(rows,f.name);
@@ -3664,35 +3664,10 @@ async function loadProductFiles(files,platform){
   if(S.nav==='products') renderProducts();
 }
 
-async function loadSheetById(sheetId,gid='0',name='Sheet',platform='shopee'){
-  syncLog(`[${platform}] Loading sheet "${name}"…`);
-  setPlatformStatus(platform,'fetching','Loading…');
-  try{
-    const rows=await fetchRawRows({id:sheetId,mimeType:SHEET_MIME,name});
-    if(rows.length<2) throw new Error('Sheet is empty or missing data rows.');
-    applyParsedRows(rows,name,sheetId,platform);
-    startAutoRefresh();
-  }catch(e){
-    setPlatformStatus(platform,'error',e.message.slice(0,50));
-    syncLog(`Error: ${e.message}`,true);
-  }
-}
-
-function loadFile(fileId,name,mimeType,platform='shopee'){
-  const f={id:fileId,name,mimeType};
-  setPlatformStatus(platform,'fetching','Loading…');
-  fetchRawRows(f).then(rows=>{
-    applyParsedRows(rows,name,fileId,platform);
-    startAutoRefresh();
-  }).catch(e=>{
-    setPlatformStatus(platform,'error',e.message.slice(0,50));
-    syncLog(`Error: ${e.message}`,true);
-  });
-}
-
 // ── Auto-refresh every 5 min ──
 let _autoRefreshTimer=null;
-function startAutoRefresh(intervalMs=5*60*1000){
+function startAutoRefresh(){
+  const intervalMs=5*60*1000;
   if(_autoRefreshTimer) clearInterval(_autoRefreshTimer);
   _autoRefreshTimer=setInterval(async()=>{
     if(!GS.apiKey) return;
@@ -3731,10 +3706,6 @@ function applyParsedRows(rows,name,fileId,platform='shopee'){
   }
   applyMonths(m2026,m2025,name,fileId,platform);
 }
-
-// Legacy stubs (kept for any lingering references)
-function clearSync(){ disconnectPlatform('shopee'); }
-function doSync(){} function doSyncPanel(){} function parseAndApplyCSV(){} function parseGDriveUrl(){}
 
 /* ─── INIT ─── */
 window.addEventListener('DOMContentLoaded',()=>{
