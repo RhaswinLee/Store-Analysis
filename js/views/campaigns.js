@@ -167,7 +167,7 @@ function renderPromoVoucherCards(){
     const trows=(range?D.shopee.daily.filter(r=>r.date>=range[0]&&r.date<=range[1]):D.shopee.daily).sort((a,b)=>a.date.localeCompare(b.date));
     if(!trows.length){trBody.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px 0">No data — sync a Shopee MY Sales Data file</div>';}
     else{
-      const v=trows.reduce((a,r)=>a+(r.v||0),0), cl=trows.reduce((a,r)=>a+(r.cl||0),0);
+      const v=trows.reduce((a,r)=>a+(r.v||0),0), cl=trows.reduce((a,r)=>a+(r.cl||0),0), o=trows.reduce((a,r)=>a+(r.o||0),0);
       const fmt=iso=>{const[y,m,d]=iso.split('-');return `${d}-${m}-${y}`;};
       const s=document.getElementById('trafficSub');
       if(s) s.textContent=trows.length===1?fmt(trows[0].date):`${fmt(trows[0].date)} → ${fmt(trows[trows.length-1].date)}`;
@@ -175,6 +175,7 @@ function renderPromoVoucherCards(){
         td(['Visitors',v.toLocaleString()]),
         td(['Clicks',cl.toLocaleString()]),
         td(['Click-Through',v?(cl/v*100).toFixed(2)+'%':'—']),
+        td(['Conversion Rate',v?(o/v*100).toFixed(2)+'%':'—']),
       ].join('');
       trBody.innerHTML=tbl(th(['Metric','Value']),rows);
     }
