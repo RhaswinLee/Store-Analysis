@@ -29,7 +29,11 @@ function renderCampaigns(){
   }
 
   const baseOpts={responsive:true,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='CR%'?` CR: ${c.raw}%`:` Sales: ${RMk(c.raw)}`}}},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
+      if(c.dataset.label==='CR%') return ` CR: ${c.raw}%`;
+      if(c.dataset.label==='Sales (RM)') return ` Sales: ${RMk(c.raw)}`;
+      return ` ${c.dataset.label}: ${Num(c.raw)}`;
+    }}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
       y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
       y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'}}}};
@@ -48,6 +52,8 @@ function renderCampaigns(){
         {label:'Sales (RM)',data:rows.map(r=>r.s),
           backgroundColor:rows.map(r=>inWindow(parseInt(r.date.slice(8,10),10))?'rgba(99,102,241,.85)':'rgba(203,213,225,.7)'),
           borderRadius:3,maxBarThickness:26,yAxisID:'y'},
+        {label:'Visitors',data:rows.map(r=>r.v),backgroundColor:'rgba(234,179,8,.6)',borderRadius:3,maxBarThickness:26,yAxisID:'y'},
+        {label:'Clicks',data:rows.map(r=>r.cl),backgroundColor:'rgba(59,130,246,.6)',borderRadius:3,maxBarThickness:26,yAxisID:'y'},
         {label:'CR%',data:rows.map(r=>r.cr),borderColor:'#3fb950',borderWidth:2,type:'line',pointRadius:3,yAxisID:'y2',tension:.3},
       ]
     },options:baseOpts});
@@ -69,6 +75,8 @@ function renderCampaigns(){
       labels:points.map(p=>`${p.m} '${String(p.y).slice(2)}`),
       datasets:[
         {label:'Sales (RM)',data:points.map(p=>p.s),backgroundColor:'rgba(99,102,241,.7)',borderRadius:3,maxBarThickness:28,yAxisID:'y'},
+        {label:'Visitors',data:points.map(p=>p.v),backgroundColor:'rgba(234,179,8,.6)',borderRadius:3,maxBarThickness:28,yAxisID:'y'},
+        {label:'Clicks',data:points.map(p=>p.cl),backgroundColor:'rgba(59,130,246,.6)',borderRadius:3,maxBarThickness:28,yAxisID:'y'},
         {label:'CR%',data:points.map(p=>p.cr),borderColor:'#3fb950',borderWidth:2,type:'line',pointRadius:3,yAxisID:'y2',tension:.3},
       ]
     },options:{...baseOpts,onClick:(evt,els)=>{
