@@ -47,6 +47,7 @@
 - **UI Icon Formatting Fix:** Updated `js/main.js` and `js/sync.js` badge setting from `textContent` to `innerHTML` so Material Symbols checkmark icons render as icons instead of raw code strings.
 - **Git & PR Setup:** Created Pull Request `#3` on GitHub (`feat/campaign-traffic-visitors-clicks` branch).
 - **Cloudflare Pages Deployment:** Successfully deployed live production app to [https://store-analysis-hygr.pages.dev](https://store-analysis-hygr.pages.dev).
+- **Campaign Performance Detail Table:** Added full Store Performance metrics table (Sales, Visitors, Orders, Basket Size, Order CR, Buyers, Clicks, Cancelled, Returns) below the Shopee Campaign Sales chart in `js/views/campaigns.js` with dynamic daily drill-down support.
 
 ---
 
