@@ -6,6 +6,7 @@
 - **Application Security & Hardening:** Audit and resolve Stored XSS vulnerabilities and sensitive data exposure (Google API keys).
 - **Resilience & QA:** Handle empty data states gracefully without breaking chart rendering or throwing JavaScript runtime errors.
 - **Automated Data Ingestion (Shopee Open API):** Transition from manual `.xlsx` file parsing and Google Drive API sync (which suffers from 403 rate-limit cooldowns) to direct, real-time JSON data streaming via the official Shopee Open Platform.
+- **High-Performance Hosting (Cloudflare Pages):** Deploy the web application on Cloudflare Pages for global edge speed and unlimited free bandwidth.
 
 ---
 
@@ -15,7 +16,7 @@
 - Month-to-day drill-down interaction is active on revenue graphs with seamless back navigation.
 - Missing data fallbacks (High ATC Products, New vs Existing Buyer, Live Stream GMV) display clean empty-state notices.
 - The Google API key status badge renders properly with its checkmark icon.
-- Codebase is clean of syntax errors, hosted on GitHub (`ADM1SH/Store-Analysis`), and ready for deployment on Vercel.
+- Codebase is clean of syntax errors, hosted on GitHub (`ADM1SH/Store-Analysis`), and ready for instant deployment on Cloudflare Pages.
 
 ---
 
@@ -44,6 +45,7 @@
 - **Drill-Down Feature:** Implemented `_oDrillMonth`, `_sDrillMonth`, and `_tDrillMonth` state variables and added "← Back to months" buttons across timeline charts.
 - **UI Icon Formatting Fix:** Updated `js/main.js` and `js/sync.js` badge setting from `textContent` to `innerHTML` so Material Symbols checkmark icons render as icons instead of raw code strings.
 - **Git & PR Setup:** Created Pull Request `#3` on GitHub (`feat/campaign-traffic-visitors-clicks` branch).
+- **Deployment Platform Selection:** Updated deployment target to Cloudflare Pages (unlimited bandwidth, global edge network).
 
 ---
 
@@ -54,15 +56,21 @@
 ---
 
 ## 6. Next Steps
-- **Shopee Open API Integration (Selected Strategy):**
+- **Cloudflare Pages Deployment:**
+  1. Go to [dash.cloudflare.com](https://dash.cloudflare.com/) → **Workers & Pages** → **Create application** → **Pages**.
+  2. Connect GitHub repository `ADM1SH/Store-Analysis`.
+  3. Set build configuration:
+     - Framework preset: **None**
+     - Build command: *(leave empty)*
+     - Output directory: `/` (or root)
+  4. Click **Save and Deploy**.
+- **Shopee Open API Integration (Cloudflare Functions):**
   1. Obtain company credentials from the company's existing Shopee Open Platform Developer Account ([open.shopee.com](https://open.shopee.com/)):
      - `Partner ID`
      - `Partner Key / App Secret`
      - `Shop ID`
-  2. Configure secure Environment Variables in Vercel to store the Partner credentials safely.
-  3. Implement Vercel Serverless Functions (`/api/shopee/...`) to handle OAuth 2.0 authorization and execute live API calls for:
+  2. Configure Environment Variables in Cloudflare Pages settings for Partner credentials.
+  3. Create Cloudflare Pages Functions (`/functions/api/shopee.js`) to handle OAuth 2.0 authorization and execute live API calls for:
      - Orders & Revenue (`v2.order.get_order_list`, `v2.order.get_order_detail`)
      - Product & Performance Analytics (`v2.merchant_analytics`, `v2.product.get_item_list`)
   4. Bind the live JSON API feed directly to global state `D.shopee`, completely eliminating manual `.xlsx` spreadsheet downloads and Google Drive rate limits.
-- **Vercel Deployment:**
-  - Connect the GitHub repository (`ADM1SH/Store-Analysis`) to Vercel for automated CI/CD deployment on every `git push` and PR.
