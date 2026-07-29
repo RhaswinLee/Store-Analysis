@@ -6,6 +6,7 @@
 <title>HYGR — Business Intelligence Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -178,13 +179,20 @@
           <div id="buyerList" style="overflow-x:auto"></div>
         </div>
         <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub">Feb–Mar 2026</div></div></div>
-          <div class="stats-row" style="flex-direction:column;gap:8px;margin-bottom:0">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              <div class="stat"><div class="stat-val">RM157.3k</div><div class="stat-label">Mar Affiliate GMV</div><div class="stat-change up">↑ 1.30% MoM</div></div>
-              <div class="stat"><div class="stat-val">3.3k</div><div class="stat-label">Mar Orders</div><div class="stat-change dn">↓ 6.42% MoM</div></div>
-              <div class="stat"><div class="stat-val">RM10k</div><div class="stat-label">Mar Commission</div><div class="stat-change dn">↓ 4.24%</div></div>
-              <div class="stat"><div class="stat-val">15.7x</div><div class="stat-label">Mar ROI</div><div class="stat-change up">↑ 5.78%</div></div>
+          <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub" id="shopeeAffSub">Loading...</div></div></div>
+          <div class="stats-row" style="flex-direction:column;gap:6px;margin-bottom:0">
+            <style>
+              .stat-compact { padding: 10px 12px; }
+              .stat-compact .stat-val { font-size: 17px; margin-bottom: 2px; }
+              .stat-compact .stat-label { font-size: 11px; margin-bottom: 4px; }
+            </style>
+            <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:6px">
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffGmv">—</div><div class="stat-label">Affiliate GMV</div><div class="stat-change" id="shopeeAffGmvDiff"></div></div>
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffOrders">—</div><div class="stat-label">Orders</div><div class="stat-change" id="shopeeAffOrdersDiff"></div></div>
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffAov">—</div><div class="stat-label">AOV</div><div class="stat-change" id="shopeeAffAovDiff"></div></div>
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffCr">—</div><div class="stat-label">Conv. Rate</div><div class="stat-change" id="shopeeAffCrDiff"></div></div>
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffClicks">—</div><div class="stat-label">Clicks</div><div class="stat-change" id="shopeeAffClicksDiff"></div></div>
+              <div class="stat stat-compact"><div class="stat-val" id="shopeeAffViews">—</div><div class="stat-label">Views</div><div class="stat-change" id="shopeeAffViewsDiff"></div></div>
             </div>
           </div>
         </div>
@@ -272,7 +280,9 @@
             <div><div class="cc-title">Shopee Campaign Sales</div><div class="cc-sub" id="campSub">Mega campaign days (1.1–12.12)</div></div>
             <span class="tag tag-s">Shopee</span>
           </div>
-          <canvas id="campChart" height="220"></canvas>
+          <div style="position: relative; height: 260px; width: 100%;">
+            <canvas id="campChart"></canvas>
+          </div>
         </div>
       </div>
       <div class="cg cg-3">
