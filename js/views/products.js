@@ -73,30 +73,58 @@ function renderProducts(){
   renderProductCharts();
 }
 
+// Toggles a canvas vs. a sibling "no data" message, without ever swapping out the canvas
+// element itself — so a later render with real data can still find it by id.
+function _chartOrEmpty(canvasId,hasData,emptyMsg,draw){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas) return;
+  let msg=canvas.nextElementSibling;
+  if(!msg||!msg.classList||!msg.classList.contains('chart-empty-msg')){
+    msg=document.createElement('div');
+    msg.className='chart-empty-msg';
+    msg.style='padding:32px 0;text-align:center;color:var(--t3);font-size:13px';
+    canvas.after(msg);
+  }
+  if(hasData){
+    canvas.style.display='';
+    msg.style.display='none';
+    draw();
+  } else {
+    if(charts[canvasId]){charts[canvasId].destroy();delete charts[canvasId];}
+    canvas.style.display='none';
+    msg.textContent=emptyMsg;
+    msg.style.display='';
+  }
+}
+
 function renderProductCharts(){
 
-  // ATC chart
+  // ATC chart — atc is only present on demo-mode products; live Drive product exports don't carry it.
   const atcProds=D.products.filter(p=>p.atc).sort((a,b)=>b.atc-a.atc);
-  mkChart('atcChart',{type:'bar',data:{
-    labels:atcProds.map(p=>p.name.length>20?p.name.substring(0,18)+'…':p.name),
-    datasets:[{
-      label:'Add to Cart',
-      data:atcProds.map(p=>p.atc),
-      backgroundColor:atcProds.map(p=>p.bounce&&p.bounce>20?'rgba(248,81,73,.7)':p.bounce?'rgba(210,153,34,.7)':'rgba(63,185,80,.7)'),
-      borderRadius:4,maxBarThickness:28,
-    }]
-  },options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ATC: ${Num(c.raw)}`}}},
-    scales:{x:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10}}},y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
+  _chartOrEmpty('atcChart',atcProds.length>0,'No add-to-cart data in the connected source files',()=>{
+    mkChart('atcChart',{type:'bar',data:{
+      labels:atcProds.map(p=>p.name.length>20?p.name.substring(0,18)+'…':p.name),
+      datasets:[{
+        label:'Add to Cart',
+        data:atcProds.map(p=>p.atc),
+        backgroundColor:atcProds.map(p=>p.bounce&&p.bounce>20?'rgba(248,81,73,.7)':p.bounce?'rgba(210,153,34,.7)':'rgba(63,185,80,.7)'),
+        borderRadius:4,maxBarThickness:28,
+      }]
+    },options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ATC: ${Num(c.raw)}`}}},
+      scales:{x:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10}}},y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
+  });
 
-  // Buyer revenue chart
+  // Buyer revenue chart — new/existing buyer split isn't extracted by the current sync pipeline.
   const byers=D.shopee.buyers;
-  mkChart('buyerRevChart',{type:'bar',data:{
-    labels:byers.map(b=>b.m+' 2026'),
-    datasets:[
-      {label:'New Buyers',data:byers.map(b=>b.ns),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:36},
-      {label:'Existing Buyers',data:byers.map(b=>b.es),backgroundColor:'rgba(99,102,241,.7)',borderRadius:3,maxBarThickness:36},
-    ]
-  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
-    scales:{x:{grid:{display:false},border:{display:false},stacked:true,ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+  _chartOrEmpty('buyerRevChart',byers.length>0,'No new-vs-existing buyer data in the connected source files',()=>{
+    mkChart('buyerRevChart',{type:'bar',data:{
+      labels:byers.map(b=>b.m+' 2026'),
+      datasets:[
+        {label:'New Buyers',data:byers.map(b=>b.ns),backgroundColor:'rgba(249,115,22,.7)',borderRadius:3,maxBarThickness:36},
+        {label:'Existing Buyers',data:byers.map(b=>b.es),backgroundColor:'rgba(99,102,241,.7)',borderRadius:3,maxBarThickness:36},
+      ]
+    },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+      scales:{x:{grid:{display:false},border:{display:false},stacked:true,ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+  });
 }
 
