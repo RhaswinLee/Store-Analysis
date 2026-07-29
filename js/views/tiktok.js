@@ -42,15 +42,17 @@ function renderTikTok(){
   },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` GMV: ${RMk(c.raw)}`}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
 
-  // Video views
+  // Video views — not extracted by the current sync pipeline (no source sheet wired for it yet)
   const vw=D.tiktok.views;
-  mkChart('ttViewChart',{type:'bar',data:{
-    labels:vw.map(r=>r.m),
-    datasets:[
-      {label:'Video Views',data:vw.map(r=>r.views),backgroundColor:['rgba(244,63,94,.5)','rgba(244,63,94,.5)','#f43f5e'],borderRadius:4,maxBarThickness:40}
-    ]
-  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` Views: ${(c.raw/1000000).toFixed(2)}M`}}},
-    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>(v/1000000).toFixed(1)+'M'}}}}});
+  _chartOrEmpty('ttViewChart',vw.length>0,'No video-view data in the connected source files',()=>{
+    mkChart('ttViewChart',{type:'bar',data:{
+      labels:vw.map(r=>r.m),
+      datasets:[
+        {label:'Video Views',data:vw.map(r=>r.views),backgroundColor:['rgba(244,63,94,.5)','rgba(244,63,94,.5)','#f43f5e'],borderRadius:4,maxBarThickness:40}
+      ]
+    },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` Views: ${(c.raw/1000000).toFixed(2)}M`}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>(v/1000000).toFixed(1)+'M'}}}}});
+  });
 
   // TikTok ads table
   document.getElementById('ttAdsTbl').innerHTML=D.tiktok.ads.map(r=>{
