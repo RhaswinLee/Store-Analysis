@@ -28,7 +28,7 @@ function renderCampaigns(){
     return;
   }
 
-  const baseOpts={responsive:true,interaction:{mode:'index',intersect:false},
+  const baseOpts={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
       if(c.dataset.label==='CR%') return ` CR: ${c.raw}%`;
       if(c.dataset.label==='Sales (RM)') return ` Sales: ${RMk(c.raw)}`;
