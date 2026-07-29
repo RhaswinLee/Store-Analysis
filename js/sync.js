@@ -75,7 +75,7 @@ function setSyncStatus(status,msg){
     txt.innerHTML=`<strong>🟡 Fetching…</strong> — Reading from Google Drive`;
   } else if(status==='error'){
     dot.className='sync-dot error';
-    txt.innerHTML=`<strong>🔴 Error</strong> — ${msg||'Connection failed'}`;
+    txt.innerHTML=`<strong>🔴 Error</strong> — ${esc(msg||'Connection failed')}`;
   } else {
     dot.className='sync-dot idle';
     txt.innerHTML=`Not connected — using built-in demo data · <button class="btn-sm ghost" onclick="showPanel('sync')" style="font-size:10px;padding:2px 8px;margin-left:2px">Configure ↗</button>`;
@@ -86,7 +86,7 @@ function syncLog(msg,isError=false){
   const el=document.getElementById('syncLog');
   if(!el) return;
   const t=new Date().toLocaleTimeString('en-MY',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const line=`<div style="color:${isError?'var(--red)':'var(--t3)'}">${t} ${msg}</div>`;
+  const line=`<div style="color:${isError?'var(--red)':'var(--t3)'}">${t} ${esc(msg)}</div>`;
   el.innerHTML=(el.innerHTML==='—'?'':el.innerHTML)+line;
   el.scrollTop=el.scrollHeight;
   const lines=el.querySelectorAll('div');
@@ -99,7 +99,7 @@ function saveApiKey(){
   GS.apiKey=key;
   localStorage.setItem('hygr_gapi',key);
   const tag=document.getElementById('apiKeyTag');
-  tag.textContent='✓ Saved';
+  tag.innerHTML='<span class="material-symbols-outlined">check</span> Saved';
   tag.style.cssText='background:var(--green-d);color:var(--green)';
   syncLog('API key saved.');
 }
@@ -130,10 +130,10 @@ async function connectPlatform(platform){
   const inp=document.getElementById(`pLink_${k}`);
   if(!inp) return;
   const url=inp.value.trim();
-  if(!url){syncLog(`⚠ Paste a Drive folder URL for ${platform}.`,true);return;}
-  if(!GS.apiKey){syncLog('⚠ Enter and save your Google API key first.',true);return;}
+  if(!url){syncLog(`<span class="material-symbols-outlined">warning</span> Paste a Drive folder URL for ${platform}.`,true);return;}
+  if(!GS.apiKey){syncLog('<span class="material-symbols-outlined">warning</span> Enter and save your Google API key first.',true);return;}
   const parsed=parseDriveLink(url);
-  if(!parsed||parsed.type!=='folder'){syncLog('⚠ Unrecognised URL — paste a Drive folder link (not a file link).',true);return;}
+  if(!parsed||parsed.type!=='folder'){syncLog('<span class="material-symbols-outlined">warning</span> Unrecognised URL — paste a Drive folder link (not a file link).',true);return;}
   PLAT_S[platform].url=url;
   PLAT_S[platform].nav=[];
   localStorage.setItem(`hygr_url_${k}`,url);
@@ -1302,7 +1302,7 @@ function applyMonths(months,months25,name,fileId,platform='shopee'){
     if(months25&&months25.length) D[dKey].m2025=months25;
   }
   setPlatformStatus(platform,'connected',`${months.length} mo 2026 · ${months25?.length||0} mo 2025 · ${name.slice(0,25)}`);
-  syncLog(`[${platform}] ✓ 2026: ${months.length} month(s), 2025: ${months25?.length||0} month(s)`);
+  syncLog(`[${platform}] <span class="material-symbols-outlined">check</span> 2026: ${months.length} month(s), 2025: ${months25?.length||0} month(s)`);
   if(typeof clearFilterCache === 'function') clearFilterCache();
   saveCache(platform);
   renderKPIs(); showPanel(S.nav);
@@ -1332,13 +1332,13 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
       const rows=await fetchRawRows(f);
       // Shopee Live exports share column words with shop stats and parse as garbage — skip with a clear message
       if(rows.slice(0,5).some(r=>Array.isArray(r)&&r.some(c=>/livestream name/i.test(String(c))))){
-        syncLog(`  ⚠ Skipped "${f.name}": Shopee Live report — export "Shop Performance" (shop-stats) instead`);
+        syncLog(`  <span class="material-symbols-outlined">warning</span> Skipped "${f.name}": Shopee Live report — export "Shop Performance" (shop-stats) instead`);
         continue;
       }
       const {m2025,m2026}=rowsToMonths(rows,f.name);
       if(!m2025.length&&!m2026.length){
         const hdrs=rows[0]?rows[0].filter(Boolean).slice(0,6).join(' | '):'empty';
-        syncLog(`  ⚠ No data in "${f.name}" — columns: ${hdrs}`);
+        syncLog(`  <span class="material-symbols-outlined">warning</span> No data in "${f.name}" — columns: ${hdrs}`);
       } else {
         for(const mo of m2025) mergeInto(merged25,mo);
         for(const mo of m2026) mergeInto(merged26,mo);
@@ -1348,14 +1348,14 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
         ok++; lastId=f.id;
         const y25=m2025.map(m=>m.m).join(',');
         const y26=m2026.map(m=>m.m).join(',');
-        syncLog(`  ✓ ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]${daily.length?` · ${daily.length}d`:''}`);}
+        syncLog(`  <span class="material-symbols-outlined">check</span> ${f.name} → 2025:[${y25||'—'}] 2026:[${y26||'—'}]${daily.length?` · ${daily.length}d`:''}`);}
       // Scan all sheets in xlsx for campaign/promo/affiliate/breakdown data
       const isXlsx=f.name.toLowerCase().endsWith('.xlsx')||f.name.toLowerCase().endsWith('.xls')||f.mimeType===XLSX_MIME||f.mimeType===XLS_MIME;
       if(isXlsx){
         try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
-        catch(e){syncLog(`  ⚠ Extra-sheets parse error in "${f.name}": ${e.message}`);}
+        catch(e){syncLog(`  <span class="material-symbols-outlined">warning</span> Extra-sheets parse error in "${f.name}": ${e.message}`);}
       }
-    }catch(e){syncLog(`  ⚠ Skipped "${f.name}": ${e.message}`);}
+    }catch(e){syncLog(`  <span class="material-symbols-outlined">warning</span> Skipped "${f.name}": ${e.message}`);}
   }
   const buildFinal=merged=>mNames.map(mk=>{
     const a=merged[mk]; if(!a||(!a.s&&!a.o)) return null;
@@ -1372,7 +1372,7 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     syncLog(`[${platform}] Could not parse any file. Ensure filenames contain dates like YYYYMMDD-YYYYMMDD or YYYYMM.`,true);
     return;
   }
-  syncLog(`[${platform}] ✓ Merged ${ok} file(s) → 2026:${final26.length}mo, 2025:${final25.length}mo`);
+  syncLog(`[${platform}] <span class="material-symbols-outlined">check</span> Merged ${ok} file(s) → 2026:${final26.length}mo, 2025:${final25.length}mo`);
   // Store deduplicated daily records
   const _dKey=PLAT_D[platform];
   if(D[_dKey]&&D[_dKey].daily!==undefined&&allDailyRows.length){
@@ -1387,7 +1387,7 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     for(const f of _extraXlsx){
       if(f!==_extraXlsx[0]) await new Promise(r=>setTimeout(r,200));
       try{const wb=await fetchXlsxWorkbook(f);extractExtraSheets(wb,platform,f.name);}
-      catch(e){syncLog(`  ⚠ Extra-file parse error "${f.name}": ${e.message}`);}
+      catch(e){syncLog(`  <span class="material-symbols-outlined">warning</span> Extra-file parse error "${f.name}": ${e.message}`);}
     }
   }
   // Build sorted ads array from per-month data collected in extractExtraSheets
@@ -1420,7 +1420,7 @@ async function loadProductFiles(files,platform){
         syncLog(`  → Products: ${prods.length} from "${f.name}"`);
         allProds.push(...prods);
       }
-    }catch(e){syncLog(`  ⚠ Product file skipped "${f.name}": ${e.message}`);}
+    }catch(e){syncLog(`  <span class="material-symbols-outlined">warning</span> Product file skipped "${f.name}": ${e.message}`);}
   }
   if(!allProds.length) return;
   // Aggregate across months — keep top 20 by total GMV
@@ -1431,7 +1431,7 @@ async function loadProductFiles(files,platform){
   }
   const dKey=PLAT_D[platform];
   if(D[dKey]) D[dKey].products=Object.values(agg).sort((a,b)=>b.gmv-a.gmv).slice(0,20);
-  syncLog(`[${platform}] ✓ ${D[dKey]?.products?.length||0} products loaded`);
+  syncLog(`[${platform}] <span class="material-symbols-outlined">check</span> ${D[dKey]?.products?.length||0} products loaded`);
   if(S.nav==='products') renderProducts();
 }
 

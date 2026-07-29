@@ -1,5 +1,13 @@
 /* ─── SHOPEE CHARTS ─── */
+let _sDrillMonth=null;
+let _sLastGrainSig=null;
+window.sBackToMonths = function(){ _sDrillMonth=null; renderShopee(); return false; };
+
 function renderShopee(){
+  const grainSig=JSON.stringify([S.grain,S.selectedMonth,S.selectedDate,S.customStart,S.customEnd,S.selectedCampaignMonth,S.selectedCampaignYear]);
+  if(_sLastGrainSig!==null&&_sLastGrainSig!==grainSig) _sDrillMonth=null;
+  _sLastGrainSig=grainSig;
+
   const sf=filteredShopee();
   const pf=getPrevShopee();
   // Current period totals
@@ -20,12 +28,12 @@ function renderShopee(){
   const prevLabel=pf.length?` vs ${pf[0].m}`:'';
   const m2El=document.getElementById('shopeeMetrics2');
   if(m2El) m2El.innerHTML=[
-    {l:'Cancelled Orders',v:totCO?Num(totCO):'—',...momChip(totCO,pCO,true),sub:`Total cancelled${prevLabel}`,ico:'❌'},
-    {l:'Cancelled Sales',v:totCS?RMfull(totCS):'—',...momChip(totCS,pCS,true),sub:`MYR cancelled${prevLabel}`,ico:'💸'},
+    {l:'Cancelled Orders',v:totCO?Num(totCO):'—',...momChip(totCO,pCO,true),sub:`Total cancelled${prevLabel}`,ico:'<span class="material-symbols-outlined">cancel</span>'},
+    {l:'Cancelled Sales',v:totCS?RMfull(totCS):'—',...momChip(totCS,pCS,true),sub:`MYR cancelled${prevLabel}`,ico:'<span class="material-symbols-outlined">money_off</span>'},
     {l:'Return/Refund Orders',v:totRO?Num(totRO):'—',...momChip(totRO,pRO,true),sub:`Returned orders${prevLabel}`,ico:'↩️'},
-    {l:'Return/Refund Sales',v:totRS?RMfull(totRS):'—',...momChip(totRS,pRS,true),sub:`MYR refunded${prevLabel}`,ico:'🔄'},
-    {l:'Product Clicks',v:totCL?Num(totCL):'—',...momChip(totCL,pCL,false),sub:`Total clicks${prevLabel}`,ico:'👆'},
-    {l:'Unique Buyers',v:totBU?Num(totBU):'—',...momChip(totBU,pBU,false),sub:`Monthly buyers${prevLabel}`,ico:'👥'},
+    {l:'Return/Refund Sales',v:totRS?RMfull(totRS):'—',...momChip(totRS,pRS,true),sub:`MYR refunded${prevLabel}`,ico:'<span class="material-symbols-outlined">sync</span>'},
+    {l:'Product Clicks',v:totCL?Num(totCL):'—',...momChip(totCL,pCL,false),sub:`Total clicks${prevLabel}`,ico:'<span class="material-symbols-outlined">touch_app</span>'},
+    {l:'Unique Buyers',v:totBU?Num(totBU):'—',...momChip(totBU,pBU,false),sub:`Monthly buyers${prevLabel}`,ico:'<span class="material-symbols-outlined">group</span>'},
   ].map(k=>`<div class="kpi"><div class="kpi-ico">${k.ico}</div><div class="kpi-label">${k.l}</div><div class="kpi-val" style="font-size:18px">${k.v}</div><span class="chip ${k.dir}">${k.ch}</span><div class="kpi-sub">${k.sub}</div></div>`).join('');
 
   // Store performance chart:
@@ -34,7 +42,10 @@ function renderShopee(){
   //   Custom / All  → monthly bars
   const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let chartRows, isDailyChart=false;
-  if(S.grain==='daily'&&S.selectedDate&&D.shopee.daily.length){
+  if(_sDrillMonth&&D.shopee.daily.length){
+    chartRows=D.shopee.daily.filter(r=>r.y===_sDrillMonth.year&&r.m===mNames[_sDrillMonth.month-1]);
+    isDailyChart=chartRows.length>0;
+  } else if(S.grain==='daily'&&S.selectedDate&&D.shopee.daily.length){
     const[cy,cmo]=S.selectedDate.split('-').map(Number);
     chartRows=D.shopee.daily.filter(r=>r.y===cy&&r.m===mNames[cmo-1]);
     isDailyChart=chartRows.length>0;
@@ -59,23 +70,39 @@ function renderShopee(){
     ]
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
-      if(c.dataset.label==='Sales') return ` Sales: RM${Math.round(c.raw).toLocaleString()}`;
+      if(c.dataset.label==='Sales') return ` Sales: ${RMexact(c.raw)}`;
       if(c.dataset.label==='Basket Size') return ` AOV: RM${c.raw.toFixed(2)}`;
       if(c.dataset.label==='Order CR') return ` CR: ${c.raw}%`;
       return ` ${c.dataset.label}: ${Math.round(c.raw).toLocaleString()}`;
     }}}},
     scales:{
       x:{grid:{display:false},border:{display:false},ticks:{font:{size:isDailyChart?8:9},maxRotation:isDailyChart?45:0}},
-      y:{position:'left',grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+      y:{position:'left',grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)},beginAtZero:true},
       y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'},min:0},
-      y3:{display:false}
-    }}});
+      y3:{display:false,beginAtZero:true}
+    },
+    onClick:(evt,els)=>{
+      if(isDailyChart || !els.length) return;
+      const p=chartRows[els[0].index];
+      if(p){
+        const is25 = D.shopee.m2025.includes(p);
+        _sDrillMonth={year:is25?2025:2026,month:mNames.indexOf(p.m)+1};
+        renderShopee();
+      }
+    }
+  }});
+
+  const subEl = document.getElementById('shopeeRevSub');
+  if(subEl) {
+    if(_sDrillMonth) subEl.innerHTML = `Daily breakdown for ${mNames[_sDrillMonth.month-1]} ${_sDrillMonth.year} · <a href="#" onclick="return sBackToMonths()" style="color:var(--t2);text-decoration:underline;cursor:pointer">← Back to months</a>`;
+    else subEl.innerHTML = 'Sales · Orders · Visitors · AOV · CR';
+  }
 
   // Detail metrics table (buyers, clicks, cancelled, returns) per row
   const tblEl=document.getElementById('shopeeDetailTbl');
   if(tblEl){
     const tblRows=isDailyChart?chartRows:sf;
-    const labelFn=r=>isDailyChart?(r.date.slice(8)+'/'+r.date.slice(5,7))+(r.date===S.selectedDate?' ★':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
+    const labelFn=r=>isDailyChart?(r.date.slice(8)+'/'+r.date.slice(5,7))+(r.date===S.selectedDate?' <span class="material-symbols-outlined">star</span>':''):D.shopee.m2025.includes(r)?r.m+" '25":r.m+" '26";
     const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
     const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
     tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
@@ -163,8 +190,8 @@ function renderShopee(){
       labels:ch.labels,
       datasets:[{label:'Sales (MYR)',data:ch.mar,backgroundColor:ch.colors,borderRadius:4,maxBarThickness:22}]
     },options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},
-      tooltip:{...cTooltip,callbacks:{label:c=>` ${RMfull(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}},
-      scales:{x:{grid:{color:'#f1f5f9'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
+      tooltip:{...cTooltip,callbacks:{label:c=>` ${RMexact(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}},
+      scales:{x:{grid:{color:'#f1f5f9'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)},beginAtZero:true},
         y:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}}}}});
     // Pie chart
     const pieWrap=document.getElementById('channelPieWrap');
@@ -173,7 +200,7 @@ function renderShopee(){
       labels:ch.labels,
       datasets:[{data:ch.mar,backgroundColor:ch.colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]
     },options:{responsive:true,cutout:'52%',plugins:{legend:{display:false},tooltip:{...cTooltip,
-      callbacks:{label:c=>` ${c.label}: ${RMfull(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}}}});
+      callbacks:{label:c=>` ${c.label}: ${RMexact(c.raw)} (${tot?+(c.raw/tot*100).toFixed(1):0}%)`}}}}});
     const pieLeg=document.getElementById('channelPieLegend');
     if(pieLeg) pieLeg.innerHTML=ch.labels.map((l,i)=>`
       <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px">

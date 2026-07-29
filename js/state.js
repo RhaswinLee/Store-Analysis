@@ -10,9 +10,12 @@ const D = {
 };
 
 /* ─── HELPERS ─── */
+const esc = str => String(str||'').replace(/[&<>"'`=\/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#x60;','=':'&#x3D;','/':'&#x2F;'}[s]));
 const RM = v => 'RM'+Math.round(v).toLocaleString();
 const RMk = v => v>=1000000?'RM'+(v/1000000).toFixed(2)+'M':v>=1000?'RM'+(v/1000).toFixed(1)+'k':'RM'+v.toFixed(2).replace(/\.00$/,'');
 const RMfull = v => 'RM'+Math.round(v).toLocaleString();
+const RMexact = v => 'RM ' + (v||0).toLocaleString('en-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const SGDexact = v => 'SGD ' + (v||0).toLocaleString('en-SG', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const Pct = v => v==null?'—':v.toFixed(2)+'%';
 const Num = v => v==null?'—':v.toLocaleString();
 const cTooltip = {
@@ -214,8 +217,8 @@ function renderBuyersComp(idx){
   const fmtN=v=>Math.round(v).toLocaleString();
   const fmtRM=v=>'RM'+Math.round(v).toLocaleString();
   const fmtP=v=>v.toFixed(2)+'%';
-  const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${c}</th>`).join('')}</tr>`;
-  const td=(cells,bold=false)=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}${bold?'font-weight:700;':''}color:var(--t1)">${c}</td>`).join('')}</tr>`;
+  const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${esc(c)}</th>`).join('')}</tr>`;
+  const td=(cells,bold=false)=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}${bold?'font-weight:700;':''}color:var(--t1)">${esc(c)}</td>`).join('')}</tr>`;
   const tbl=(head,rows)=>`<table style="width:100%;border-collapse:collapse;margin-top:6px">${head}${rows}</table>`;
   if(idx===0){
     // Type of Buyers

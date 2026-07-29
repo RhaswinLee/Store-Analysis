@@ -53,25 +53,25 @@ function renderKPIs(){
   const tPrevLabel=isYearly?(ptf.length?' vs prior year':''):(ptf.length?` vs ${ptf[0].m}`:'');
 
   const all=[
-    {l:'Total Revenue',v:RMk(sRev+tRev),...((sPartial||tPartial)?partialChip:momChip(sCurR+tCurR,pRev+ptRev,false,period)),sub:'Shopee+TikTok combined',ico:'💰'},
-    {l:'Shopee GMV',v:RMk(sRev),...revMoM,sub:`${sf.length}mo avg ${sf.length?RMk(sRev/sf.length):'RM 0'}/mo`,ico:'🛒'},
-    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length}mo`,ico:'🎵'},
-    {l:'Combined Orders',v:Num(sOrd+tOrd),...((sPartial||tPartial)?partialChip:momChip(sCurO+tCurO,pOrd+ptOrd,false,period)),sub:'All channels',ico:'📦'},
-    {l:'Avg Conv. Rate',v:Pct((sCr+tCr)/2),ch:sCr>tCr?'Shopee leads':'TikTok leads',dir:'up',sub:'Platform average',ico:'⚡'},
+    {l:'Total Revenue',v:RMk(sRev+tRev),...((sPartial||tPartial)?partialChip:momChip(sCurR+tCurR,pRev+ptRev,false,period)),sub:'Shopee+TikTok combined',ico:'<span class="material-symbols-outlined">payments</span>'},
+    {l:'Shopee GMV',v:RMk(sRev),...revMoM,sub:`${sf.length}mo avg ${sf.length?RMk(sRev/sf.length):'RM 0'}/mo`,ico:'<span class="material-symbols-outlined">shopping_bag</span>'},
+    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length}mo`,ico:'<span class="material-symbols-outlined">music_note</span>'},
+    {l:'Combined Orders',v:Num(sOrd+tOrd),...((sPartial||tPartial)?partialChip:momChip(sCurO+tCurO,pOrd+ptOrd,false,period)),sub:'All channels',ico:'<span class="material-symbols-outlined">package</span>'},
+    {l:'Avg Conv. Rate',v:Pct((sCr+tCr)/2),ch:sCr>tCr?'Shopee leads':'TikTok leads',dir:'up',sub:'Platform average',ico:'<span class="material-symbols-outlined">bolt</span>'},
   ];
   const shopee=[
-    {l:'Shopee Revenue',v:RMfull(sRev),...revMoM,sub:`${sf.length} month${sf.length>1?'s':''}${prevLabel}`,ico:'💵'},
-    {l:'Total Orders',v:Num(sOrd),...ordMoM,sub:`Confirmed orders${prevLabel}`,ico:'📦'},
-    {l:'Conv. Rate',v:Pct(sCr),...crChip,sub:`Target 3.80%${prevLabel}`,ico:'⚡'},
-    {l:'Avg Order Value',v:'RM'+sAov.toFixed(2),...aovMoM,sub:`Target RM55–60${prevLabel}`,ico:'🎯'},
-    {l:'Avg Visitors',v:sVis?Num(sVis):'—',...visMoM,sub:`Unique visits${prevLabel}`,ico:'👥'},
+    {l:'Shopee Revenue',v:RMfull(sRev),...revMoM,sub:`${sf.length} month${sf.length>1?'s':''}${prevLabel}`,ico:'<span class="material-symbols-outlined">payments</span>'},
+    {l:'Total Orders',v:Num(sOrd),...ordMoM,sub:`Confirmed orders${prevLabel}`,ico:'<span class="material-symbols-outlined">package</span>'},
+    {l:'Conv. Rate',v:Pct(sCr),...crChip,sub:`Target 3.80%${prevLabel}`,ico:'<span class="material-symbols-outlined">bolt</span>'},
+    {l:'Avg Order Value',v:'RM'+sAov.toFixed(2),...aovMoM,sub:`Target RM55–60${prevLabel}`,ico:'<span class="material-symbols-outlined">track_changes</span>'},
+    {l:'Avg Visitors',v:sVis?Num(sVis):'—',...visMoM,sub:`Unique visits${prevLabel}`,ico:'<span class="material-symbols-outlined">group</span>'},
   ];
   const tiktok=[
-    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length} months`,ico:'🎵'},
-    {l:'Total Orders',v:Num(tOrd),...tOrdMoM,sub:`Confirmed orders${tPrevLabel}`,ico:'📦'},
-    {l:'Conv. Rate',v:Pct(tCr),...tCrChip,sub:`Buyer conversion${tPrevLabel}`,ico:'⚡'},
-    {l:'Avg Order Value',v:'RM'+tAov.toFixed(2),...tAovMoM,sub:`vs Shopee RM${sAov.toFixed(2)}`,ico:'🎯'},
-    {l:'Affiliate GMV',v:D.tiktok.affiliate&&D.tiktok.affiliate.length?RMk(D.tiktok.affiliate[D.tiktok.affiliate.length-1].gmv||0):'—',ch:'from Drive data',dir:'up',sub:'Connect TikTok MY folder',ico:'🤝'},
+    {l:'TikTok GMV',v:RMk(tRev),...tRevMoM,sub:`${tf.length} months`,ico:'<span class="material-symbols-outlined">music_note</span>'},
+    {l:'Total Orders',v:Num(tOrd),...tOrdMoM,sub:`Confirmed orders${tPrevLabel}`,ico:'<span class="material-symbols-outlined">package</span>'},
+    {l:'Conv. Rate',v:Pct(tCr),...tCrChip,sub:`Buyer conversion${tPrevLabel}`,ico:'<span class="material-symbols-outlined">bolt</span>'},
+    {l:'Avg Order Value',v:'RM'+tAov.toFixed(2),...tAovMoM,sub:`vs Shopee RM${sAov.toFixed(2)}`,ico:'<span class="material-symbols-outlined">track_changes</span>'},
+    {l:'Affiliate GMV',v:D.tiktok.affiliate&&D.tiktok.affiliate.length?RMk(D.tiktok.affiliate[D.tiktok.affiliate.length-1].gmv||0):'—',ch:'from Drive data',dir:'up',sub:'Connect TikTok MY folder',ico:'<span class="material-symbols-outlined">handshake</span>'},
   ];
 
   function renderRow(id, data){

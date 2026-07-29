@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
     const inp=document.getElementById('apiKeyInp');
     if(inp) inp.value=GS.apiKey;
     const tag=document.getElementById('apiKeyTag');
-    if(tag){tag.textContent='✓ Saved';tag.style.cssText='background:var(--green-d);color:var(--green)';}
+    if(tag){tag.innerHTML='<span class="material-symbols-outlined">check</span> Saved';tag.style.cssText='background:var(--green-d);color:var(--green)';}
   }
   // Restore platform folder URL inputs
   Object.keys(PLAT_S).forEach(p=>{

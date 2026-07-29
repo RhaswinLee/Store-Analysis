@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HYGR — Business Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
@@ -27,17 +31,17 @@
   </div>
   <nav class="sb-nav">
     <div class="sb-section">Overview</div>
-    <div class="sb-item active" data-nav="overview">📊 Performance Overview</div>
-    <div class="sb-item" data-nav="shopee">🛒 Shopee Deep Dive</div>
-    <div class="sb-item" data-nav="tiktok">🎵 TikTok Deep Dive</div>
+    <div class="sb-item active" data-nav="overview"><span class="material-symbols-outlined" style="font-size: 18px;">analytics</span> Performance Overview</div>
+    <div class="sb-item" data-nav="shopee"><span class="material-symbols-outlined" style="font-size: 18px;">shopping_bag</span> Shopee Deep Dive</div>
+    <div class="sb-item" data-nav="tiktok"><span class="material-symbols-outlined" style="font-size: 18px;">play_circle</span> TikTok Deep Dive</div>
     <div class="sb-section" style="margin-top:8px">Analysis</div>
-    <div class="sb-item" data-nav="campaigns">🎯 Campaigns</div>
-    <div class="sb-item" data-nav="promo">🎟️ Promotions</div>
-    <div class="sb-item" data-nav="products">🧴 Product Strategy</div>
-    <div class="sb-item" data-nav="reco">💡 Recommendations <span class="sb-badge">7</span></div>
+    <div class="sb-item" data-nav="campaigns"><span class="material-symbols-outlined" style="font-size: 18px;">campaign</span> Campaigns</div>
+    <div class="sb-item" data-nav="promo"><span class="material-symbols-outlined" style="font-size: 18px;">loyalty</span> Promotions</div>
+    <div class="sb-item" data-nav="products"><span class="material-symbols-outlined" style="font-size: 18px;">inventory_2</span> Product Strategy</div>
+    <div class="sb-item" data-nav="reco"><span class="material-symbols-outlined" style="font-size: 18px;">lightbulb</span> Recommendations <span class="sb-badge">7</span></div>
     <div class="sb-section" style="margin-top:8px">Operations</div>
-    <div class="sb-item" data-nav="health">🏥 Account Health</div>
-    <div class="sb-item" data-nav="sync">🔗 Data Sync</div>
+    <div class="sb-item" data-nav="health"><span class="material-symbols-outlined" style="font-size: 18px;">monitor_heart</span> Account Health</div>
+    <div class="sb-item" data-nav="sync"><span class="material-symbols-outlined" style="font-size: 18px;">sync</span> Data Sync</div>
   </nav>
   <div class="sb-footer">
     <div class="sb-user">
@@ -69,10 +73,10 @@
     </div>
     <div class="ptabs" id="ptabs">
       <div class="ptab active" data-p="all">All Platforms</div>
-      <div class="ptab" data-p="shopee">🛒 Shopee MY</div>
-      <div class="ptab" data-p="tiktok">🎵 TikTok MY</div>
-      <div class="ptab" data-p="shopee-sg">🛒 Shopee SG</div>
-      <div class="ptab" data-p="tiktok-sg">🎵 TikTok SG</div>
+      <div class="ptab" data-p="shopee"><span class="material-symbols-outlined">shopping_bag</span> Shopee MY</div>
+      <div class="ptab" data-p="tiktok"><span class="material-symbols-outlined">music_note</span> TikTok MY</div>
+      <div class="ptab" data-p="shopee-sg"><span class="material-symbols-outlined">shopping_bag</span> Shopee SG</div>
+      <div class="ptab" data-p="tiktok-sg"><span class="material-symbols-outlined">music_note</span> TikTok SG</div>
     </div>
     <div class="period-wrap" id="periodWrap">
       <button class="period-btn" id="periodBtn" onclick="togglePeriod(event)">
@@ -106,7 +110,7 @@
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Revenue Trend</div><div class="cc-sub">Monthly GMV · All Platforms</div></div>
+            <div><div class="cc-title">Revenue Trend</div><div class="cc-sub" id="overviewRevSub">Monthly GMV · All Platforms</div></div>
             <span class="tag tag-g" id="revTag"></span>
           </div>
           <canvas id="revChart"></canvas>
@@ -232,7 +236,7 @@
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">TikTok Monthly GMV</div><div class="cc-sub">2025 (Apr-Dec) + 2026 (Jan-Mar)</div></div>
+            <div><div class="cc-title">TikTok Monthly GMV</div><div class="cc-sub" id="ttRevSub">2025 (Apr-Dec) + 2026 (Jan-Mar)</div></div>
             <span class="tag tag-t">TikTok Shop</span>
           </div>
           <canvas id="ttRevChart"></canvas>
@@ -317,7 +321,7 @@
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Shopee SG Monthly Revenue</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+            <div><div class="cc-title">Shopee SG Monthly Revenue</div><div class="cc-sub" id="shopeeSgRevSub">Jan–Mar 2026 · SGD</div></div>
             <span class="tag tag-s">Shopee SG</span>
           </div>
           <canvas id="shopeeSgRevChart"></canvas>
@@ -369,7 +373,7 @@
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">TikTok SG Monthly GMV</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
+            <div><div class="cc-title">TikTok SG Monthly GMV</div><div class="cc-sub" id="tiktokSgRevSub">Jan–Mar 2026 · SGD</div></div>
             <span class="tag tag-t">TikTok SG</span>
           </div>
           <canvas id="tiktokSgRevChart"></canvas>
@@ -527,7 +531,7 @@
           <strong>Preferred Seller Status Active</strong> — Weekly evaluation updated 24-03-2026.
           Maintain all targets to keep benefits: Preferred Badge · Search Filter · Chat Broadcast Quota · Free Shipping page.
         </div>
-        <div class="preferred-alert">⚠ Fast Handover 61.83% — FAILING</div>
+        <div class="preferred-alert"><span class="material-symbols-outlined">warning</span> Fast Handover 61.83% — FAILING</div>
       </div>
       <div class="sh"><div class="sh-title">Fulfillment Health Metrics</div></div>
       <div class="health-grid" id="healthGrid"></div>
@@ -560,21 +564,21 @@
       </div>
       <input class="sync-inp" id="apiKeyInp" style="width:100%;padding:7px 11px;font-size:12px;margin-bottom:8px" placeholder="AIzaSy…">
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn-sm primary" onclick="saveApiKey()" style="padding:5px 14px">✓ Save Key</button>
+        <button class="btn-sm primary" onclick="saveApiKey()" style="padding:5px 14px"><span class="material-symbols-outlined">check</span> Save Key</button>
         <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="font-size:11px;color:var(--indigo);text-decoration:none">→ Create API Key ↗</a>
       </div>
       <div style="font-size:10px;color:var(--t3);margin-top:7px;line-height:1.5">Enable <em>Google Drive API</em> + <em>Google Sheets API</em> in Cloud Console, then create a credential → API key.</div>
     </div>
     <div class="cc">
-      <div class="cc-title" style="margin-bottom:8px">⚡ Auto-Sync Overview</div>
+      <div class="cc-title" style="margin-bottom:8px"><span class="material-symbols-outlined">bolt</span> Auto-Sync Overview</div>
       <div style="font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:12px">
         Paste a <strong style="color:var(--t1)">Drive folder URL</strong> for each platform. The dashboard auto-loads <strong style="color:var(--t1)">all files</strong> inside and re-checks every <strong style="color:var(--t1)">5 minutes</strong> for new uploads. Folder must be shared <strong style="color:var(--green)">Anyone with the link can view</strong>.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee)">🛒 Shopee MY</div><div id="statusLine_shopee" style="color:var(--t3);margin-top:2px">Not connected</div></div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok)">🎵 TikTok MY</div><div id="statusLine_tiktok" style="color:var(--t3);margin-top:2px">Not connected</div></div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee);opacity:.8">🛒 Shopee SG</div><div id="statusLine_shopeesg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok);opacity:.8">🎵 TikTok SG</div><div id="statusLine_tiktoksg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee)"><span class="material-symbols-outlined">shopping_bag</span> Shopee MY</div><div id="statusLine_shopee" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok)"><span class="material-symbols-outlined">music_note</span> TikTok MY</div><div id="statusLine_tiktok" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--shopee);opacity:.8"><span class="material-symbols-outlined">shopping_bag</span> Shopee SG</div><div id="statusLine_shopeesg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 9px"><div style="font-weight:700;color:var(--tiktok);opacity:.8"><span class="material-symbols-outlined">music_note</span> TikTok SG</div><div id="statusLine_tiktoksg" style="color:var(--t3);margin-top:2px">Not connected</div></div>
       </div>
     </div>
   </div>
@@ -584,24 +588,24 @@
     <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Connect Platform Folders</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="cc" style="padding:13px">
-        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px">🛒 Shopee MY</div>
+        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px"><span class="material-symbols-outlined">shopping_bag</span> Shopee MY</div>
         <input class="sync-inp" id="pLink_shopee" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
-        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee')" style="font-size:10px;padding:4px 8px">✕</button></div>
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee')" style="font-size:10px;padding:4px 8px"><span class="material-symbols-outlined">close</span></button></div>
       </div>
       <div class="cc" style="padding:13px">
-        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px">🎵 TikTok MY</div>
+        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px"><span class="material-symbols-outlined">music_note</span> TikTok MY</div>
         <input class="sync-inp" id="pLink_tiktok" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
-        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok')" style="font-size:10px;padding:4px 8px">✕</button></div>
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok')" style="font-size:10px;padding:4px 8px"><span class="material-symbols-outlined">close</span></button></div>
       </div>
       <div class="cc" style="padding:13px">
-        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px;opacity:.85">🛒 Shopee SG</div>
+        <div style="font-size:12px;font-weight:700;color:var(--shopee);margin-bottom:8px;opacity:.85"><span class="material-symbols-outlined">shopping_bag</span> Shopee SG</div>
         <input class="sync-inp" id="pLink_shopeesg" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
-        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee-sg')" style="font-size:10px;padding:4px 8px">✕</button></div>
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('shopee-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('shopee-sg')" style="font-size:10px;padding:4px 8px"><span class="material-symbols-outlined">close</span></button></div>
       </div>
       <div class="cc" style="padding:13px">
-        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px;opacity:.85">🎵 TikTok SG</div>
+        <div style="font-size:12px;font-weight:700;color:var(--tiktok);margin-bottom:8px;opacity:.85"><span class="material-symbols-outlined">music_note</span> TikTok SG</div>
         <input class="sync-inp" id="pLink_tiktoksg" placeholder="Drive folder URL…" style="width:100%;padding:6px 10px;font-size:11px;margin-bottom:7px;box-sizing:border-box">
-        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok-sg')" style="font-size:10px;padding:4px 8px">✕</button></div>
+        <div style="display:flex;gap:6px"><button class="btn-sm primary" onclick="connectPlatform('tiktok-sg')" style="flex:1;font-size:10px;padding:4px 0">🔍 Connect</button><button class="btn-sm ghost" onclick="disconnectPlatform('tiktok-sg')" style="font-size:10px;padding:4px 8px"><span class="material-symbols-outlined">close</span></button></div>
       </div>
     </div>
   </div>
@@ -611,10 +615,10 @@
     <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">🧪 Use Test Data</div>
     <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Point at a platform's local export folder — same Sales Data / Product Performance / Discount Performance / Voucher Performance sub-folders as Drive — to load it straight from disk. No API key, no rate limits, nothing uploaded anywhere.</div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee')" style="font-size:10px;padding:6px 4px">🛒 Shopee MY</button>
-      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok')" style="font-size:10px;padding:6px 4px">🎵 TikTok MY</button>
-      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee-sg')" style="font-size:10px;padding:6px 4px">🛒 Shopee SG</button>
-      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok-sg')" style="font-size:10px;padding:6px 4px">🎵 TikTok SG</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee')" style="font-size:10px;padding:6px 4px"><span class="material-symbols-outlined">shopping_bag</span> Shopee MY</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok')" style="font-size:10px;padding:6px 4px"><span class="material-symbols-outlined">music_note</span> TikTok MY</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee-sg')" style="font-size:10px;padding:6px 4px"><span class="material-symbols-outlined">shopping_bag</span> Shopee SG</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok-sg')" style="font-size:10px;padding:6px 4px"><span class="material-symbols-outlined">music_note</span> TikTok SG</button>
     </div>
   </div>
 

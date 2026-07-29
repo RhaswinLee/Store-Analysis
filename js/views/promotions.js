@@ -26,7 +26,7 @@ function renderPromos(){
      Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = 'none'; });
      ph.style.display = 'block';
      const pName = document.querySelector(`.ptab[data-p="${S.platform}"]`)?.innerText.replace(/[^A-Za-z0-9 ]/g,'').trim() || 'this platform';
-     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px">🚧</div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Promotion data for ${pName} is not yet synced from Google Drive.</div>`;
+     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px"><span class="material-symbols-outlined">construction</span></div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Promotion data for ${pName} is not yet synced from Google Drive.</div>`;
      return;
   }
   Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = ''; });
@@ -55,21 +55,34 @@ function renderPromos(){
   const promoTotal=e=>e?e.byType.reduce((a,t)=>a+t.sales,0):0;
   const promoOrders=e=>e?e.byType.reduce((a,t)=>a+t.orders,0):0;
 
-  // Discount/Voucher Performance files only report whole-month totals — a Campaign Day window
-  // (e.g. 3.3 ±1 day) can't be isolated from them, so show the encompassing month and say so,
-  // same treatment as the Campaign Performance tab's Promotion Revenue card.
-  const latestPromo=promoArr[promoArr.length-1];
-  const latestVoucher=voucherArr[voucherArr.length-1];
-  const prevVoucher=voucherArr[voucherArr.length-2];
+  const sumPromoSales = promoArr.reduce((a, e) => a + promoTotal(e), 0);
+  const sumPromoOrders = promoArr.reduce((a, e) => a + promoOrders(e), 0);
+  const sumVoucherSales = voucherArr.reduce((a, e) => a + (e.sales || 0), 0);
+  const sumVoucherClaims = voucherArr.reduce((a, e) => a + (e.claims || 0), 0);
+  const sumVoucherOrders = voucherArr.reduce((a, e) => a + (e.orders || 0), 0);
+  const sumVoucherCost = voucherArr.reduce((a, e) => a + (e.cost || 0), 0);
+  
+  const vUsage = sumVoucherClaims ? (sumVoucherOrders / sumVoucherClaims * 100) : 0;
+  const vRoi = sumVoucherCost ? (sumVoucherSales / sumVoucherCost).toFixed(1) + 'x' : 'N/A';
+
+  const pLbl = promoArr.length === 1 ? mLbl(promoArr[0]) : (promoArr.length > 1 ? 'Period Total' : '—');
+  const vLbl = voucherArr.length === 1 ? mLbl(voucherArr[0]) : (voucherArr.length > 1 ? 'Period Total' : '—');
+
+  // Top Promotion doesn't have period data natively since it's aggregated by name across all time.
   const topPromo=(D.shopee.promoListArr||[])[0];
 
   // KPIs
   const el=document.getElementById('promoKpi');
   if(el) el.innerHTML=[
-    {l:`Promo GMV (${latestPromo?mLbl(latestPromo):'—'}${isCampDay?', monthly':''})`,v:RMk(promoTotal(latestPromo)),ch:`${Num(promoOrders(latestPromo))} orders`,dir:'up',sub:'From Discount Performance files',ico:'🎟️'},
-    {l:`Voucher Sales (${latestVoucher?mLbl(latestVoucher):'—'}${isCampDay?', monthly':''})`,v:RMk(latestVoucher?.sales||0),ch:latestVoucher?`Usage ${latestVoucher.usageRate.toFixed(2)}%`:'—',dir:'up',sub:latestVoucher?`${Num(latestVoucher.claims)} claims`:'',ico:'🏷️'},
-    {l:'Voucher ROI',v:latestVoucher&&latestVoucher.cost?(latestVoucher.sales/latestVoucher.cost).toFixed(1)+'x':'N/A',ch:prevVoucher&&prevVoucher.cost?`vs ${(prevVoucher.sales/prevVoucher.cost).toFixed(1)}x prior mo`:'',dir:'warn',sub:latestVoucher?`${RMk(latestVoucher.cost)} cost`:'',ico:'📊'},
-    {l:'Top Promotion (All-Time)',v:topPromo?(topPromo.name.length>18?topPromo.name.slice(0,16)+'…':topPromo.name):'—',ch:topPromo?RMk(topPromo.sales):'',dir:'up',sub:topPromo?.type||'',ico:'🏆'},
+    {l:`Promo GMV (${pLbl}${isCampDay?', monthly':''})`,v:RMk(sumPromoSales),ch:`${Num(sumPromoOrders)} orders`,dir:'up',sub:'From Discount Performance files',ico:'<span class="material-symbols-outlined">loyalty</span>'},
+    {l:`Voucher Sales (${vLbl}${isCampDay?', monthly':''})`,v:RMk(sumVoucherSales),ch:sumVoucherClaims?`Usage ${vUsage.toFixed(2)}%`:'—',dir:'up',sub:sumVoucherClaims?`${Num(sumVoucherClaims)} claims`:'',ico:'<span class="material-symbols-outlined">sell</span>️'},
+    {l:'Voucher ROI',v:vRoi,ch:voucherArr.length===1&&D.shopee.voucherPerf?((()=>{
+      const vAll = [...D.shopee.voucherPerf].sort((a,b)=>a.start.localeCompare(b.start));
+      const idx = vAll.findIndex(v=>v.start===voucherArr[0].start);
+      if(idx>0 && vAll[idx-1].cost) return `vs ${(vAll[idx-1].sales/vAll[idx-1].cost).toFixed(1)}x prior mo`;
+      return '';
+    })()):'',dir:'warn',sub:sumVoucherCost?`${RMk(sumVoucherCost)} cost`:'',ico:'<span class="material-symbols-outlined">analytics</span>'},
+    {l:'Top Promotion (All-Time)',v:topPromo?(topPromo.name.length>18?topPromo.name.slice(0,16)+'…':topPromo.name):'—',ch:topPromo?RMk(topPromo.sales):'',dir:'up',sub:topPromo?.type||'',ico:'<span class="material-symbols-outlined">emoji_events</span>'},
   ].map(k=>`
     <div class="kpi">
       <div class="kpi-ico">${k.ico}</div>
@@ -91,20 +104,27 @@ function renderPromos(){
       backgroundColor:typeColors[i%typeColors.length],borderRadius:3,maxBarThickness:36,stack:'p',
     }))
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMk(c.raw)}`}}},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${RMexact(c.raw)}`}}},
     scales:{x:{grid:{display:false},border:{display:false},stacked:true,ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)}}}}});
+      y:{grid:{color:'#e2e8f0'},border:{display:false},stacked:true,ticks:{font:{size:10},callback:v=>RMk(v)},beginAtZero:true}}}});
   const trendLegend=document.getElementById('promoTrendLegend');
   if(trendLegend) trendLegend.innerHTML=promoTypes.map((ty,i)=>`<div class="lg-item"><div class="lg-dot" style="background:${typeColors[i%typeColors.length]}"></div>${ty}</div>`).join('');
 
-  // Promo type mix donut — latest synced month
-  const marByType=latestPromo?Object.fromEntries(latestPromo.byType.map(t=>[t.type,t.sales])):{};
+  // Promo type mix donut
+  const marByType={};
+  promoArr.forEach(e => {
+    if(e.byType) {
+      e.byType.forEach(t => {
+        marByType[t.type] = (marByType[t.type] || 0) + t.sales;
+      });
+    }
+  });
   const ptVals=promoTypes.map(t=>marByType[t]||0);
   const ptTotal=ptVals.reduce((a,v)=>a+v,0)||1;
   mkChart('promoTypeChart',{type:'doughnut',data:{
     labels:promoTypes,
     datasets:[{data:ptVals,backgroundColor:promoTypes.map((_,i)=>typeColors[i%typeColors.length]),borderWidth:0,hoverOffset:4}]
-  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMk(c.raw)} (${(c.raw/ptTotal*100).toFixed(1)}%)`}}}}});
+  },options:{responsive:true,cutout:'65%',plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.label}: ${RMexact(c.raw)} (${(c.raw/ptTotal*100).toFixed(1)}%)`}}}}});
   document.getElementById('promoTypeLegend').innerHTML=promoTypes.map((ty,i)=>`
     <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px">
       <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;background:${typeColors[i%typeColors.length]};border-radius:2px;display:inline-block"></span><span style="color:var(--t2)">${ty}</span></span>
@@ -121,8 +141,8 @@ function renderPromos(){
   },options:{responsive:true,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` ${c.dataset.label}: ${Num(c.raw)}`}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Claims',font:{size:9},color:'#94a3b8'}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Orders',font:{size:9},color:'#94a3b8'}}}}});
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Claims',font:{size:9},color:'#94a3b8'},beginAtZero:true},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>Num(v)},title:{display:true,text:'Orders',font:{size:9},color:'#94a3b8'},beginAtZero:true}}}});
 
   // Live Stream GMV — the sync pipeline doesn't yet assemble a reliable per-month Shopee Seller Live +
   // TikTok LIVE series (TikTok's monthly breakdown collapses different years into the same month key),
@@ -136,7 +156,7 @@ function renderPromos(){
     const usage=v.claims?(v.orders/v.claims*100):0;
     const rc=roi==null?'':roi>=15?'roi-good':roi>=10?'roi-warn':'roi-bad';
     return `<tr>
-      <td style="font-weight:600;color:var(--t1)">${v.name}</td>
+      <td style="font-weight:600;color:var(--t1)">${esc(v.name)}</td>
       <td>${Num(v.claims)}</td><td>${Num(v.orders)}</td>
       <td><span style="font-weight:700;color:${usage>=15?'var(--green)':usage>=10?'var(--amber)':'var(--t2)'}">${usage.toFixed(2)}%</span></td>
       <td style="color:var(--green);font-weight:700">${RM(v.sales)}</td>
@@ -153,8 +173,8 @@ function renderPromos(){
     const aov=p.orders?p.sales/p.orders:0;
     const isActive=/ongoing|active|upcoming/i.test(p.status||'');
     return `<tr>
-      <td style="font-weight:600;color:var(--t1)">${p.name}</td>
-      <td><span class="tag" style="${promoTypeTagStyle(p.type)}">${p.type}</span></td>
+      <td style="font-weight:600;color:var(--t1)">${esc(p.name)}</td>
+      <td><span class="tag" style="${promoTypeTagStyle(p.type)}">${esc(p.type)}</span></td>
       <td style="font-size:10px;color:var(--t3)">Shopee MY</td>
       <td style="font-weight:700;color:var(--t1)">${p.sales?RMk(p.sales):'—'}</td>
       <td>${p.orders?Num(p.orders):'—'}</td>

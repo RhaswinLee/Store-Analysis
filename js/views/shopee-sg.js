@@ -1,5 +1,13 @@
 /* ─── SHOPEE SG ─── */
+let _sSgDrillMonth=null;
+let _sSgLastGrainSig=null;
+window.sSgBackToMonths = function(){ _sSgDrillMonth=null; renderShopeeSG(); return false; };
+
 function renderShopeeSG(){
+  const grainSig=JSON.stringify([S.grain,S.selectedMonth,S.selectedDate,S.customStart,S.customEnd,S.selectedCampaignMonth,S.selectedCampaignYear]);
+  if(_sSgLastGrainSig!==null&&_sSgLastGrainSig!==grainSig) _sSgDrillMonth=null;
+  _sSgLastGrainSig=grainSig;
+
   const d=filteredShopeeSG();
   if(!d||d.length<1){
     const el=document.getElementById('shopeeSgKpi');
@@ -55,12 +63,46 @@ function renderShopeeSG(){
       <span class="chip ${k.dir}">${k.ch}</span>
     </div>`).join('');
 
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let chartRows, isDailyChart=false;
   const labs=d.map(r=>r.m);
+  if(_sSgDrillMonth&&(D.shopeeSG.daily||[]).length){
+    chartRows=(D.shopeeSG.daily||[]).filter(r=>r.y===_sSgDrillMonth.year&&r.m===mNames[_sSgDrillMonth.month-1]);
+    isDailyChart=chartRows.length>0;
+  }
+  if(!isDailyChart) chartRows=d;
+
+  const chartLabs=isDailyChart
+    ? chartRows.map(r=>r.date.slice(8)+' '+r.m)
+    : d.map(r=>r.m+' 2026');
+
   mkChart('shopeeSgRevChart',{type:'bar',data:{
-    labels:labs,
-    datasets:[{label:'Revenue (SGD)',data:d.map(r=>r.s),backgroundColor:d.map((_,i)=>i===d.length-1?'#f97316':'rgba(249,115,22,.45)'),borderRadius:5,maxBarThickness:52}]
-  },options:{responsive:true,plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>` Revenue: SGD ${c.raw.toLocaleString()}`}}},
-    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)}}}}});
+    labels:chartLabs,
+    datasets:[
+      {label:'Sales (SGD)',data:chartRows.map(r=>r.s),backgroundColor:chartRows.map((_,i)=>i===chartRows.length-1&&!isDailyChart?'rgba(59,130,246,1)':'rgba(59,130,246,.5)'),borderRadius:3,maxBarThickness:isDailyChart?12:40,yAxisID:'y'},
+      {label:'Orders',data:chartRows.map(r=>r.o),type:'line',borderColor:'#f97316',borderWidth:2.5,pointRadius:isDailyChart?2:4,pointBackgroundColor:'#f97316',tension:.4,yAxisID:'y2',fill:false},
+    ]
+  },options:{responsive:true,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>c.dataset.label==='Orders'?` Orders: ${c.raw.toLocaleString()}`:` Sales: ${SGDexact(c.raw)}`}}},
+    scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:isDailyChart?8:11},maxRotation:isDailyChart?45:0}},
+      y:{position:'left',grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:10},callback:v=>SGD(v)},beginAtZero:true},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:10},callback:v=>v.toLocaleString()},beginAtZero:true}},
+    onClick:(evt,els)=>{
+      if(isDailyChart || !els.length) return;
+      const p=chartRows[els[0].index];
+      if(p){
+        const is25 = D.shopeeSG.m2025&&D.shopeeSG.m2025.includes(p);
+        _sSgDrillMonth={year:is25?2025:2026,month:mNames.indexOf(p.m)+1};
+        renderShopeeSG();
+      }
+    }
+  }});
+
+  const subEl = document.getElementById('shopeeSgRevSub');
+  if(subEl) {
+    if(_sSgDrillMonth) subEl.innerHTML = `Daily breakdown for ${mNames[_sSgDrillMonth.month-1]} ${_sSgDrillMonth.year} · <a href="#" onclick="return sSgBackToMonths()" style="color:var(--t2);text-decoration:underline;cursor:pointer">← Back to months</a>`;
+    else subEl.innerHTML = 'Jan–Mar 2026 · SGD';
+  }
 
   const ch=D.shopeeSG.channel;
   if(ch&&ch.mar&&ch.mar.length){

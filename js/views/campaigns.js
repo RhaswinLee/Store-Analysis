@@ -23,7 +23,7 @@ function renderCampaigns(){
      Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = 'none'; });
      ph.style.display = 'block';
      const pName = document.querySelector(`.ptab[data-p="${S.platform}"]`)?.innerText.replace(/[^A-Za-z0-9 ]/g,'').trim() || 'this platform';
-     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px">🚧</div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Campaign data for ${pName} is not yet synced from Google Drive.</div>`;
+     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px"><span class="material-symbols-outlined">construction</span></div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Campaign data for ${pName} is not yet synced from Google Drive.</div>`;
      return;
   }
   
@@ -50,12 +50,12 @@ function renderCampaigns(){
   const baseOpts={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{
       if(c.dataset.label==='CR%') return ` CR: ${c.raw}%`;
-      if(c.dataset.label==='Sales (RM)') return ` Sales: ${RMk(c.raw)}`;
+      if(c.dataset.label==='Sales (RM)') return ` Sales: ${RMexact(c.raw)}`;
       return ` ${c.dataset.label}: ${Num(c.raw)}`;
     }}}},
     scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{size:10}}},
-      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)}},
-      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'}}}};
+      y:{grid:{color:'#e2e8f0'},border:{display:false},ticks:{font:{size:9},callback:v=>RMk(v)},beginAtZero:true},
+      y2:{position:'right',grid:{display:false},border:{display:false},ticks:{font:{size:9},callback:v=>v+'%'},beginAtZero:true}}};
 
   // A month can come from clicking a bar, or from the Period filter's own Campaign Day picker —
   // either way it lands in the same daily drill-down.
@@ -111,8 +111,8 @@ function renderCampaigns(){
 
 function renderPromoVoucherCards(){
   const RMc=v=>'RM'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0));
-  const th=cells=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600">${c}</th>`).join('')}</tr>`;
-  const td=cells=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}color:var(--t1)">${c}</td>`).join('')}</tr>`;
+  const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${esc(c)}</th>`).join('')}</tr>`;
+  const td=cells=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}color:var(--t1)">${esc(c)}</td>`).join('')}</tr>`;
   const tbl=(head,rows)=>`<table style="width:100%;border-collapse:collapse">${head}${rows}</table>`;
 
   const range=getPeriodRange();
