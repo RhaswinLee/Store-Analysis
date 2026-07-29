@@ -1188,16 +1188,19 @@ function campaignDaysFromDaily(daily){
     const day=parseInt(r.date.slice(8,10),10), mo=parseInt(r.date.slice(5,7),10);
     if(Math.abs(day-mo)>1) continue;
     if(!byYear[r.y]) byYear[r.y]={};
-    if(!byYear[r.y][mo]) byYear[r.y][mo]={s:0,o:0,v:0,cl:0,crSum:0,crN:0};
+    if(!byYear[r.y][mo]) byYear[r.y][mo]={s:0,o:0,v:0,cl:0,bu:0,co:0,cs:0,ro:0,rs:0,crSum:0,crN:0};
     const a=byYear[r.y][mo];
     a.s+=r.s; a.o+=r.o; a.v+=(r.v||0); a.cl+=(r.cl||0);
+    a.bu+=(r.bu||0); a.co+=(r.co||0); a.cs+=(r.cs||0); a.ro+=(r.ro||0); a.rs+=(r.rs||0);
     if(r.cr){a.crSum+=r.cr; a.crN++;}
   }
   const out={};
   for(const y of Object.keys(byYear)){
     out[y]=mNames.map((m,i)=>{
       const a=byYear[y][i+1]; if(!a) return null;
-      return{m,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,cr:a.crN?+(a.crSum/a.crN).toFixed(2):0};
+      const b=a.o?a.s/a.o:0;
+      const cr=a.v?(a.o/a.v*100):a.crN?(a.crSum/a.crN):0;
+      return{m,s:+a.s.toFixed(2),o:a.o,v:a.v,cl:a.cl,bu:a.bu,co:a.co,cs:+a.cs.toFixed(2),ro:a.ro,rs:+a.rs.toFixed(2),b:+b.toFixed(2),cr:+cr.toFixed(2)};
     }).filter(Boolean);
   }
   return out;

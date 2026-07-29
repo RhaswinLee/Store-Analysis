@@ -106,6 +106,38 @@ function renderCampaigns(){
     if(sub) sub.textContent=points.length?'Mega campaign days (1.1–12.12) — click a bar to see every day of that month':'No campaign days in this period';
   }
 
+  // Detail metrics table (same format as Store Performance in Deep Dive)
+  const tblEl=document.getElementById('campDetailTbl');
+  if(tblEl){
+    const tblRows=drill?D.shopee.daily.filter(r=>r.y===drill.year&&r.m===mNames[drill.month-1]).sort((a,b)=>a.date.localeCompare(b.date)):_campMonthlyPoints;
+    const isDaily=!!drill;
+    const labelFn=r=>isDaily?(r.date.slice(8)+'/'+r.date.slice(5,7)):(r.m+" '"+String(r.y).slice(2));
+    const th=s=>`<th style="padding:5px 7px;text-align:right;white-space:nowrap">${s}</th>`;
+    const td=(v,style='')=>`<td style="padding:5px 7px;text-align:right${style?';'+style:''}">${v}</td>`;
+    tblEl.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:10px">
+      <thead style="position:sticky;top:0;z-index:1;background:var(--bg2)"><tr style="color:var(--t3);text-transform:uppercase;letter-spacing:.4px">
+        <th style="padding:5px 7px;text-align:left;white-space:nowrap">Period</th>
+        ${th('Sales')}${th('Visitors')}${th('Orders')}${th('Basket Size')}${th('Order CR')}
+        ${th('Buyers')}${th('Clicks')}
+        ${th('Cancelled Ord')}${th('Cancelled Sales')}${th('Return Ord')}${th('Return Sales')}
+      </tr></thead>
+      <tbody>${tblRows.map(r=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:5px 7px;color:var(--t1);font-weight:600;white-space:nowrap">${labelFn(r)}</td>
+        ${td(r.s?RMk(r.s):'—')}
+        ${td(r.v?Num(r.v):'—')}
+        ${td(r.o?Num(r.o):'—')}
+        ${td(r.b||(r.s&&r.o?r.s/r.o:0)?'RM'+(r.b||r.s/r.o).toFixed(2):'—')}
+        ${td(r.cr?r.cr+'%':'—')}
+        ${td(r.bu?Num(r.bu):'—')}
+        ${td(r.cl?Num(r.cl):'—')}
+        ${td(r.co?Num(r.co):'—',r.co?'color:var(--red)':'color:var(--t3)')}
+        ${td(r.cs?RMk(r.cs):'—',r.cs?'color:var(--red)':'color:var(--t3)')}
+        ${td(r.ro?Num(r.ro):'—',r.ro?'color:var(--amber)':'color:var(--t3)')}
+        ${td(r.rs?RMk(r.rs):'—',r.rs?'color:var(--amber)':'color:var(--t3)')}
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
   renderPromoVoucherCards();
 }
 
