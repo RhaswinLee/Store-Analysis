@@ -2,7 +2,7 @@
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null, promoRevenue:[], voucherPerf:[], promoList:{}, promoListArr:[], voucherList:{}, voucherListArr:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null, compositionByMonth:{}, promoRevenue:[], voucherPerf:[], promoList:{}, promoListArr:[], voucherList:{}, voucherListArr:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[], daily:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, daily:[] },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], daily:[] },
@@ -186,9 +186,29 @@ function switchBuyersTab(idx){
   [0,1,2].forEach(i=>document.getElementById('bcTab'+i).classList.toggle('active',i===idx));
   renderBuyersComp(idx);
 }
+// Picks the Buyers Composition month matching the current Period filter (exact month for
+// Monthly/Campaign Day/Daily grains) instead of always the last-synced month — Sales Composition
+// files only carry monthly-granularity data, so multi-month/All Time views fall back to the
+// latest available month, same as before this existed.
+function _compositionForPeriod(){
+  const cbm=D.shopee.compositionByMonth||{};
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(S.grain==='monthly'&&S.selectedMonth){
+    const key=mNames[S.selectedMonth.month]+S.selectedMonth.year;
+    if(cbm[key]) return cbm[key];
+  } else if(S.grain==='campday'&&S.selectedCampaignMonth){
+    const key=mNames[S.selectedCampaignMonth-1]+S.selectedCampaignYear;
+    if(cbm[key]) return cbm[key];
+  } else if(S.grain==='daily'&&S.selectedDate){
+    const[y,,mo]=S.selectedDate.split('-').map(Number);
+    const key=mNames[mo-1]+y;
+    if(cbm[key]) return cbm[key];
+  }
+  return D.shopee.composition;
+}
 function renderBuyersComp(idx){
   const bl=document.getElementById('buyerList');
-  const comp=D.shopee.composition;
+  const comp=_compositionForPeriod();
   if(!comp){bl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px 0">No data — sync a sales_composition file</div>';return;}
   document.getElementById('buyersCompSub').textContent=comp.month||'';
   const fmtN=v=>Math.round(v).toLocaleString();

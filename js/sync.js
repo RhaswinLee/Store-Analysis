@@ -10,7 +10,7 @@ const PLAT_S = {
 };
 
 // ── Cache helpers — persist parsed data across sessions ──
-const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','breakdown','affiliate','ads','daily','composition','promoRevenue','voucherPerf','promoListArr','voucherListArr'];
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','breakdown','affiliate','ads','daily','composition','compositionByMonth','promoRevenue','voucherPerf','promoListArr','voucherListArr'];
 
 // ── Background Worker for XLSX Parsing ──
 const xlsxWorker = new Worker('js/worker.js');
@@ -33,7 +33,7 @@ function parseXlsxWorker(ab) {
   });
 }
 
-const CACHE_VER=9; // Bump when adding new parsed fields to force re-sync of old caches
+const CACHE_VER=10; // Bump when adding new parsed fields to force re-sync of old caches
 async function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
@@ -506,9 +506,16 @@ function extractExtraSheets(wb,platform,fname){
       }
       // Extract month label from filename e.g. sales_composition_20260501-20260531.xlsx
       const mMatch=fname.match(/(\d{4})(\d{2})\d{2}-\d{8}/);
-      const mLabel=mMatch?((['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(mMatch[2])-1]+' '+mMatch[1]):'';
+      const mAbbr=mMatch?(['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])[parseInt(mMatch[2])-1]:null;
+      const mYear=mMatch?mMatch[1]:null;
+      const mLabel=mAbbr?mAbbr+' '+mYear:'';
       if(typeOfBuyers.length||priceRange.length||subCategory.length){
-        D[dKey].composition={month:mLabel,typeOfBuyers,priceRange,subCategory};
+        const compObj={month:mLabel,typeOfBuyers,priceRange,subCategory};
+        D[dKey].composition=compObj; // latest-seen — kept as the default/no-period-selected fallback
+        if(mAbbr&&mYear){
+          if(!D[dKey].compositionByMonth) D[dKey].compositionByMonth={};
+          D[dKey].compositionByMonth[mAbbr+mYear]=compObj;
+        }
         syncLog(`  [${platform}] Sales Composition "${csn}": ${typeOfBuyers.length} buyer types, ${priceRange.length} price ranges, ${subCategory.length} sub-categories`);
       }
     }

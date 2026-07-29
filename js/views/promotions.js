@@ -12,17 +12,32 @@ function promoTypeTagStyle(type){
 }
 
 function renderPromos(){
-  const promoArr=[...(D.shopee.promoRevenue||[])].sort((a,b)=>a.start.localeCompare(b.start));
-  const voucherArr=[...(D.shopee.voucherPerf||[])].sort((a,b)=>a.start.localeCompare(b.start));
-  if(!promoArr.length&&!voucherArr.length){
+  const range=getPeriodRange(); // null for 'all'/'12m' — no filtering
+  const isCampDay=S.grain==='campday';
+  let promoArr=[...(D.shopee.promoRevenue||[])].sort((a,b)=>a.start.localeCompare(b.start));
+  let voucherArr=[...(D.shopee.voucherPerf||[])].sort((a,b)=>a.start.localeCompare(b.start));
+  if(range){
+    promoArr=promoArr.filter(e=>e.start<=range[1]&&e.end>=range[0]);
+    voucherArr=voucherArr.filter(e=>e.start<=range[1]&&e.end>=range[0]);
+  }
+  const hasAnyData=(D.shopee.promoRevenue||[]).length||(D.shopee.voucherPerf||[]).length;
+  if(!hasAnyData){
     const el=document.getElementById('promoKpi');
     if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Connect platform folders to load promotions data</div></div>';
+    return;
+  }
+  if(!promoArr.length&&!voucherArr.length){
+    const el=document.getElementById('promoKpi');
+    if(el) el.innerHTML='<div class="kpi" style="grid-column:1/-1"><div class="kpi-label">No Data For This Period</div><div class="kpi-val" style="font-size:13px;color:var(--t3)">Discount/Voucher Performance files only have monthly data — try a wider period</div></div>';
     return;
   }
   const mLbl=e=>{const d=new Date(e.start+'T00:00:00Z');return d.toLocaleString('en',{month:'short',timeZone:'UTC'})+" '"+String(d.getUTCFullYear()).slice(2);};
   const promoTotal=e=>e?e.byType.reduce((a,t)=>a+t.sales,0):0;
   const promoOrders=e=>e?e.byType.reduce((a,t)=>a+t.orders,0):0;
 
+  // Discount/Voucher Performance files only report whole-month totals — a Campaign Day window
+  // (e.g. 3.3 ±1 day) can't be isolated from them, so show the encompassing month and say so,
+  // same treatment as the Campaign Performance tab's Promotion Revenue card.
   const latestPromo=promoArr[promoArr.length-1];
   const latestVoucher=voucherArr[voucherArr.length-1];
   const prevVoucher=voucherArr[voucherArr.length-2];
@@ -31,10 +46,10 @@ function renderPromos(){
   // KPIs
   const el=document.getElementById('promoKpi');
   if(el) el.innerHTML=[
-    {l:`Promo GMV (${latestPromo?mLbl(latestPromo):'—'})`,v:RMk(promoTotal(latestPromo)),ch:`${Num(promoOrders(latestPromo))} orders`,dir:'up',sub:'From Discount Performance files',ico:'🎟️'},
-    {l:`Voucher Sales (${latestVoucher?mLbl(latestVoucher):'—'})`,v:RMk(latestVoucher?.sales||0),ch:latestVoucher?`Usage ${latestVoucher.usageRate.toFixed(2)}%`:'—',dir:'up',sub:latestVoucher?`${Num(latestVoucher.claims)} claims`:'',ico:'🏷️'},
+    {l:`Promo GMV (${latestPromo?mLbl(latestPromo):'—'}${isCampDay?', monthly':''})`,v:RMk(promoTotal(latestPromo)),ch:`${Num(promoOrders(latestPromo))} orders`,dir:'up',sub:'From Discount Performance files',ico:'🎟️'},
+    {l:`Voucher Sales (${latestVoucher?mLbl(latestVoucher):'—'}${isCampDay?', monthly':''})`,v:RMk(latestVoucher?.sales||0),ch:latestVoucher?`Usage ${latestVoucher.usageRate.toFixed(2)}%`:'—',dir:'up',sub:latestVoucher?`${Num(latestVoucher.claims)} claims`:'',ico:'🏷️'},
     {l:'Voucher ROI',v:latestVoucher&&latestVoucher.cost?(latestVoucher.sales/latestVoucher.cost).toFixed(1)+'x':'N/A',ch:prevVoucher&&prevVoucher.cost?`vs ${(prevVoucher.sales/prevVoucher.cost).toFixed(1)}x prior mo`:'',dir:'warn',sub:latestVoucher?`${RMk(latestVoucher.cost)} cost`:'',ico:'📊'},
-    {l:'Top Promotion',v:topPromo?(topPromo.name.length>18?topPromo.name.slice(0,16)+'…':topPromo.name):'—',ch:topPromo?RMk(topPromo.sales):'',dir:'up',sub:topPromo?.type||'',ico:'🏆'},
+    {l:'Top Promotion (All-Time)',v:topPromo?(topPromo.name.length>18?topPromo.name.slice(0,16)+'…':topPromo.name):'—',ch:topPromo?RMk(topPromo.sales):'',dir:'up',sub:topPromo?.type||'',ico:'🏆'},
   ].map(k=>`
     <div class="kpi">
       <div class="kpi-ico">${k.ico}</div>
