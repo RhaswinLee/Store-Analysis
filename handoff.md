@@ -5,18 +5,19 @@
 - **Interactive Drill-Downs:** Provide month-to-day timeline drill-downs across Overview, Shopee MY, TikTok MY, Shopee SG, and TikTok SG with simple "Back to months" navigation.
 - **Application Security & Hardening:** Audit and resolve Stored XSS vulnerabilities and sensitive data exposure (Google API keys).
 - **Resilience & QA:** Handle empty data states gracefully without breaking chart rendering or throwing JavaScript runtime errors.
-- **Automated Data Ingestion (Shopee Open API):** Transition from manual `.xlsx` file parsing and Google Drive API sync (which suffers from 403 rate-limit cooldowns) to direct, real-time JSON data streaming via the official Shopee Open Platform.
-- **High-Performance Hosting (Cloudflare Pages):** Deploy the web application on Cloudflare Pages for global edge speed and unlimited free bandwidth.
+- **Automated Data Ingestion (Shopee & TikTok APIs):** Transition from manual `.xlsx` file parsing and Google Drive API sync (which suffers from 403 rate-limit cooldowns) to direct, real-time JSON data streaming via official Shopee Open Platform and TikTok Shop Partner APIs.
+- **High-Performance Hosting (Cloudflare Pages):** Deploy and host the web application on Cloudflare Pages for global edge speed and unlimited free bandwidth.
 
 ---
 
 ## 2. Current State
+- **Live Production URL:** [https://store-analysis-hygr.pages.dev](https://store-analysis-hygr.pages.dev)
 - The HYGR Dashboard is fully functional, responsive, and hardened against Stored XSS attacks.
 - Charts render accurately with dynamic data binding.
 - Month-to-day drill-down interaction is active on revenue graphs with seamless back navigation.
 - Missing data fallbacks (High ATC Products, New vs Existing Buyer, Live Stream GMV) display clean empty-state notices.
 - The Google API key status badge renders properly with its checkmark icon.
-- Codebase is clean of syntax errors, hosted on GitHub (`ADM1SH/Store-Analysis`), and ready for instant deployment on Cloudflare Pages.
+- Codebase is clean of syntax errors, hosted on GitHub (`ADM1SH/Store-Analysis`), and live on Cloudflare Pages with automatic CI/CD deployment on every `git push`.
 
 ---
 
@@ -45,7 +46,7 @@
 - **Drill-Down Feature:** Implemented `_oDrillMonth`, `_sDrillMonth`, and `_tDrillMonth` state variables and added "← Back to months" buttons across timeline charts.
 - **UI Icon Formatting Fix:** Updated `js/main.js` and `js/sync.js` badge setting from `textContent` to `innerHTML` so Material Symbols checkmark icons render as icons instead of raw code strings.
 - **Git & PR Setup:** Created Pull Request `#3` on GitHub (`feat/campaign-traffic-visitors-clicks` branch).
-- **Deployment Platform Selection:** Updated deployment target to Cloudflare Pages (unlimited bandwidth, global edge network).
+- **Cloudflare Pages Deployment:** Successfully deployed live production app to [https://store-analysis-hygr.pages.dev](https://store-analysis-hygr.pages.dev).
 
 ---
 
@@ -56,21 +57,15 @@
 ---
 
 ## 6. Next Steps
-- **Cloudflare Pages Deployment:**
-  1. Go to [dash.cloudflare.com](https://dash.cloudflare.com/) → **Workers & Pages** → **Create application** → **Pages**.
-  2. Connect GitHub repository `ADM1SH/Store-Analysis`.
-  3. Set build configuration:
-     - Framework preset: **None**
-     - Build command: *(leave empty)*
-     - Output directory: `/` (or root)
-  4. Click **Save and Deploy**.
-- **Shopee Open API Integration (Cloudflare Functions):**
+- **Cloudflare Pages Maintenance:**
+  - App is deployed live at [https://store-analysis-hygr.pages.dev](https://store-analysis-hygr.pages.dev). Any push to `main` or PR merge will automatically trigger production deployments.
+- **Shopee Open API Integration:**
   1. Obtain company credentials from the company's existing Shopee Open Platform Developer Account ([open.shopee.com](https://open.shopee.com/)):
-     - `Partner ID`
-     - `Partner Key / App Secret`
-     - `Shop ID`
+     - `Partner ID`, `Partner Key / App Secret`, `Shop ID`
   2. Configure Environment Variables in Cloudflare Pages settings for Partner credentials.
-  3. Create Cloudflare Pages Functions (`/functions/api/shopee.js`) to handle OAuth 2.0 authorization and execute live API calls for:
-     - Orders & Revenue (`v2.order.get_order_list`, `v2.order.get_order_detail`)
-     - Product & Performance Analytics (`v2.merchant_analytics`, `v2.product.get_item_list`)
-  4. Bind the live JSON API feed directly to global state `D.shopee`, completely eliminating manual `.xlsx` spreadsheet downloads and Google Drive rate limits.
+  3. Create Cloudflare Pages Functions (`/functions/api/shopee.js`) to stream live Orders, GMV, and Product data into `D.shopee`.
+- **TikTok Shop Partner API Integration:**
+  1. Register an In-House Custom App on the TikTok Shop Partner Center ([partner.tiktokshop.com](https://partner.tiktokshop.com/)).
+  2. Obtain `App Key` and `App Secret`, and configure Cloudflare Pages Environment Variables.
+  3. Create Cloudflare Pages Functions (`/functions/api/tiktok.js`) to stream real-time TikTok Shop Orders, Product Analytics, and Affiliate Creator performance directly into `D.tiktok`.
+  4. Both Shopee and TikTok live feeds will stream directly into the **Performance Overview**, completely eliminating manual `.xlsx` file downloads and Google Drive rate limits across both platforms.
