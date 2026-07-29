@@ -139,7 +139,7 @@
       <div class="kpi-grid" id="shopeeKpi"></div>
       <div class="kpi-grid" id="shopeeMetrics2" style="grid-template-columns:repeat(6,1fr);margin-top:-8px"></div>
       <div class="cg cg-21">
-        <div class="cc" style="display:flex;flex-direction:column;height:1px;min-height:100%">
+        <div class="cc">
           <div class="cc-head">
             <div><div class="cc-title">Shopee Store Performance</div><div class="cc-sub" id="shopeeRevSub">Sales · Orders · Visitors · AOV · CR</div></div>
             <span class="tag tag-s">Shopee</span>
@@ -152,7 +152,7 @@
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#22d3ee;flex-shrink:0"></div>Basket Size</div>
             <div class="lg-item" style="gap:5px"><div style="width:20px;height:2px;background:#6b7280;border-top:2px dashed #6b7280;flex-shrink:0"></div>Order CR</div>
           </div>
-          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto;flex:1;min-height:0;overflow-y:auto"></div>
+          <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto;max-height:280px;overflow-y:auto;border-radius:6px;border:1px solid var(--border-sub)"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
@@ -176,7 +176,7 @@
               <button class="ads-tab" id="bcTab2" onclick="switchBuyersTab(2)">Category</button>
             </div>
           </div>
-          <div id="buyerList" style="overflow-x:auto"></div>
+          <div id="buyerList" style="overflow-x:auto;max-height:250px;overflow-y:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub" id="shopeeAffSub">Loading...</div></div></div>
@@ -265,10 +265,12 @@
           <div><div class="cc-title">TikTok GMV Max Ads</div><div class="cc-sub">Oct 2025 – Mar 2026 · ROI declining — action needed</div></div>
           <span class="tag tag-r">ROI Declining</span>
         </div>
-        <table class="ads-table">
-          <thead><tr><th>Month</th><th>Spend</th><th>Orders</th><th>GMV</th><th>ROI</th><th>Cost/Order</th></tr></thead>
-          <tbody id="ttAdsTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:300px;overflow-y:auto">
+          <table class="ads-table">
+            <thead><tr><th>Month</th><th>Spend</th><th>Orders</th><th>GMV</th><th>ROI</th><th>Cost/Order</th></tr></thead>
+            <tbody id="ttAdsTbl"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -343,10 +345,12 @@
           <div><div class="cc-title">Shopee SG Ads Performance</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
           <span class="tag tag-s">Shopee SG Ads</span>
         </div>
-        <table class="ads-table">
-          <thead><tr><th>Month</th><th>Revenue</th><th>Orders</th><th>Conv. Rate</th><th>AOV</th><th>Cancelled</th><th>Returns</th></tr></thead>
-          <tbody id="shopeeSgAdsTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:300px;overflow-y:auto">
+          <table class="ads-table">
+            <thead><tr><th>Month</th><th>Revenue</th><th>Orders</th><th>Conv. Rate</th><th>AOV</th><th>Cancelled</th><th>Returns</th></tr></thead>
+            <tbody id="shopeeSgAdsTbl"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -395,10 +399,12 @@
           <div><div class="cc-title">TikTok SG Affiliate & Ads</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
           <span class="tag tag-t">TikTok SG</span>
         </div>
-        <table class="ads-table">
-          <thead><tr><th>Month</th><th>GMV</th><th>Ad Spend</th><th>ROI</th><th>Orders</th><th>Affiliate GMV</th><th>Creators</th></tr></thead>
-          <tbody id="tiktokSgAdsTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:300px;overflow-y:auto">
+          <table class="ads-table">
+            <thead><tr><th>Month</th><th>GMV</th><th>Ad Spend</th><th>ROI</th><th>Orders</th><th>Affiliate GMV</th><th>Creators</th></tr></thead>
+            <tbody id="tiktokSgAdsTbl"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -449,20 +455,24 @@
           <div><div class="cc-title">Voucher Detail</div><div class="cc-sub">Individual cofund voucher performance</div></div>
           <span class="tag tag-i">Shopee Cofund</span>
         </div>
-        <table>
-          <thead><tr><th>Voucher</th><th>Claims</th><th>Orders</th><th>Usage Rate</th><th>Sales</th><th>Cost</th><th>ROI</th></tr></thead>
-          <tbody id="voucherDetailTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:280px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Voucher</th><th>Claims</th><th>Orders</th><th>Usage Rate</th><th>Sales</th><th>Cost</th><th>ROI</th></tr></thead>
+            <tbody id="voucherDetailTbl"></tbody>
+          </table>
+        </div>
       </div>
       <div class="tbl-wrap">
         <div class="tbl-head">
           <div><div class="cc-title">All Promotions · Effectiveness Overview</div><div class="cc-sub">Shopee promotion performance · All synced months</div></div>
           <span class="tag tag-a" id="promoCountTag">Promotions</span>
         </div>
-        <table>
-          <thead><tr><th>Promotion</th><th>Type</th><th>Platform</th><th>Sales GMV</th><th>Orders</th><th>AOV</th><th>Conv. Rate</th><th>Status</th></tr></thead>
-          <tbody id="promoTypesTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+          <table>
+            <thead><tr><th>Promotion</th><th>Type</th><th>Platform</th><th>Sales GMV</th><th>Orders</th><th>AOV</th><th>Conv. Rate</th><th>Status</th></tr></thead>
+            <tbody id="promoTypesTbl"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -473,10 +483,12 @@
           <div><div class="cc-title">Product Strategy &amp; Merchandising Matrix</div><div class="cc-sub">Cross-channel diagnostics · loaded from connected Drive folders · Top 20 by GMV</div></div>
           <span class="tag tag-a" id="prodTag">Loading…</span>
         </div>
-        <table>
-          <thead><tr id="prodTblHdr"><th>Product</th><th style="text-align:right">GMV</th><th style="text-align:right">Orders</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">CVR</th></tr></thead>
-          <tbody id="prodTbl"></tbody>
-        </table>
+        <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
+          <table>
+            <thead><tr id="prodTblHdr"><th>Product</th><th style="text-align:right">GMV</th><th style="text-align:right">Orders</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">CVR</th></tr></thead>
+            <tbody id="prodTbl"></tbody>
+          </table>
+        </div>
       </div>
       <div class="cg cg-2">
         <div class="cc">
