@@ -16,21 +16,41 @@ function showPanel(name){
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
   const panel=document.getElementById('panel-'+name);
   if(panel) panel.classList.add('on');
-  document.querySelector(`[data-nav="${name}"]`)?.classList.add('active');
+  
+  const sbName = (name === 'shopee' || name === 'shopee-sg') ? 'shopee' :
+                 (name === 'tiktok' || name === 'tiktok-sg') ? 'tiktok' : name;
+  document.querySelector(`[data-nav="${sbName}"]`)?.classList.add('active');
+
+  // Update .ptabs visibility and active state for deep dives
+  const deepDiveNavs = ['overview', 'shopee', 'tiktok', 'shopee-sg', 'tiktok-sg'];
+  if (deepDiveNavs.includes(name)) {
+    S.platform = (name === 'overview') ? 'all' : name;
+    document.querySelectorAll('.ptab').forEach(t => {
+      t.classList.toggle('active', t.dataset.p === S.platform);
+    });
+  }
+
+  document.querySelectorAll('.ptab').forEach(t => {
+    const p = t.dataset.p;
+    if (name === 'shopee' || name === 'shopee-sg') {
+      t.style.display = (p === 'all' || p === 'shopee' || p === 'shopee-sg') ? '' : 'none';
+    } else if (name === 'tiktok' || name === 'tiktok-sg') {
+      t.style.display = (p === 'all' || p === 'tiktok' || p === 'tiktok-sg') ? '' : 'none';
+    } else {
+      t.style.display = '';
+    }
+  });
+
   const titles={overview:'Performance Overview',shopee:'Shopee MY — Deep Dive',tiktok:'TikTok MY — Deep Dive','shopee-sg':'Shopee SG — Deep Dive','tiktok-sg':'TikTok SG — Deep Dive',campaigns:'Campaign Performance',promo:'Promotion Analytics',products:'Product Strategy',reco:'Strategic Recommendations',health:'Account Health',sync:'Data Sync Settings'};
   document.getElementById('pageTitle').textContent=titles[name]||'Dashboard';
-  setTimeout(()=>{
-    if(name==='overview') renderOverview();
-    else if(name==='shopee') renderShopee();
-    else if(name==='tiktok') renderTikTok();
-    else if(name==='shopee-sg') renderShopeeSG();
-    else if(name==='tiktok-sg') renderTikTokSG();
-    else if(name==='campaigns') renderCampaigns();
-    else if(name==='promo') renderPromos();
-    else if(name==='products') renderProducts();
-    else if(name==='reco'){renderRecos();renderRecommendations();}
-    else if(name==='health') renderHealth();
-  },0);
+  const renderers={
+    overview:window.renderOverview, shopee:window.renderShopee, tiktok:window.renderTikTok,
+    'shopee-sg':window.renderShopeeSG, 'tiktok-sg':window.renderTikTokSG,
+    campaigns:window.renderCampaigns, promo:window.renderPromos, products:window.renderProducts,
+    reco:()=>{if(window.renderRecos)window.renderRecos();if(window.renderRecommendations)window.renderRecommendations();},
+    health:window.renderHealth
+  };
+  setTimeout(()=> renderers[name]?.(),0);
 }
 
 /* ─── PLATFORM TABS ─── */
@@ -39,11 +59,19 @@ document.querySelectorAll('.ptab').forEach(t=>{
     document.querySelectorAll('.ptab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
     S.platform=t.dataset.p;
-    if(S.platform==='shopee') showPanel('shopee');
-    else if(S.platform==='tiktok') showPanel('tiktok');
-    else if(S.platform==='shopee-sg') showPanel('shopee-sg');
-    else if(S.platform==='tiktok-sg') showPanel('tiktok-sg');
-    else showPanel('overview');
+    const deepDiveNavs = ['overview', 'shopee', 'tiktok', 'shopee-sg', 'tiktok-sg'];
+    if (deepDiveNavs.includes(S.nav)) {
+      showPanel(S.platform === 'all' ? 'overview' : S.platform);
+    } else {
+      const renderers = {
+        campaigns: window.renderCampaigns,
+        promo: window.renderPromos,
+        products: window.renderProducts,
+        reco: () => { if(window.renderRecos)window.renderRecos(); if(window.renderRecommendations)window.renderRecommendations(); },
+        health: window.renderHealth
+      };
+      if(renderers[S.nav]) renderers[S.nav]();
+    }
   });
 });
 

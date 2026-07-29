@@ -6,7 +6,12 @@ function renderProducts(){
     const prods=D[dKey]?.products||[];
     if(prods.length) platProds[plat]=prods;
   }
-  const allProds=Object.values(platProds).flat().sort((a,b)=>b.gmv-a.gmv);
+  let allProds=[];
+  if (S.platform === 'all') {
+    allProds = Object.values(platProds).flat().sort((a,b)=>b.gmv-a.gmv);
+  } else {
+    allProds = [...(platProds[S.platform] || [])].sort((a,b)=>b.gmv-a.gmv);
+  }
   const useProds=allProds.length?allProds:D.products;
 
   const RMf=v=>'RM '+v.toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});

@@ -9,11 +9,27 @@ let _campLastGrainSig=null; // last-seen Period filter signature — if it chang
 function campBackToMonths(){ _campDrillMonth=null; renderCampaigns(); return false; }
 
 function renderCampaigns(){
-  // Picking a bar drills into that month, but that drill-down has nothing to do with the global
-  // Period filter — if the user then picks All Time/Year/Custom Range/etc. from the dropdown,
-  // the chart was staying stuck on whatever month was last clicked. Any actual period change here
-  // means the drill-down is stale, so drop it and fall back to the monthly overview (or the Period
-  // filter's own Campaign Day selection, if that's what's now active).
+  const p = document.getElementById('panel-campaigns');
+  if(!p) return;
+  let ph = p.querySelector('.platform-placeholder');
+  if(!ph) {
+    ph = document.createElement('div');
+    ph.className = 'platform-placeholder';
+    ph.style = 'padding:60px 20px;text-align:center;color:var(--t3);font-size:14px;background:var(--card);border:1px solid var(--border-sub);border-radius:9px;';
+    p.prepend(ph);
+  }
+
+  if(S.platform !== 'all' && S.platform !== 'shopee') {
+     Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = 'none'; });
+     ph.style.display = 'block';
+     const pName = document.querySelector(`.ptab[data-p="${S.platform}"]`)?.innerText.replace(/[^A-Za-z0-9 ]/g,'').trim() || 'this platform';
+     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px">🚧</div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Campaign data for ${pName} is not yet synced from Google Drive.</div>`;
+     return;
+  }
+  
+  Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = ''; });
+  ph.style.display = 'none';
+
   const grainSig=JSON.stringify([S.grain,S.selectedMonth,S.selectedDate,S.customStart,S.customEnd,S.selectedCampaignMonth,S.selectedCampaignYear]);
   if(_campLastGrainSig!==null&&_campLastGrainSig!==grainSig) _campDrillMonth=null;
   _campLastGrainSig=grainSig;
@@ -22,11 +38,14 @@ function renderCampaigns(){
   const sub=document.getElementById('campSub');
 
   if(!D.shopee.daily.length){
-    const el=document.getElementById('campChart');
-    if(el){const ph=document.createElement('div');ph.style='padding:32px 0;text-align:center;color:var(--t3);font-size:13px';ph.textContent='Connect Shopee MY folder to load campaign data';el.replaceWith(ph);}
+    const cw=document.getElementById('campChart')?.parentElement;
+    if(cw) cw.innerHTML = '<div style="padding:32px 0;text-align:center;color:var(--t3);font-size:13px">Connect Shopee MY folder to load campaign data</div><canvas id="campChart" style="display:none"></canvas>';
     renderPromoVoucherCards();
     return;
   }
+  // Ensure canvas is visible if it was hidden
+  const cv=document.getElementById('campChart');
+  if(cv) { cv.style.display=''; if(cv.previousElementSibling) cv.previousElementSibling.remove(); }
 
   const baseOpts={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     plugins:{legend:{display:false},tooltip:{...cTooltip,callbacks:{label:c=>{

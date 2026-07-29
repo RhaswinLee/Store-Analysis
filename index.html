@@ -109,27 +109,27 @@
             <div><div class="cc-title">Revenue Trend</div><div class="cc-sub">Monthly GMV · All Platforms</div></div>
             <span class="tag tag-g" id="revTag"></span>
           </div>
-          <canvas id="revChart" height="200"></canvas>
+          <canvas id="revChart"></canvas>
           <div class="legend" id="revLegend"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Platform Split</div><div class="cc-sub">Revenue share 2026</div></div></div>
-          <canvas id="splitChart" height="200"></canvas>
+          <canvas id="splitChart"></canvas>
           <div id="splitLegend" style="margin-top:10px"></div>
         </div>
       </div>
       <div class="cg cg-3">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Orders Trend</div><div class="cc-sub">Combined monthly orders</div></div></div>
-          <canvas id="ordersChart" height="180"></canvas>
+          <canvas id="ordersChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Order CR % by month</div></div></div>
-          <canvas id="crChart" height="180"></canvas>
+          <canvas id="crChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Basket Size (AOV)</div><div class="cc-sub">Average order value RM</div></div></div>
-          <canvas id="aovChart" height="180"></canvas>
+          <canvas id="aovChart"></canvas>
         </div>
       </div>
     </div>
@@ -144,7 +144,7 @@
             <div><div class="cc-title">Shopee Store Performance</div><div class="cc-sub" id="shopeeRevSub">Sales · Orders · Visitors · AOV · CR</div></div>
             <span class="tag tag-s">Shopee</span>
           </div>
-          <canvas id="shopeeRevChart" height="150"></canvas>
+          <canvas id="shopeeRevChart"></canvas>
           <div class="legend" style="flex-wrap:wrap;gap:10px;margin-top:8px">
             <div class="lg-item"><div style="width:12px;height:12px;background:rgba(59,130,246,.8);border-radius:2px;flex-shrink:0"></div>Sales</div>
             <div class="lg-item"><div style="width:12px;height:12px;background:rgba(234,179,8,.8);border-radius:2px;flex-shrink:0"></div>Visitors</div>
@@ -154,17 +154,19 @@
           </div>
           <div id="shopeeDetailTbl" style="margin-top:12px;overflow-x:auto;max-height:280px;overflow-y:auto;border-radius:6px;border:1px solid var(--border-sub)"></div>
         </div>
-        <div class="cc">
+        <div class="cc" style="position:relative">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub" id="channelMixSub">Traffic sources contribution</div></div></div>
-          <canvas id="channelBarChart" height="130"></canvas>
-          <div id="channelPieWrap" style="margin-top:12px;display:none">
-            <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">Sales Contribution</div>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="width:110px;flex-shrink:0"><canvas id="channelPieChart"></canvas></div>
-              <div id="channelPieLegend" style="flex:1;display:flex;flex-direction:column;gap:5px"></div>
+          <div style="position:absolute;top:65px;left:16px;right:16px;bottom:16px;overflow-y:auto;overflow-x:hidden;padding-right:4px">
+            <canvas id="channelBarChart"></canvas>
+            <div id="channelPieWrap" style="margin-top:12px;display:none">
+              <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">Sales Contribution</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <div style="width:110px;flex-shrink:0"><canvas id="channelPieChart"></canvas></div>
+                <div id="channelPieLegend" style="flex:1;display:flex;flex-direction:column;gap:5px"></div>
+              </div>
             </div>
+            <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
           </div>
-          <div id="trafficSourceWrap" style="margin-top:10px;display:none"></div>
         </div>
       </div>
       <div class="cg cg-2">
@@ -176,7 +178,7 @@
               <button class="ads-tab" id="bcTab2" onclick="switchBuyersTab(2)">Category</button>
             </div>
           </div>
-          <div id="buyerList" style="overflow-x:auto;max-height:250px;overflow-y:auto"></div>
+          <div id="buyerList" style="overflow-x:auto;max-height:180px;overflow-y:auto"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Shopee Affiliate</div><div class="cc-sub" id="shopeeAffSub">Loading...</div></div></div>
@@ -220,7 +222,7 @@
         <div id="adsPeriodSub" style="display:none;align-items:center;gap:6px;padding:5px 10px;border-bottom:1px solid var(--border-sub);background:var(--bg2);font-size:10px;flex-wrap:wrap"></div>
         <div id="shopeeAdsTab0" style="overflow-y:auto;max-height:300px"></div>
         <div id="shopeeAdsTab1" style="display:none;overflow-y:auto;max-height:300px"></div>
-        <div id="shopeeAdsTab2" style="display:none;padding:8px 12px"><canvas id="shopeeRoiChart" height="90"></canvas></div>
+        <div id="shopeeAdsTab2" style="display:none;padding:8px 12px"><canvas id="shopeeRoiChart"></canvas></div>
       </div>
     </div>
 
@@ -233,11 +235,11 @@
             <div><div class="cc-title">TikTok Monthly GMV</div><div class="cc-sub">2025 (Apr-Dec) + 2026 (Jan-Mar)</div></div>
             <span class="tag tag-t">TikTok Shop</span>
           </div>
-          <canvas id="ttRevChart" height="200"></canvas>
+          <canvas id="ttRevChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Breakdown</div><div class="cc-sub">Product · Video · Live (2026)</div></div></div>
-          <canvas id="ttBreakChart" height="200"></canvas>
+          <canvas id="ttBreakChart"></canvas>
           <div class="legend" style="margin-top:10px">
             <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Product</div>
             <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Video</div>
@@ -248,15 +250,15 @@
       <div class="cg cg-3">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">TikTok Ads (GMV Max)</div><div class="cc-sub">ROI trend — target ≥4.5x</div></div></div>
-          <canvas id="ttAdsChart" height="180"></canvas>
+          <canvas id="ttAdsChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Affiliate GMV</div><div class="cc-sub">Nov 2025 – Mar 2026</div></div></div>
-          <canvas id="ttAffChart" height="180"></canvas>
+          <canvas id="ttAffChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Video Views</div><div class="cc-sub">Jan–Mar 2026 engagement</div></div></div>
-          <canvas id="ttViewChart" height="180"></canvas>
+          <canvas id="ttViewChart"></canvas>
         </div>
       </div>
       <!-- TikTok Ads table -->
@@ -318,26 +320,28 @@
             <div><div class="cc-title">Shopee SG Monthly Revenue</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
             <span class="tag tag-s">Shopee SG</span>
           </div>
-          <canvas id="shopeeSgRevChart" height="200"></canvas>
+          <canvas id="shopeeSgRevChart"></canvas>
         </div>
-        <div class="cc">
+        <div class="cc" style="position:relative">
           <div class="cc-head"><div><div class="cc-title">Sales Channel Mix</div><div class="cc-sub">Mar 2026 contribution · SGD</div></div></div>
-          <canvas id="shopeeSgChannelChart" height="200"></canvas>
-          <div id="shopeeSgChannelLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+          <div style="position:absolute;top:65px;left:16px;right:16px;bottom:16px;overflow-y:auto;overflow-x:hidden;padding-right:4px">
+            <canvas id="shopeeSgChannelChart"></canvas>
+            <div id="shopeeSgChannelLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+          </div>
         </div>
       </div>
       <div class="cg cg-3">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Monthly CR% · SG market</div></div></div>
-          <canvas id="shopeeSgCrChart" height="180"></canvas>
+          <canvas id="shopeeSgCrChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Avg Order Value</div><div class="cc-sub">AOV trend · SGD</div></div></div>
-          <canvas id="shopeeSgAovChart" height="180"></canvas>
+          <canvas id="shopeeSgAovChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">MY vs SG Comparison</div><div class="cc-sub">Revenue index (MY=100)</div></div></div>
-          <canvas id="shopeeSgCompChart" height="180"></canvas>
+          <canvas id="shopeeSgCompChart"></canvas>
         </div>
       </div>
       <div class="tbl-wrap">
@@ -368,11 +372,11 @@
             <div><div class="cc-title">TikTok SG Monthly GMV</div><div class="cc-sub">Jan–Mar 2026 · SGD</div></div>
             <span class="tag tag-t">TikTok SG</span>
           </div>
-          <canvas id="tiktokSgRevChart" height="200"></canvas>
+          <canvas id="tiktokSgRevChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Sales Breakdown</div><div class="cc-sub">Product · Video · Live (2026)</div></div></div>
-          <canvas id="tiktokSgBreakChart" height="200"></canvas>
+          <canvas id="tiktokSgBreakChart"></canvas>
           <div class="legend" style="margin-top:10px">
             <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Product</div>
             <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Video</div>
@@ -383,15 +387,15 @@
       <div class="cg cg-3">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Conversion Rate</div><div class="cc-sub">Monthly CR% · SG market</div></div></div>
-          <canvas id="tiktokSgCrChart" height="180"></canvas>
+          <canvas id="tiktokSgCrChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Avg Order Value</div><div class="cc-sub">AOV trend · SGD</div></div></div>
-          <canvas id="tiktokSgAovChart" height="180"></canvas>
+          <canvas id="tiktokSgAovChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">MY vs SG Comparison</div><div class="cc-sub">Revenue index (MY=100)</div></div></div>
-          <canvas id="tiktokSgCompChart" height="180"></canvas>
+          <canvas id="tiktokSgCompChart"></canvas>
         </div>
       </div>
       <div class="tbl-wrap">
@@ -417,12 +421,12 @@
             <div><div class="cc-title">Promotion Revenue by Type</div><div class="cc-sub">All synced months · by promotion type</div></div>
             <span class="tag tag-i">Stacked by Type</span>
           </div>
-          <canvas id="promoTrendChart" height="200"></canvas>
+          <canvas id="promoTrendChart"></canvas>
           <div class="legend" id="promoTrendLegend" style="margin-top:10px"></div>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">Promo Type Mix</div><div class="cc-sub">Latest synced month · GMV contribution</div></div></div>
-          <canvas id="promoTypeChart" height="200"></canvas>
+          <canvas id="promoTypeChart"></canvas>
           <div id="promoTypeLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
         </div>
       </div>
@@ -432,7 +436,7 @@
             <div><div class="cc-title">Voucher Performance</div><div class="cc-sub">Claims vs Orders · All synced months</div></div>
             <span class="tag tag-i">Shopee Cofund</span>
           </div>
-          <canvas id="voucherChart" height="200"></canvas>
+          <canvas id="voucherChart"></canvas>
           <div class="legend" style="margin-top:10px">
             <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Voucher Claims</div>
             <div class="lg-item"><div class="lg-line" style="background:#f97316"></div>Orders Generated</div>
@@ -443,7 +447,7 @@
             <div><div class="cc-title">Live Stream GMV</div><div class="cc-sub">Shopee Seller Live vs TikTok LIVE</div></div>
             <span class="tag tag-a">Live Commerce</span>
           </div>
-          <canvas id="liveGmvChart" height="200"></canvas>
+          <canvas id="liveGmvChart"></canvas>
           <div class="legend" style="margin-top:10px">
             <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>Shopee Seller Live</div>
             <div class="lg-item"><div class="lg-dot" style="background:#e11d48"></div>TikTok LIVE</div>
@@ -493,11 +497,11 @@
       <div class="cg cg-2">
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">High ATC Products</div><div class="cc-sub">Add-to-cart leaders · checkout gap analysis</div></div></div>
-          <canvas id="atcChart" height="200"></canvas>
+          <canvas id="atcChart"></canvas>
         </div>
         <div class="cc">
           <div class="cc-head"><div><div class="cc-title">New vs Existing Buyer Revenue</div><div class="cc-sub">Revenue split by acquisition type · 2026</div></div></div>
-          <canvas id="buyerRevChart" height="200"></canvas>
+          <canvas id="buyerRevChart"></canvas>
         </div>
       </div>
     </div>

@@ -12,6 +12,26 @@ function promoTypeTagStyle(type){
 }
 
 function renderPromos(){
+  const p = document.getElementById('panel-promo');
+  if(!p) return;
+  let ph = p.querySelector('.platform-placeholder');
+  if(!ph) {
+    ph = document.createElement('div');
+    ph.className = 'platform-placeholder';
+    ph.style = 'padding:60px 20px;text-align:center;color:var(--t3);font-size:14px;background:var(--card);border:1px solid var(--border-sub);border-radius:9px;';
+    p.prepend(ph);
+  }
+
+  if(S.platform !== 'all' && S.platform !== 'shopee') {
+     Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = 'none'; });
+     ph.style.display = 'block';
+     const pName = document.querySelector(`.ptab[data-p="${S.platform}"]`)?.innerText.replace(/[^A-Za-z0-9 ]/g,'').trim() || 'this platform';
+     ph.innerHTML = `<div style="font-size:24px;margin-bottom:12px">🚧</div><div style="font-weight:600;color:var(--t1);margin-bottom:6px">Data Not Available</div><div>Promotion data for ${pName} is not yet synced from Google Drive.</div>`;
+     return;
+  }
+  Array.from(p.children).forEach(c => { if(c !== ph) c.style.display = ''; });
+  ph.style.display = 'none';
+
   const range=getPeriodRange(); // null for 'all'/'12m' — no filtering
   const isCampDay=S.grain==='campday';
   let promoArr=[...(D.shopee.promoRevenue||[])].sort((a,b)=>a.start.localeCompare(b.start));

@@ -212,7 +212,7 @@ function renderBuyersComp(idx){
   if(!comp){bl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px 0">No data — sync a sales_composition file</div>';return;}
   document.getElementById('buyersCompSub').textContent=comp.month||'';
   const fmtN=v=>Math.round(v).toLocaleString();
-  const fmtRM=v=>'RM'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0));
+  const fmtRM=v=>'RM'+Math.round(v).toLocaleString();
   const fmtP=v=>v.toFixed(2)+'%';
   const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${c}</th>`).join('')}</tr>`;
   const td=(cells,bold=false)=>`<tr style="border-bottom:1px solid var(--border)">${cells.map((c,i)=>`<td style="padding:4px 6px;font-size:11px;${i===0?'text-align:left;':'text-align:right;'}${bold?'font-weight:700;':''}color:var(--t1)">${c}</td>`).join('')}</tr>`;
@@ -574,14 +574,31 @@ function switchAdsTab(idx){
 }
 function mkChart(id,cfg){
   const el=document.getElementById(id);
-  if(!el) return;
+  if(!el){
+    if(charts[id]){charts[id].destroy();delete charts[id];}
+    return;
+  }
+  if(charts[id] && charts[id].canvas !== el){
+    charts[id].destroy();
+    delete charts[id];
+  }
   if(charts[id] && charts[id].config.type === cfg.type){
     charts[id].data = cfg.data;
     if(cfg.options) charts[id].options = cfg.options;
-    charts[id].update();
+    charts[id].update('none');
   } else {
     if(charts[id]) charts[id].destroy();
     charts[id]=new Chart(el,cfg);
   }
 }
+
+window.renderTbody = function(id, data, emptyMsg, mapFn) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(!data || data.length === 0) {
+    el.innerHTML = `<tr><td colspan="100%" style="text-align:center;padding:24px;color:var(--t3);font-size:11px">${emptyMsg}</td></tr>`;
+    return;
+  }
+  el.innerHTML = data.map(mapFn).join('');
+};
 

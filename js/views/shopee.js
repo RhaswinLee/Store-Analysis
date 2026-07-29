@@ -218,7 +218,7 @@ function renderShopee(){
   renderBuyersComp(0);
 
   // Ads table
-  document.getElementById('shopeeAdsTbl').innerHTML=D.shopee.ads.map(r=>{
+  renderTbody('shopeeAdsTbl', D.shopee.ads, 'No Ads data available for the selected period.', r=>{
     const rc=r.roas>=5?'roi-good':r.roas>=3.5?'roi-warn':'roi-bad';
     const impStr=r.imp>=1000000?(r.imp/1000000).toFixed(1)+'M':r.imp>=1000?(r.imp/1000).toFixed(1)+'k':Num(r.imp);
     return `<tr>
@@ -229,7 +229,7 @@ function renderShopee(){
       <td>RM${Math.round(r.exp).toLocaleString()}</td>
       <td class="${rc}">${r.roas}x</td>
     </tr>`;
-  }).join('');
+  });
 }
 
 
