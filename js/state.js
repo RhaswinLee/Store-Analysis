@@ -2,11 +2,10 @@
    DATA
 ───────────────────────────────────────────── */
 const D = {
-  shopee:   { m2026:[], m2025:[], products:[], channels:null, ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null, promoRevenue:[], voucherPerf:[] },
+  shopee:   { m2026:[], m2025:[], products:[], channels:null, ads:[], adsByMonth:{}, adsDailyByDate:{}, adsDailySrc:{}, adsSrcOrder:[], channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, buyers:[], daily:[], composition:null, promoRevenue:[], voucherPerf:[], promoList:{}, promoListArr:[], voucherList:{}, voucherListArr:[] },
   tiktok:   { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], ads:[], views:[], daily:[] },
   shopeeSG: { m2026:[], m2025:[], products:[], channels:null, channel:null, channelByMonth:{}, trafficSources:null, trafficSourcesByMonth:{}, daily:[] },
   tiktokSG: { m2026:[], m2025:[], products:[], channels:null, breakdown:[], affiliate:[], daily:[] },
-  promos:   { monthly:[], vouchers:[], voucherDetail:[], live:[], types:[] },
   products: [],
 };
 
@@ -52,14 +51,26 @@ const S = {
    only Shopee MY's had 'daily'/'custom' grain support, so switching the global period
    picker to Daily or Custom Range on TikTok MY/Shopee SG/TikTok SG silently fell through
    to full-year data instead of respecting the selected period. */
+const _filterCache = {};
+function clearFilterCache() {
+  for (const k in _filterCache) delete _filterCache[k];
+}
+
 function filteredByKey(dKey){
+  const stateKey = `${S.grain}|${S.selectedDate}|${S.selectedMonth?.month}-${S.selectedMonth?.year}|${S.customStart}|${S.customEnd}|${S.selectedCampaignMonth}-${S.selectedCampaignYear}`;
+  if (_filterCache[dKey] && _filterCache[dKey].key === stateKey) {
+    return _filterCache[dKey].data;
+  }
+  
   const Dp=D[dKey];
   const all=[...Dp.m2025,...Dp.m2026];
-  if(S.grain==='all'||S.grain==='12m') return all;
-  if(S.grain==='y2025') return Dp.m2025;
-  if(S.grain==='y2026') return Dp.m2026;
-  if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') return Dp.m2026.slice(-1);
-  if(S.grain==='daily'&&S.selectedDate){
+  let result;
+  
+  if(S.grain==='all'||S.grain==='12m') result = all;
+  else if(S.grain==='y2025') result = Dp.m2025;
+  else if(S.grain==='y2026') result = Dp.m2026;
+  else if(S.grain==='today'||S.grain==='yesterday'||S.grain==='7d'||S.grain==='30d') result = Dp.m2026.slice(-1);
+  else if(S.grain==='daily'&&S.selectedDate){
     // Return the aggregated monthly record for the selected date's month (for KPI context)
     const [y,,mo]=S.selectedDate.split('-').map(Number);
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -67,40 +78,46 @@ function filteredByKey(dKey){
     const r=src.find(x=>x.m===mNames[mo-1]);
     // Return the specific daily record, fall back to monthly if not available
     const dr=(Dp.daily||[]).find(x=>x.date===S.selectedDate);
-    return dr?[dr]:r?[r]:Dp.m2026.slice(-1);
+    result = dr?[dr]:r?[r]:Dp.m2026.slice(-1);
   }
-  if(S.grain==='monthly'&&S.selectedMonth){
+  else if(S.grain==='monthly'&&S.selectedMonth){
     const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const mn=mNames[S.selectedMonth.month];
     const yr=S.selectedMonth.year;
     const src=yr===2025?Dp.m2025:Dp.m2026;
     const r=src.find(x=>x.m===mn);
-    return r?[r]:Dp.m2026.slice(-1);
+    result = r?[r]:Dp.m2026.slice(-1);
   }
-  if(S.grain==='custom'&&S.customStart&&S.customEnd){
+  else if(S.grain==='custom'&&S.customStart&&S.customEnd){
     const [sy,sm]=S.customStart.split('-').map(Number);
     const [ey,em]=S.customEnd.split('-').map(Number);
-    return all.filter(r=>{
+    result = all.filter(r=>{
       const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const mi=mNames.indexOf(r.m);
       const yr=Dp.m2025.includes(r)?2025:2026;
       return (yr>sy||(yr===sy&&mi+1>=sm))&&(yr<ey||(yr===ey&&mi+1<=em));
     });
   }
-  if(S.grain==='campday'&&S.selectedCampaignMonth){
+  else if(S.grain==='campday'&&S.selectedCampaignMonth){
     // Aggregate the day-before/day/day-after window from real daily records into one
     // monthly-shaped record, so KPIs/charts that only know how to read m2025/m2026-style
     // rows can consume it without their own special case.
     const range=getPeriodRange();
     const rows=range?(Dp.daily||[]).filter(r=>r.date>=range[0]&&r.date<=range[1]):[];
-    if(!rows.length) return [];
-    const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const s=rows.reduce((a,r)=>a+r.s,0), o=rows.reduce((a,r)=>a+r.o,0);
-    const v=rows.reduce((a,r)=>a+(r.v||0),0), cl=rows.reduce((a,r)=>a+(r.cl||0),0);
-    const cr=rows.reduce((a,r)=>a+(r.cr||0),0)/rows.length;
-    return [{m:mNames[S.selectedCampaignMonth-1],s:+s.toFixed(2),o,v,cl,cr:+cr.toFixed(2),b:o?+(s/o).toFixed(2):0}];
+    if(!rows.length) result = [];
+    else {
+      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const s=rows.reduce((a,r)=>a+r.s,0), o=rows.reduce((a,r)=>a+r.o,0);
+      const v=rows.reduce((a,r)=>a+(r.v||0),0), cl=rows.reduce((a,r)=>a+(r.cl||0),0);
+      const cr=rows.reduce((a,r)=>a+(r.cr||0),0)/rows.length;
+      result = [{m:mNames[S.selectedCampaignMonth-1],s:+s.toFixed(2),o,v,cl,cr:+cr.toFixed(2),b:o?+(s/o).toFixed(2):0}];
+    }
+  } else {
+    result = Dp.m2026;
   }
-  return Dp.m2026;
+  
+  _filterCache[dKey] = { key: stateKey, data: result };
+  return result;
 }
 function filteredShopee(){ return filteredByKey('shopee'); }
 function filteredTT(){ return filteredByKey('tiktok'); }
@@ -518,9 +535,15 @@ function switchAdsTab(idx){
   if(idx===2) requestAnimationFrame(()=>{if(charts['shopeeRoiChart']) charts['shopeeRoiChart'].resize();});
 }
 function mkChart(id,cfg){
-  if(charts[id]) charts[id].destroy();
   const el=document.getElementById(id);
   if(!el) return;
-  charts[id]=new Chart(el,cfg);
+  if(charts[id] && charts[id].config.type === cfg.type){
+    charts[id].data = cfg.data;
+    if(cfg.options) charts[id].options = cfg.options;
+    charts[id].update();
+  } else {
+    if(charts[id]) charts[id].destroy();
+    charts[id]=new Chart(el,cfg);
+  }
 }
 

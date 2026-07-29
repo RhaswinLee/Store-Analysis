@@ -1,5 +1,5 @@
 /* ─── INIT ─── */
-window.addEventListener('DOMContentLoaded',()=>{
+window.addEventListener('DOMContentLoaded', async ()=>{
   // Restore API key UI
   if(GS.apiKey){
     const inp=document.getElementById('apiKeyInp');
@@ -15,9 +15,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   });
   // Step 1: Restore cached data immediately — dashboard is usable right away
   let anyCache=false;
-  Object.keys(PLAT_S).forEach(p=>{
-    if(PLAT_S[p].url&&restoreCache(p)) anyCache=true;
-  });
+  for (const p of Object.keys(PLAT_S)) {
+    if(PLAT_S[p].url && await restoreCache(p)) anyCache=true;
+  }
   setSyncStatus();
   renderKPIs();
   showPanel('overview');

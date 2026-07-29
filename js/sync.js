@@ -10,22 +10,43 @@ const PLAT_S = {
 };
 
 // ── Cache helpers — persist parsed data across sessions ──
-const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','breakdown','affiliate','ads','daily','composition','promoRevenue','voucherPerf'];
-const CACHE_VER=8; // Bump when adding new parsed fields to force re-sync of old caches
-function saveCache(platform){
+const _CACHE_FIELDS=['m2026','m2025','channelByMonth','trafficSourcesByMonth','adsByMonth','adsDailyByDate','adsDailySrc','adsSrcOrder','buyers','products','breakdown','affiliate','ads','daily','composition','promoRevenue','voucherPerf','promoListArr','voucherListArr'];
+
+// ── Background Worker for XLSX Parsing ──
+const xlsxWorker = new Worker('js/worker.js');
+let workerReqId = 0;
+const workerQueue = new Map();
+xlsxWorker.onmessage = function(e) {
+  const { id, success, data, error } = e.data;
+  if(workerQueue.has(id)){
+    const { resolve, reject } = workerQueue.get(id);
+    workerQueue.delete(id);
+    if(success) resolve(data);
+    else reject(new Error(error));
+  }
+};
+function parseXlsxWorker(ab) {
+  return new Promise((resolve, reject) => {
+    const id = ++workerReqId;
+    workerQueue.set(id, { resolve, reject });
+    xlsxWorker.postMessage({ id, ab }, [ab]);
+  });
+}
+
+const CACHE_VER=9; // Bump when adding new parsed fields to force re-sync of old caches
+async function saveCache(platform){
   try{
     const dKey=PLAT_D[platform];
     if(!D[dKey]) return;
     const snap={ts:Date.now(),_v:CACHE_VER};
     _CACHE_FIELDS.forEach(f=>{if(D[dKey][f]!==undefined) snap[f]=D[dKey][f];});
-    localStorage.setItem(`hygr_cache_${platform.replace(/-/g,'')}`,JSON.stringify(snap));
+    await idbKeyval.set(`hygr_cache_${platform.replace(/-/g,'')}`, snap);
   }catch(e){}
 }
-function restoreCache(platform){
+async function restoreCache(platform){
   try{
-    const raw=localStorage.getItem(`hygr_cache_${platform.replace(/-/g,'')}`);
-    if(!raw) return false;
-    const snap=JSON.parse(raw);
+    const snap = await idbKeyval.get(`hygr_cache_${platform.replace(/-/g,'')}`);
+    if(!snap) return false;
     // Discard caches written before CACHE_VER was introduced — they lack adsDailyByDate
     if((snap._v||0)<CACHE_VER) return false;
     const dKey=PLAT_D[platform];
@@ -37,6 +58,7 @@ function restoreCache(platform){
     const age=snap.ts?Math.round((Date.now()-snap.ts)/60000):0;
     const ageStr=age<1?'just now':age<60?`${age}m ago`:`${Math.round(age/60)}h ago`;
     if(PLAT_S[platform].name) setPlatformStatus(platform,'connected',`${PLAT_S[platform].name} · cached ${ageStr}`);
+    if(typeof clearFilterCache === 'function') clearFilterCache();
     return true;
   }catch(e){return false;}
 }
@@ -292,7 +314,19 @@ function findHeaderRow(rows){
   return bestScore>=0?bestIdx:0;
 }
 
+
+let _fetchLock = Promise.resolve();
+async function acquireFetchLock() {
+  let release;
+  const p = new Promise(r => release = r);
+  const wait = _fetchLock;
+  _fetchLock = _fetchLock.then(() => p);
+  await wait;
+  return () => setTimeout(release, 1500); // 1.5s global stagger for network requests
+}
+
 // Download and cache xlsx workbooks (avoids re-downloading the same file)
+
 const _wbCache={};
 let _dl403=0; // consecutive all-URL 403 failures — Google's per-IP "automated queries" block trips this
 let _dl403CooldownUntil=0; // ponytail: was a permanent session-long lock once tripped (only a full page reload cleared it) — now a real timer that expires on its own, so a passing burst doesn't require manual intervention
@@ -302,6 +336,8 @@ async function fetchXlsxWorkbook(file){
     const waitS=Math.ceil((_dl403CooldownUntil-Date.now())/1000);
     throw new Error(`Google is rate-limiting downloads from this network — retrying automatically in ~${waitS}s.`);
   }
+  const releaseLock = await acquireFetchLock();
+  try {
   if(typeof XLSX==='undefined') throw new Error('SheetJS not loaded — refresh the page.');
   const urls=[
     // /api/download proxies the request server-side — no CORS, no referrer issues
@@ -321,6 +357,13 @@ async function fetchXlsxWorkbook(file){
     }catch(e){errors.push(e.message);}
   }
   if(!ab){
+    // Drive's real permission-denied errors say so in the message (e.g. "insufficient permissions") —
+    // that never resolves by waiting, unlike a generic 403 from IP-based rate-limiting. Split them so
+    // a permissions gap surfaces a clear one-time message instead of "retrying automatically" forever.
+    const permErr=errors.find(e=>/permission/i.test(String(e)));
+    if(permErr){
+      throw new Error(`Download failed: ${permErr}. This file isn't shared "Anyone with the link can view" — fix sharing in Google Drive; retrying won't help.`);
+    }
     if(errors.some(e=>/403/.test(String(e)))){
       _dl403++;
       if(_dl403>=3) _dl403CooldownUntil=Date.now()+60000; // 60s, not the whole rest of the session
@@ -330,10 +373,15 @@ async function fetchXlsxWorkbook(file){
     throw new Error(`Download failed: ${meaningful||errors.at(-1)||'unknown'}. Ensure the file/folder is shared "Anyone with the link can view".`);
   }
   _dl403=0; _dl403CooldownUntil=0;
-  const wb=XLSX.read(ab,{type:'array'});
-  if(!wb.SheetNames.length) throw new Error('No sheets in xlsx file.');
-  _wbCache[file.id]=wb;
-  return wb;
+  releaseLock(); // release lock before heavy parsing
+  const workerData = await parseXlsxWorker(ab);
+  if(!workerData.sheetNames.length) throw new Error('No sheets in xlsx file.');
+  _wbCache[file.id] = workerData;
+  return workerData;
+  } catch (err) {
+    if (typeof releaseLock === 'function') releaseLock();
+    throw err;
+  }
 }
 
 // Scan all non-primary sheets in a workbook and populate D fields (campaign, promo, breakdown, affiliate)
@@ -357,7 +405,7 @@ function extractExtraSheets(wb,platform,fname){
     return null;
   }
   function getRows(sn){
-    const r=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    const r=(wb.sheets[sn] || []);
     return r.length>=2?r:null;
   }
   function makeGetter(headers){
@@ -367,16 +415,16 @@ function extractExtraSheets(wb,platform,fname){
     };
   }
 
-  syncLog(`  [${platform}] Scanning "${fname}": sheets=[${wb.SheetNames.join(', ')}]`);
-  console.log(`[AdsDebug] extractExtraSheets: file="${fname}" sheets=`, wb.SheetNames);
+  syncLog(`  [${platform}] Scanning "${fname}": sheets=[${(wb.SheetNames||wb.sheetNames).join(', ')}]`);
+  console.log(`[AdsDebug] extractExtraSheets: file="${fname}" sheets=`, (wb.SheetNames||wb.sheetNames));
   if(!window._adsParseLog) window._adsParseLog=[];
-  window._adsParseLog.push(`FILE: ${fname} | sheets: ${wb.SheetNames.join(' · ')}`);
+  window._adsParseLog.push(`FILE: ${fname} | sheets: ${(wb.SheetNames||wb.sheetNames).join(' · ')}`);
 
   // ── Sales Composition file → Buyers Composition card ──
   if(/sales.?composition/i.test(fname)){
-    const csn=wb.SheetNames.find(s=>s.toLowerCase().replace(/\s/g,'').includes('confirmed'));
+    const csn=(wb.SheetNames||wb.sheetNames).find(s=>s.toLowerCase().replace(/\s/g,'').includes('confirmed'));
     if(csn){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[csn],{header:1,raw:false,defval:''});
+      const rows=(wb.sheets[csn] || []);
       const numC=v=>parseFloat(String(v||'').replace(/[,%\s]/g,''))||0;
       const str=v=>String(v||'').trim();
       // Detect table starts by scanning for known header keywords
@@ -413,9 +461,9 @@ function extractExtraSheets(wb,platform,fname){
 
   // ── Discount Performance file → Promotion Revenue card ──
   if(/discount/i.test(fname)){
-    const kmsn=wb.SheetNames.find(s=>/key metrics/i.test(s));
+    const kmsn=(wb.SheetNames||wb.sheetNames).find(s=>/key metrics/i.test(s));
     if(kmsn){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[kmsn],{header:1,raw:false,defval:''});
+      const rows=(wb.sheets[kmsn] || []);
       const headers=(rows[0]||[]).map(h=>str(h).toLowerCase().replace(/[^a-z0-9]/g,''));
       const get=makeGetter(headers);
       const period=str(rows[1]?.[0]);
@@ -436,15 +484,37 @@ function extractExtraSheets(wb,platform,fname){
         syncLog(`  [${platform}] Discount Performance "${kmsn}": ${period}, ${byType.length} promotion type(s)`);
       }
     }
+    // Performance List → per-promotion detail (name/type/status/sales/orders/buyers), summed across
+    // the months a promotion runs through — the same promo row reappears in every monthly file it
+    // overlaps, each time carrying just that file's own period contribution.
+    const plsn=(wb.SheetNames||wb.sheetNames).find(s=>/performance list/i.test(s));
+    if(plsn){
+      const rows=(wb.sheets[plsn] || []);
+      const headers=(rows[0]||[]).map(h=>str(h).toLowerCase().replace(/[^a-z0-9]/g,''));
+      const get=makeGetter(headers);
+      let n=0;
+      for(const row of rows.slice(1)){
+        const pname=get(row,'promotionname'); if(!pname) continue;
+        const sales=num(get(row,'salesconfirmedorder'));
+        const orders=Math.round(num(get(row,'ordersconfirmedorder')));
+        const buyers=Math.round(num(get(row,'buyersconfirmedorder')));
+        if(!sales&&!orders) continue;
+        const e=D[dKey].promoList[pname]||(D[dKey].promoList[pname]={name:pname,type:get(row,'promotiontype')||'Discount',period:get(row,'promotionperiod'),status:get(row,'status'),sales:0,orders:0,buyers:0});
+        e.sales+=sales; e.orders+=orders; e.buyers+=buyers;
+        e.status=get(row,'status')||e.status;
+        n++;
+      }
+      if(n) syncLog(`  [${platform}] Discount Performance List: ${n} row(s)`);
+    }
     return;
   }
 
   // ── Voucher Performance file → Voucher Performance card ──
   if(/voucher/i.test(fname)){
-    const kmsn=wb.SheetNames.find(s=>/key metrics/i.test(s));
-    const mtsn=wb.SheetNames.find(s=>/metric trends/i.test(s));
+    const kmsn=(wb.SheetNames||wb.sheetNames).find(s=>/key metrics/i.test(s));
+    const mtsn=(wb.SheetNames||wb.sheetNames).find(s=>/metric trends/i.test(s));
     if(kmsn){
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[kmsn],{header:1,raw:false,defval:''});
+      const rows=(wb.sheets[kmsn] || []);
       const headers=(rows[0]||[]).map(h=>str(h).toLowerCase().replace(/[^a-z0-9]/g,''));
       const get=makeGetter(headers);
       const row=rows[1]||[];
@@ -454,7 +524,7 @@ function extractExtraSheets(wb,platform,fname){
       const orders=Math.round(num(get(row,'ordersconfirmedorder')));
       let daily=[];
       if(mtsn){
-        const drows=XLSX.utils.sheet_to_json(wb.Sheets[mtsn],{header:1,raw:false,defval:''});
+        const drows=(wb.sheets[mtsn] || []);
         const dheaders=(drows[0]||[]).map(h=>str(h).toLowerCase().replace(/[^a-z0-9]/g,''));
         const dget=makeGetter(dheaders);
         for(const r of drows.slice(1)){
@@ -483,10 +553,31 @@ function extractExtraSheets(wb,platform,fname){
         syncLog(`  [${platform}] Voucher Performance "${kmsn}": ${period}, ${daily.length} daily row(s)`);
       }
     }
+    // Performance List → per-voucher detail (claims/orders/sales/cost), summed by voucher name across
+    // every claim-code row and every monthly file it appears in.
+    const plsn=(wb.SheetNames||wb.sheetNames).find(s=>/performance list/i.test(s));
+    if(plsn){
+      const rows=(wb.sheets[plsn] || []);
+      const headers=(rows[0]||[]).map(h=>str(h).toLowerCase().replace(/[^a-z0-9]/g,''));
+      const get=makeGetter(headers);
+      let n=0;
+      for(const row of rows.slice(1)){
+        const vname=get(row,'vouchername'); if(!vname) continue;
+        const claims=Math.round(num(get(row,'claims')));
+        const vorders=Math.round(num(get(row,'ordersconfirmedorder')));
+        const vsales=num(get(row,'salesconfirmedorder'));
+        const vcost=num(get(row,'costconfirmedorder'));
+        if(!claims&&!vorders&&!vsales) continue;
+        const e=D[dKey].voucherList[vname]||(D[dKey].voucherList[vname]={name:vname,claims:0,orders:0,sales:0,cost:0});
+        e.claims+=claims; e.orders+=vorders; e.sales+=vsales; e.cost+=vcost;
+        n++;
+      }
+      if(n) syncLog(`  [${platform}] Voucher Performance List: ${n} row(s)`);
+    }
     return;
   }
 
-  for(const sn of wb.SheetNames){
+  for(const sn of wb.sheetNames){
     const sl=sn.toLowerCase().replace(/\s+/g,'');
     console.log(`[AdsDebug] SHEET: "${sn}" sl="${sl}"`);
 
@@ -524,21 +615,25 @@ function extractExtraSheets(wb,platform,fname){
       // Parse all 4 section breakdowns
       const sections={productCard:[],sellerLive:[],sellerVideo:[],shopeeAffiliate:[],shopeeAds:[]};
       let curSec=null;
+      let curGet=null;
       for(let i=2;i<dr.length;i++){
         const row=dr[i];
         const fc=String(row[0]||'').trim();
         if(!fc) continue;
         // Section header detection
-        if(/^product card$/i.test(fc)){curSec='productCard';continue;}
-        if(/^seller live$/i.test(fc)){curSec='sellerLive';continue;}
-        if(/^seller video$/i.test(fc)){curSec='sellerVideo';continue;}
-        if(/^shopee affiliate$/i.test(fc)){curSec='shopeeAffiliate';continue;}
-        if(/^shopee ads$/i.test(fc)){curSec='shopeeAds';continue;}
-        // Skip sub-header rows ("Traffic Source", "Live Views", etc.)
-        if(/^(traffic source|live views|video views|content views|ads impressions)$/i.test(fc)) continue;
+        if(/^product card$/i.test(fc)){curSec='productCard'; continue;}
+        if(/^seller live$/i.test(fc)){curSec='sellerLive'; continue;}
+        if(/^seller video$/i.test(fc)){curSec='sellerVideo'; continue;}
+        if(/^shopee affiliate$/i.test(fc)){curSec='shopeeAffiliate'; continue;}
+        if(/^shopee ads$/i.test(fc)){curSec='shopeeAds'; continue;}
+        // Detect sub-header row and create a getter for this section
+        if(/^(traffic source|live views|video views|content views|ads impressions)$/i.test(fc)){
+          const hdrs=row.map(h=>String(h||'').trim().toLowerCase().replace(/[^a-z0-9]/g,''));
+          curGet=makeGetter(hdrs);
+          continue;
+        }
         if(!curSec) continue;
         if(curSec==='shopeeAds'){
-          // Cols: 0=source,1=salesRatio,2=sales(MY),3=adsImpressions,4=orders,5=conversion,6=adsExpense,7=adsROAS
           const s=numC(String(row[2]||''));
           const imp=numC(String(row[3]||''));
           const o=Math.round(numC(String(row[4]||'')));
@@ -548,12 +643,26 @@ function extractExtraSheets(wb,platform,fname){
           sections.shopeeAds.push({src:fc,s:+s.toFixed(2),imp:Math.round(imp),o,exp:+exp.toFixed(2),roas:+roas.toFixed(2)});
           continue;
         }
+        
         const pct=numC(String(row[1]||'').replace('%',''));
         const sales=numC(String(row[2]||''));
-        // Skip 100% total rows and zero rows
         if(!fc||(pct===0&&sales===0)) continue;
         if(/^100(\.0+)?%?$/.test(String(row[1]||'').trim())) continue;
-        sections[curSec].push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2)});
+        
+        if(curSec==='shopeeAffiliate') {
+          let o=0, cl=0, v=0, cr=0, aov=0;
+          if(curGet) {
+            o = Math.round(numC(curGet(row,'placedorders','orders','paidorders')));
+            cl = Math.round(numC(curGet(row,'productclicks','clicks')));
+            v = Math.round(numC(curGet(row,'contentviews','views')));
+            cr = numC(String(curGet(row,'orderconversionrate','conversionrate','cr')).replace('%',''));
+            aov = numC(curGet(row,'salesperorder','salesperbuyer','aov'));
+          }
+          if(aov===0 && o>0) aov = +(sales/o).toFixed(2);
+          sections.shopeeAffiliate.push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2), o, cl, v, cr, aov});
+        } else {
+          sections[curSec].push({src:fc,pct:+pct.toFixed(2),s:+sales.toFixed(2)});
+        }
       }
       const hasSecData=Object.values(sections).some(a=>a.length>0);
       if(hasSecData){
@@ -589,8 +698,9 @@ function extractExtraSheets(wb,platform,fname){
       window._adsParseLog.push(`SC_CAND: "${sn.slice(0,40)}" placed=${sl.includes('place')} paid=${sl.includes('paid')}`);
     }
     if(sl.startsWith('sourcecontribution')&&!sl.includes('place')&&!sl.includes('paid')){
-      // Use raw:true so date serials come through as numbers, not locale-formatted strings
-      const rawRows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''});
+      // Worker always parses raw:false, so dates arrive as formatted strings — toIso()
+      // below handles those directly (numeric-serial branch is a harmless fallback).
+      const rawRows=(wb.sheets[sn] || []);
       window._adsParseLog.push(`SRC_FOUND: rows=${rawRows.length} sn="${sn.slice(0,30)}"`);
       console.log(`[AdsDebug] Source Contribution sheet found: "${sn}" → ${rawRows.length} rows`);
       if(!rawRows||rawRows.length<2){window._adsParseLog.push('SKIP: <2 rows');continue;}
@@ -602,7 +712,7 @@ function extractExtraSheets(wb,platform,fname){
       const toIso=v=>{
         if(typeof v==='number'&&v>40000&&v<60000){
           // Excel date serial (covers 2009-2064)
-          try{const dc=XLSX.SSF.parse_date_code(v);if(dc&&dc.y)return `${dc.y}-${String(dc.m).padStart(2,'0')}-${String(dc.d).padStart(2,'0')}`;}catch(_){}
+          
           // Fallback manual conversion (Excel epoch Jan 0, 1900, with leap year bug)
           const ms=(v-25569)*86400000;const d=new Date(ms);
           return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
@@ -733,36 +843,42 @@ function extractExtraSheets(wb,platform,fname){
 // Fetch raw 2D row array from a Drive file (no side effects)
 async function fetchRawRows(file){
   if(file.mimeType===SHEET_MIME){
-    const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/A1:Z2000?key=${GS.apiKey}`);
-    const data=await res.json();
-    if(!res.ok) throw new Error(data.error?.message||'Sheets API error '+res.status);
-    return data.values||[];
+    const releaseLock = await acquireFetchLock();
+    try {
+      const res=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${file.id}/values/A1:Z2000?key=${GS.apiKey}`);
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.error?.message||'Sheets API error '+res.status);
+      return data.values||[];
+    } finally { releaseLock(); }
   }
   if(file.mimeType===CSV_MIME||file.name.toLowerCase().endsWith('.csv')){
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}`);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text=await res.text();
-    return text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
+    const releaseLock = await acquireFetchLock();
+    try {
+      const res=await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${GS.apiKey}`);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const text=await res.text();
+      return text.trim().split('\n').map(r=>r.split(',').map(v=>v.trim().replace(/^"|"$/g,'')));
+    } finally { releaseLock(); }
   }
   // xlsx: download workbook (cached per fileId) then pick appropriate sheet
   const wb=await fetchXlsxWorkbook(file);
   const fname=file.name||'';
   if(/shopee-shop-stats/i.test(fname)){
     // Shopee shop stats: use "Confirmed Order" sheet
-    const sn=wb.SheetNames.find(s=>/confirmed.*order/i.test(s));
-    if(sn) return XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    const sn=wb.sheetNames.find(s=>/confirmed.*order/i.test(s));
+    if(sn) return wb.sheets[sn];
   }
   if(/Product Performance/i.test(fname)){
     // Shopee product performance: use "Top Performing Products" sheet
-    const sn=wb.SheetNames.find(s=>/top performing/i.test(s))||wb.SheetNames[0];
-    return XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+    const sn=wb.sheetNames.find(s=>/top performing/i.test(s))||wb.sheetNames[0];
+    return wb.sheets[sn];
   }
   // Default: use first sheet with actual data rows
-  for(const sn of wb.SheetNames){
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,defval:''});
+  for(const sn of wb.sheetNames){
+    const rows=wb.sheets[sn] || [];
     if(rows.length>=2) return rows;
   }
-  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+  return wb.sheets[wb.sheetNames[0]] || [];
 }
 
 // Parse 2D rows → {m2025:[], m2026:[]} separated by year. Each entry: {m,s,o,v,cl,cr,b}.
@@ -1124,6 +1240,7 @@ function applyMonths(months,months25,name,fileId,platform='shopee'){
   }
   setPlatformStatus(platform,'connected',`${months.length} mo 2026 · ${months25?.length||0} mo 2025 · ${name.slice(0,25)}`);
   syncLog(`[${platform}] ✓ 2026: ${months.length} month(s), 2025: ${months25?.length||0} month(s)`);
+  if(typeof clearFilterCache === 'function') clearFilterCache();
   saveCache(platform);
   renderKPIs(); showPanel(S.nav);
 }
@@ -1216,6 +1333,13 @@ async function loadAllFilesInFolder(loadables,folderName,platform='shopee'){
     D[_dKey].ads=Object.values(D[_dKey].adsByMonth)
       .sort((a,b)=>a.year!==b.year?a.year-b.year:_mOrd.indexOf(a.m)-_mOrd.indexOf(b.m));
     syncLog(`[${platform}] Ads data: ${D[_dKey].ads.length} month(s)`);
+  }
+  // Build sorted promo/voucher detail lists from per-name totals collected in extractExtraSheets
+  if(D[_dKey]&&D[_dKey].promoList){
+    D[_dKey].promoListArr=Object.values(D[_dKey].promoList).sort((a,b)=>b.sales-a.sales);
+  }
+  if(D[_dKey]&&D[_dKey].voucherList){
+    D[_dKey].voucherListArr=Object.values(D[_dKey].voucherList).sort((a,b)=>b.sales-a.sales);
   }
   applyMonths(final26,final25,folderName+' (all files)',lastId,platform);
   startAutoRefresh();
