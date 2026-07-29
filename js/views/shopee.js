@@ -151,6 +151,8 @@ function renderShopee(){
     return{ch:D.shopee.channel,ts:D.shopee.trafficSources,label:''};
   };
   const{ch,ts,label:chLabel}=_getChannelData();
+  const affMonths=sf.map(r=>({m:r.m,yr:D.shopee.m2025.includes(r)?2025:2026}));
+  renderShopeeAffiliate(affMonths);
 
   // Sales Channel Mix
   if(ch&&ch.mar&&ch.mar.some(v=>v>0)){
@@ -230,3 +232,86 @@ function renderShopee(){
   }).join('');
 }
 
+
+
+function renderShopeeAffiliate(months) {
+  const RMk=v=>'RM'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0));
+  const Num=v=>v>=1000?(v/1000).toFixed(1)+'k':Math.round(v);
+  const upDn=(c,p)=>{if(!p)return{c:'up',t:'—'};const d=(c-p)/p*100;return{c:d>=0?'up':'dn',t:(d>=0?'↑ ':'↓ ')+Math.abs(d).toFixed(2)+'%'};};
+  
+  let gmv=0, orders=0, clicks=0, views=0, cr=0, aov=0;
+  let pGmv=0, pOrders=0, pClicks=0, pViews=0, pCr=0, pAov=0;
+  
+  for(const {m,yr} of months){
+    const td = D.shopee.trafficSourcesByMonth?.[m+yr];
+    if(td && td.shopeeAffiliate){
+      for(const row of td.shopeeAffiliate) {
+        gmv += row.s;
+        orders += row.o || 0;
+        clicks += row.cl || 0;
+        views += row.v || 0;
+      }
+    }
+  }
+  
+  if (orders > 0) {
+    aov = gmv / orders;
+    cr = clicks > 0 ? (orders / clicks * 100) : 0;
+  }
+  
+  const setEl=(id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  const setDiff=(id, c, p) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const {c: cls, t} = upDn(c, p);
+    el.className = 'stat-change ' + cls;
+    el.textContent = p ? t + ' vs prev' : '—';
+  };
+  
+  const subEl = document.getElementById('shopeeAffSub');
+  if (months.length === 0) {
+     if (subEl) subEl.textContent = 'No period selected';
+     setEl('shopeeAffGmv', '—'); setEl('shopeeAffOrders', '—');
+     setEl('shopeeAffClicks', '—'); setEl('shopeeAffViews', '—');
+     setEl('shopeeAffAov', '—'); setEl('shopeeAffCr', '—');
+     ['shopeeAffGmvDiff','shopeeAffOrdersDiff','shopeeAffClicksDiff','shopeeAffViewsDiff','shopeeAffAovDiff','shopeeAffCrDiff'].forEach(id=>setDiff(id,0,0));
+     return;
+  }
+  
+  if (subEl) {
+     const rangeLabel = months.length===1?`${months[0].m} ${months[0].yr}`:`${months[0].m} ${months[0].yr} – ${months[months.length-1].m} ${months[months.length-1].yr}`;
+     subEl.textContent = rangeLabel;
+  }
+  
+  setEl('shopeeAffGmv', gmv ? RMk(gmv) : '—');
+  setEl('shopeeAffOrders', orders ? Num(orders) : '—');
+  setEl('shopeeAffClicks', clicks ? Num(clicks) : '—');
+  setEl('shopeeAffViews', views ? Num(views) : '—');
+  setEl('shopeeAffAov', aov ? 'RM' + aov.toFixed(1) : '—');
+  setEl('shopeeAffCr', cr ? cr.toFixed(2) + '%' : '—');
+  
+  const prevMonths = getPrevShopee().map(r=>({m:r.m,yr:D.shopee.m2025.includes(r)?2025:2026}));
+  for(const {m,yr} of prevMonths){
+    const td = D.shopee.trafficSourcesByMonth?.[m+yr];
+    if(td && td.shopeeAffiliate){
+      for(const row of td.shopeeAffiliate) {
+        pGmv += row.s;
+        pOrders += row.o || 0;
+        pClicks += row.cl || 0;
+        pViews += row.v || 0;
+      }
+    }
+  }
+  
+  if (pOrders > 0) {
+    pAov = pGmv / pOrders;
+    pCr = pClicks > 0 ? (pOrders / pClicks * 100) : 0;
+  }
+  
+  setDiff('shopeeAffGmvDiff', gmv, pGmv);
+  setDiff('shopeeAffOrdersDiff', orders, pOrders);
+  setDiff('shopeeAffClicksDiff', clicks, pClicks);
+  setDiff('shopeeAffViewsDiff', views, pViews);
+  setDiff('shopeeAffAovDiff', aov, pAov);
+  setDiff('shopeeAffCrDiff', cr, pCr);
+}
