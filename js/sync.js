@@ -153,6 +153,54 @@ function disconnectPlatform(platform){
   syncLog(`[${platform}] Disconnected.`);
 }
 
+// ── Test data: load straight from a local folder, no Google Drive involved ──
+// Mirrors loadPlatformFolder's sub-folder routing (Sales Data / Product Performance / everything
+// else) so the exact same parse pipeline runs — only the file source changes.
+function pickTestDataFolder(platform){
+  const inp=document.createElement('input');
+  inp.type='file'; inp.webkitdirectory=true; inp.multiple=true;
+  inp.onchange=()=>{ if(inp.files.length) loadTestDataFiles(platform,[...inp.files]); };
+  inp.click();
+}
+async function loadTestDataFiles(platform,files){
+  const rootName=(files[0].webkitRelativePath||files[0].name).split('/')[0];
+  syncLog(`[${platform}] Loading local test data from "${rootName}" (${files.length} file(s))…`);
+  setPlatformStatus(platform,'fetching','Loading local test data…');
+  const toFileObj=f=>({id:'local:'+(f.webkitRelativePath||f.name),name:f.name,mimeType:XLSX_MIME,_localFile:f});
+
+  const bySub={};
+  for(const f of files){
+    if(!isLoadable(f)) continue;
+    const parts=(f.webkitRelativePath||f.name).split('/');
+    const sub=parts.length>=2?parts[parts.length-2]:'';
+    (bySub[sub]||(bySub[sub]=[])).push(f);
+  }
+  const salesFolder=Object.keys(bySub).find(s=>s.toLowerCase()==='sales data');
+  let toLoad=[],prodFiles=[];
+  PLAT_S[platform]._extraXlsx=[];
+  if(salesFolder){
+    const rev=filterRevFiles(bySub[salesFolder],platform);
+    toLoad=(rev.length?rev:bySub[salesFolder]).map(toFileObj);
+    const prodFolder=Object.keys(bySub).find(s=>s!==salesFolder&&s.toLowerCase().includes('product'));
+    if(prodFolder) prodFiles=bySub[prodFolder].map(toFileObj);
+    for(const sub of Object.keys(bySub)){
+      if(sub===salesFolder||sub===prodFolder) continue;
+      PLAT_S[platform]._extraXlsx.push(...bySub[sub].map(toFileObj));
+    }
+  } else {
+    const all=files.filter(isLoadable);
+    const rev=filterRevFiles(all,platform);
+    toLoad=(rev.length?rev:all).map(toFileObj);
+  }
+  if(!toLoad.length){
+    setPlatformStatus(platform,'error','No matching files in folder');
+    syncLog(`[${platform}] No revenue files found in "${rootName}".`,true);
+    return;
+  }
+  if(prodFiles.length) await loadProductFiles(prodFiles,platform);
+  await loadAllFilesInFolder(toLoad,rootName+' (local test data)',platform);
+}
+
 // ── Load a platform's folder ──
 // Strategy: if a "Sales Data" sub-folder exists, load ONLY from it (revenue only).
 // Otherwise scan all sub-folders and apply filename pattern filter.
@@ -332,6 +380,14 @@ let _dl403=0; // consecutive all-URL 403 failures — Google's per-IP "automated
 let _dl403CooldownUntil=0; // ponytail: was a permanent session-long lock once tripped (only a full page reload cleared it) — now a real timer that expires on its own, so a passing burst doesn't require manual intervention
 async function fetchXlsxWorkbook(file){
   if(_wbCache[file.id]) return _wbCache[file.id];
+  if(file._localFile){
+    // Test-data mode: read straight from the picked File object — no network, no Drive, no rate limit.
+    const ab=await file._localFile.arrayBuffer();
+    const workerData = await parseXlsxWorker(ab);
+    if(!workerData.sheetNames.length) throw new Error('No sheets in xlsx file.');
+    _wbCache[file.id] = workerData;
+    return workerData;
+  }
   if(_dl403>=3&&Date.now()<_dl403CooldownUntil){
     const waitS=Math.ceil((_dl403CooldownUntil-Date.now())/1000);
     throw new Error(`Google is rate-limiting downloads from this network — retrying automatically in ~${waitS}s.`);

@@ -590,6 +590,18 @@
     </div>
   </div>
 
+  <!-- Use Test Data (local folder, skips Google Drive entirely) -->
+  <div class="cc" style="max-width:860px;margin-bottom:14px;padding:13px">
+    <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">🧪 Use Test Data</div>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Point at a platform's local export folder — same Sales Data / Product Performance / Discount Performance / Voucher Performance sub-folders as Drive — to load it straight from disk. No API key, no rate limits, nothing uploaded anywhere.</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee')" style="font-size:10px;padding:6px 4px">🛒 Shopee MY</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok')" style="font-size:10px;padding:6px 4px">🎵 TikTok MY</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('shopee-sg')" style="font-size:10px;padding:6px 4px">🛒 Shopee SG</button>
+      <button class="btn-sm ghost" onclick="pickTestDataFolder('tiktok-sg')" style="font-size:10px;padding:6px 4px">🎵 TikTok SG</button>
+    </div>
+  </div>
+
   <!-- Sync Log -->
   <div class="cc" style="max-width:860px;margin-bottom:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
