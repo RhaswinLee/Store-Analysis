@@ -135,20 +135,38 @@ function getPrevByKey(dKey){
     const r=src.find(x=>x.m===mNames[pm]);
     return r?[r]:[];
   }
-  // For year views, compare against the other year
-  if(S.grain==='y2026') return Dp.m2025;
+  // Year-to-date views: compare against the *same* number of months from the prior year,
+  // not the full 12 — otherwise a 6-month YTD total gets compared against a full prior year
+  // and looks like a huge decline even when the business is actually growing.
+  if(S.grain==='y2026') return Dp.m2025.slice(0,Dp.m2026.length);
   if(S.grain==='y2025') return [];
   const f=filteredByKey(dKey);
   return f.length>=2?[f[f.length-2]]:[];
 }
 function getPrevShopee(){ return getPrevByKey('shopee'); }
-// Returns {ch, dir} for a MoM chip. lowerBetter=true inverts direction logic.
-function momChip(curr,prev,lowerBetter){
+// A month still mid-sync (e.g. only the first few days of June have arrived) will always look
+// like a huge decline when compared against a completed prior month — that's a data-freshness
+// gap, not a real trend, so callers should skip the % chip rather than show a false alarm.
+function isPartialMonth(dKey,monthRow){
+  if(!monthRow) return false;
+  const Dp=D[dKey];
+  const year=Dp.m2026.includes(monthRow)?2026:(Dp.m2025.includes(monthRow)?2025:null);
+  if(!year) return false;
+  const daily=(Dp.daily||[]).filter(r=>r.m===monthRow.m&&r.y===year);
+  if(!daily.length) return false; // no daily granularity synced — can't tell, assume complete
+  const idx=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(monthRow.m);
+  const totalDays=new Date(year,idx+1,0).getDate();
+  return daily.length<totalDays*0.9;
+}
+
+// Returns {ch, dir} for a period-over-period chip. lowerBetter=true inverts direction logic.
+// period defaults to 'MoM'; pass 'YoY' for year-to-date comparisons.
+function momChip(curr,prev,lowerBetter,period='MoM'){
   if(!prev||prev===0) return{ch:'—',dir:'up'};
   const pct=(curr-prev)/prev*100;
   const up=pct>0, flat=Math.abs(pct)<0.05;
-  if(flat) return{ch:'→ flat',dir:'up'};
-  const label=(up?'↑':'↓')+Math.abs(pct).toFixed(1)+'% MoM';
+  if(flat) return{ch:`→ flat ${period}`,dir:'up'};
+  const label=(up?'↑':'↓')+Math.abs(pct).toFixed(1)+`% ${period}`;
   const dir=lowerBetter?(up?'warn':'up'):(up?'up':'warn');
   return{ch:label,dir};
 }
@@ -173,7 +191,7 @@ function renderBuyersComp(idx){
   const comp=D.shopee.composition;
   if(!comp){bl.innerHTML='<div style="color:var(--t3);font-size:12px;padding:8px 0">No data — sync a sales_composition file</div>';return;}
   document.getElementById('buyersCompSub').textContent=comp.month||'';
-  const fmtN=v=>v>=1000?(v/1000).toFixed(1)+'k':String(Math.round(v));
+  const fmtN=v=>Math.round(v).toLocaleString();
   const fmtRM=v=>'RM'+(v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'k':v.toFixed(0));
   const fmtP=v=>v.toFixed(2)+'%';
   const th=(cells,extra='')=>`<tr style="border-bottom:1px solid var(--border);font-size:10px;color:var(--t3);font-weight:600">${cells.map(c=>`<th style="padding:4px 6px;text-align:right;font-weight:600;${extra}">${c}</th>`).join('')}</tr>`;
