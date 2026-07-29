@@ -5,7 +5,7 @@
 - **Interactive Drill-Downs:** Provide month-to-day timeline drill-downs across Overview, Shopee MY, TikTok MY, Shopee SG, and TikTok SG with simple "Back to months" navigation.
 - **Application Security & Hardening:** Audit and resolve Stored XSS vulnerabilities and sensitive data exposure (Google API keys).
 - **Resilience & QA:** Handle empty data states gracefully without breaking chart rendering or throwing JavaScript runtime errors.
-- **Data Pipeline Optimization:** Solve Google Drive 403 rate-limit/cooldown blocks and explore automated ingestion from Shopee Seller Center.
+- **Automated Data Ingestion (Shopee Open API):** Transition from manual `.xlsx` file parsing and Google Drive API sync (which suffers from 403 rate-limit cooldowns) to direct, real-time JSON data streaming via the official Shopee Open Platform.
 
 ---
 
@@ -15,7 +15,7 @@
 - Month-to-day drill-down interaction is active on revenue graphs with seamless back navigation.
 - Missing data fallbacks (High ATC Products, New vs Existing Buyer, Live Stream GMV) display clean empty-state notices.
 - The Google API key status badge renders properly with its checkmark icon.
-- Codebase is clean of syntax errors and runs client-side using Vanilla JS and Chart.js.
+- Codebase is clean of syntax errors, hosted on GitHub (`ADM1SH/Store-Analysis`), and ready for deployment on Vercel.
 
 ---
 
@@ -33,6 +33,7 @@
 - `js/views/products.js`: Product performance tables and chart renderers.
 - `js/views/promotions.js`: Promotion and voucher performance analytics.
 - `js/views/campaigns.js`: Campaign analytics view.
+- `handoff.md`: Project documentation and roadmap.
 
 ---
 
@@ -42,6 +43,7 @@
 - **Bug & Error Fixes:** Resolved `ReferenceError` issues (`useProds`, `buyers`) in `js/views/products.js` to ensure empty states render when data is missing.
 - **Drill-Down Feature:** Implemented `_oDrillMonth`, `_sDrillMonth`, and `_tDrillMonth` state variables and added "← Back to months" buttons across timeline charts.
 - **UI Icon Formatting Fix:** Updated `js/main.js` and `js/sync.js` badge setting from `textContent` to `innerHTML` so Material Symbols checkmark icons render as icons instead of raw code strings.
+- **Git & PR Setup:** Created Pull Request `#3` on GitHub (`feat/campaign-traffic-visitors-clicks` branch).
 
 ---
 
@@ -52,10 +54,15 @@
 ---
 
 ## 6. Next Steps
-- **Automating Data Ingestion from Shopee Seller Center:**
-  1. **Shopee Open API Integration:** Set up an official Shopee Developer account (`open.shopee.com`) to stream live orders, GMV, and performance data directly via REST APIs.
-  2. **Chrome Extension Helper:** Build a lightweight Chrome extension that extracts metrics or triggers report exports directly from an active Seller Center browser session.
-- **Google Drive Alternatives (Overcoming Rate Limits & 403 Cooldowns):**
-  1. **GitHub Repository / Raw Hosting:** Store `.xlsx` files inside a GitHub repo or release asset pipeline, fetching via `raw.githubusercontent.com` (eliminates Google Drive rate limits).
-  2. **Local `/data` Directory:** Move source Excel files directly into a `data/` folder inside the web project for instant, zero-latency loading.
-  3. **Cloud Object Storage (Cloudflare R2 / S3):** Upload files to Cloudflare R2 or AWS S3 with CORS headers for scalable, reliable API access.
+- **Shopee Open API Integration (Selected Strategy):**
+  1. Obtain company credentials from the company's existing Shopee Open Platform Developer Account ([open.shopee.com](https://open.shopee.com/)):
+     - `Partner ID`
+     - `Partner Key / App Secret`
+     - `Shop ID`
+  2. Configure secure Environment Variables in Vercel to store the Partner credentials safely.
+  3. Implement Vercel Serverless Functions (`/api/shopee/...`) to handle OAuth 2.0 authorization and execute live API calls for:
+     - Orders & Revenue (`v2.order.get_order_list`, `v2.order.get_order_detail`)
+     - Product & Performance Analytics (`v2.merchant_analytics`, `v2.product.get_item_list`)
+  4. Bind the live JSON API feed directly to global state `D.shopee`, completely eliminating manual `.xlsx` spreadsheet downloads and Google Drive rate limits.
+- **Vercel Deployment:**
+  - Connect the GitHub repository (`ADM1SH/Store-Analysis`) to Vercel for automated CI/CD deployment on every `git push` and PR.
