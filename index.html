@@ -408,19 +408,14 @@
       <div class="cg cg-21">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Promotion Revenue by Type</div><div class="cc-sub">Jan–Mar 2026 · Discount · Bundle · GWP · B1F1</div></div>
+            <div><div class="cc-title">Promotion Revenue by Type</div><div class="cc-sub">All synced months · by promotion type</div></div>
             <span class="tag tag-i">Stacked by Type</span>
           </div>
           <canvas id="promoTrendChart" height="200"></canvas>
-          <div class="legend" style="margin-top:10px">
-            <div class="lg-item"><div class="lg-dot" style="background:#f43f5e"></div>Discount</div>
-            <div class="lg-item"><div class="lg-dot" style="background:#6366f1"></div>Bundle Deal</div>
-            <div class="lg-item"><div class="lg-dot" style="background:#f97316"></div>GWP</div>
-            <div class="lg-item"><div class="lg-dot" style="background:#3fb950"></div>B1F1</div>
-          </div>
+          <div class="legend" id="promoTrendLegend" style="margin-top:10px"></div>
         </div>
         <div class="cc">
-          <div class="cc-head"><div><div class="cc-title">Promo Type Mix</div><div class="cc-sub">Mar 2026 GMV contribution</div></div></div>
+          <div class="cc-head"><div><div class="cc-title">Promo Type Mix</div><div class="cc-sub">Latest synced month · GMV contribution</div></div></div>
           <canvas id="promoTypeChart" height="200"></canvas>
           <div id="promoTypeLegend" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
         </div>
@@ -428,7 +423,7 @@
       <div class="cg cg-2">
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Voucher Performance</div><div class="cc-sub">Claims vs Orders · Jan–Mar 2026</div></div>
+            <div><div class="cc-title">Voucher Performance</div><div class="cc-sub">Claims vs Orders · All synced months</div></div>
             <span class="tag tag-i">Shopee Cofund</span>
           </div>
           <canvas id="voucherChart" height="200"></canvas>
@@ -439,7 +434,7 @@
         </div>
         <div class="cc">
           <div class="cc-head">
-            <div><div class="cc-title">Live Stream GMV</div><div class="cc-sub">Shopee Seller Live vs TikTok LIVE · Jan–Mar 2026</div></div>
+            <div><div class="cc-title">Live Stream GMV</div><div class="cc-sub">Shopee Seller Live vs TikTok LIVE</div></div>
             <span class="tag tag-a">Live Commerce</span>
           </div>
           <canvas id="liveGmvChart" height="200"></canvas>
@@ -451,7 +446,7 @@
       </div>
       <div class="tbl-wrap">
         <div class="tbl-head">
-          <div><div class="cc-title">Voucher Detail · Feb 2026</div><div class="cc-sub">Individual cofund voucher performance</div></div>
+          <div><div class="cc-title">Voucher Detail</div><div class="cc-sub">Individual cofund voucher performance</div></div>
           <span class="tag tag-i">Shopee Cofund</span>
         </div>
         <table>
@@ -461,8 +456,8 @@
       </div>
       <div class="tbl-wrap">
         <div class="tbl-head">
-          <div><div class="cc-title">All Promotions · Effectiveness Overview</div><div class="cc-sub">Cross-platform promotion performance · Q1 2026</div></div>
-          <span class="tag tag-a">8 Promo Types</span>
+          <div><div class="cc-title">All Promotions · Effectiveness Overview</div><div class="cc-sub">Shopee promotion performance · All synced months</div></div>
+          <span class="tag tag-a" id="promoCountTag">Promotions</span>
         </div>
         <table>
           <thead><tr><th>Promotion</th><th>Type</th><th>Platform</th><th>Sales GMV</th><th>Orders</th><th>AOV</th><th>Conv. Rate</th><th>Status</th></tr></thead>
